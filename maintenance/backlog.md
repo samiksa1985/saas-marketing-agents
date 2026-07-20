@@ -1,0 +1,33 @@
+# Maintenance Backlog
+
+Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the top unblocked item. `P0` = correctness/health (do first). `P1` = high-leverage growth. `P2` = nice-to-have. Mark items `[x]` when done and note the date; keep this list honest.
+
+## P0 — correctness & health (always first if present)
+- [ ] (none open — health checks pass as of 2026-07-21)
+
+## P1 — high-leverage
+- [ ] Add `brand-context.md` template + wire the CATALYST orchestrator to read it first, so agent output is tailored to a user's ICP/product/voice.
+- [ ] Add a monthly ABM loop to `loops/` (account selection → tiered messaging → multi-channel sequencing → measurement).
+- [ ] Add a weekly competitive-intel loop to `loops/`.
+- [ ] Expose the 59 personas as native Claude Code subagents under `plugins/saas-marketing/agents/` (convert frontmatter to subagent format; keep skill-referenced copies working).
+- [ ] Add a 60–90s demo GIF/asset for the README hero (orchestrator taking one brief and routing it).
+- [ ] Verify install flow end-to-end for Cursor, Copilot, Aider, Windsurf; correct any drift in `integrations/README.md`.
+
+## P1 — distribution (pre-approved lists only; follow each list's exact rules)
+- [ ] Submit to `langgptai/awesome-claude-prompts` (PR, Business & Marketing section).
+- [ ] Submit to `jmedia65/awesome-ai-marketing` (PR).
+- [ ] Prepare + submit to `hesreallyhim/awesome-claude-code` (ISSUE form, human-written, no sales language) — only once README + install are polished.
+- [ ] Prepare + submit to `VoltAgent/awesome-agent-skills` (PR, marketing category; lead with genuine usage).
+- [ ] Submit the plugin to the Anthropic community marketplace (`anthropics/claude-plugins-community`) via the in-app form; run `claude plugin validate` first.
+- [ ] Revisit `kyrolabs/awesome-agents` and `sindresorhus/awesome` once the repo has ≥40 stars and 30+ days of history.
+
+## P2 — later
+- [ ] Add a golden input/output example per agent.
+- [ ] GitHub Pages catalog with copy-to-clipboard for all 59 agents.
+- [ ] MCP tool recipes (GA4, GSC, HubSpot, Ahrefs) to move agents from advisory to executable.
+- [ ] Evaluation harness: rubrics + regression checks for agent output.
+- [ ] De-duplicate agent sources (single source of truth; generate the browseable and installable copies).
+
+## Notes
+- Social launch posts live in the maintainer's private launch kit and are **posted by a human**, never automated.
+- Keep the README badge counts (agents: 59, skills: 13) and the agent index in sync when agents are added.
