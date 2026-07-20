@@ -176,7 +176,7 @@ select_tool_interactive() {
 ###############################################################################
 
 install_to_cowork() {
-    local cowork_dir="cowork"
+    local cowork_dir="plugins/saas-marketing/skills"
     local target_dir="$HOME/.claude/skills"
 
     if [ ! -d "$cowork_dir" ]; then

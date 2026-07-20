@@ -25,7 +25,7 @@ Think of it as your full-service marketing department:
 
 The skill includes a routing decision matrix to identify which team(s) you need based on your request.
 
-## The Complete Team: 12 Categories, 59 Agents
+## The Complete Team: 59 Specialist Agents Across 11 Disciplines
 
 ### Core Marketing Disciplines
 
@@ -37,14 +37,13 @@ The skill includes a routing decision matrix to identify which team(s) you need 
 | **Social Media Operations** | 6 | LinkedIn strategy, Twitter/X content, community management, social calendar, social listening, engagement |
 | **Email Marketing Operations** | 5 | Email campaigns, nurture sequences, segmentation, automation, deliverability, personalization |
 | **Design Operations** | 5 | Visual design, brand identity, design systems, creative direction, design templates |
-| **Sales Enablement** | 5 | Sales materials, battle cards, objection handling, sales training, competitive positioning, deal support |
+| **Sales Enablement** | 6 | Sales materials, battle cards, objection handling, sales training, competitive positioning, deal support |
 | **Product Marketing** | 5 | Product positioning, feature messaging, launch strategy, adoption strategy, case studies, beta programs |
 | **Marketing Analytics** | 5 | Performance reporting, attribution modeling, forecasting, CRO optimization, data storytelling |
 | **Marketing Project Management** | 4 | Campaign coordination, timeline management, resource allocation, stakeholder communication, risk management |
 | **Client Operations** | 4 | Client reporting, QA/compliance, budget tracking, legal compliance, audit trails, brand quality |
-| **Strategy & Planning** | 7 | Competitive analysis, customer insights, positioning, messaging, audience segmentation, channel strategy |
 
-**Total: 59 Specialist Agents**
+**Total: 59 Specialist Agents** across 11 disciplines, plus the **CATALYST orchestrator** that coordinates them.
 
 ---
 
@@ -421,12 +420,11 @@ START: What is your primary need?
 | Social Media Operations | 6 |
 | Email Marketing Operations | 5 |
 | Design Operations | 5 |
-| Sales Enablement | 5 |
+| Sales Enablement | 6 |
 | Product Marketing | 5 |
 | Marketing Analytics | 5 |
 | Marketing Project Management | 4 |
 | Client Operations | 4 |
-| Strategy & Planning | 7 |
 | **TOTAL** | **59** |
 
 ---
