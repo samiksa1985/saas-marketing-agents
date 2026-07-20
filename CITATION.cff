@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use these agents in your work, a citation or a star is appreciated."
+title: "SaaS Marketing Agents"
+abstract: >-
+  An open-source collection of 59 specialist B2B SaaS marketing AI agent
+  personas, packaged as 13 installable Claude Code skills and coordinated by
+  the CATALYST multi-agent orchestrator, with worked marketing workflows and a
+  continuously updated AEO/GEO playbook.
+type: software
+authors:
+  - family-names: Tripathi
+    given-names: Shivaa
+    alias: shalintripathi
+license: MIT
+repository-code: "https://github.com/shalintripathi/saas-marketing-agents"
+url: "https://github.com/shalintripathi/saas-marketing-agents"
+version: "1.1.0"
+date-released: "2026-07-21"
+keywords:
+  - marketing
+  - b2b-saas
+  - ai-agents
+  - claude-code
+  - aeo
+  - geo
+  - seo

@@ -1,29 +1,106 @@
+<div align="center">
+
 # 🚀 SaaS Marketing Agents
 
-**Your complete B2B SaaS marketing agency, powered by AI agents.**
+**An open-source AI marketing team for B2B SaaS — 59 specialist agents, one orchestrator, real playbooks.**
 
-A collection of 59 specialized AI agent personas for B2B SaaS marketing agencies. Each agent combines deep domain expertise with distinctive personality, ready to use as **clickable skills in Claude Cowork** or integrate with your favorite AI coding tools.
+Install a full B2B SaaS marketing org into Claude Code: 59 role-based agent personas, packaged as **13 skills**, coordinated by the **CATALYST** multi-agent orchestrator — with worked ABM, launch & demand-gen workflows and an actively-maintained **AEO/GEO** playbook for the AI-search era.
+
+[![Stars](https://img.shields.io/github/stars/shalintripathi/saas-marketing-agents?style=social)](https://github.com/shalintripathi/saas-marketing-agents/stargazers)
+[![License: MIT](https://img.shields.io/github/license/shalintripathi/saas-marketing-agents)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/shalintripathi/saas-marketing-agents)](https://github.com/shalintripathi/saas-marketing-agents/commits)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
+[![Agents](https://img.shields.io/badge/agents-59-blue)](AGENTS_INDEX.md)
+[![Skills](https://img.shields.io/badge/Claude%20skills-13-8A2BE2)](plugins/saas-marketing)
+[![Built for Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-D97757)](https://claude.com/claude-code)
+
+[Quick start](#-quick-start) · [The 59 agents](#-the-team-59-agents) · [Skills](#-skills) · [CATALYST](#️-catalyst-orchestrator) · [Loops](#-marketing-loops) · [AEO/GEO](#-built-for-ai-search-aeogeo) · [Contributing](#-contributing)
+
+</div>
 
 ---
 
-## ⚡ Claude Cowork (Recommended)
+## What this is
 
-The fastest way to use these agents — install as clickable skills in Claude Cowork:
+Most "marketing prompt" collections are a flat grab-bag: you get 50 clever prompts, but **you're still the manager** — deciding which to run, in what order, and how the outputs fit together.
+
+This is the opposite. It's a marketing team shaped like a real **B2B SaaS marketing org** — 59 specialist agents with defined roles and hand-offs, plus an orchestrator that turns one brief into assigned sub-tasks. You brief the team; it routes the work.
+
+- 🧑‍💼 **59 role-based agents** across 11 disciplines — content, SEO/AEO, paid media, social, email, design, sales enablement, product marketing, analytics, project management, and client ops — coordinated by the CATALYST orchestrator.
+- 🎛️ **CATALYST orchestrator** — coordinates the specialists for large, multi-channel initiatives.
+- 🔁 **Worked workflows & loops** — ABM, product launch, demand gen, and a weekly content engine you can actually run.
+- 🤖 **AI-search native** — a sourced [AEO/GEO playbook](guides/aeo-geo-playbook.md) we maintain, so your content gets *cited* by ChatGPT, Perplexity, Google AI Overviews, and Copilot.
+- 🧩 **Runs anywhere** — installable as a Claude Code plugin, or copy the plain-Markdown agents into Cursor, Copilot, Aider, or Windsurf.
+
+---
+
+## ⚡ Quick start
+
+### Install as a Claude Code plugin (recommended)
+
+```
+/plugin marketplace add shalintripathi/saas-marketing-agents
+/plugin install saas-marketing@saas-marketing-agents
+```
+
+That's it — the 13 skills load as `/saas-marketing:<skill>` (e.g. `/saas-marketing:seo-growth`, `/saas-marketing:catalyst-orchestrator`). Then just describe what you need:
+
+> "Plan a product-launch campaign for [feature] targeting [ICP]."
+
+The orchestrator routes positioning to product marketing, assets to content & design, distribution to social/email/paid, and measurement to analytics.
+
+### Or use the files directly
+
+Every agent is plain Markdown, so it works in any AI tool:
 
 ```bash
 git clone https://github.com/shalintripathi/saas-marketing-agents.git
 cd saas-marketing-agents
+
+# Claude Code / Cursor / Copilot / Aider / Windsurf — reference an agent file:
+#   content/content-blog-strategist.md
+#   seo/seo-ai-search-optimizer.md
+
+# Or install the skills locally without the marketplace:
 ./scripts/install.sh --tool cowork
 ```
 
-This installs **13 interactive skills** into your `~/.claude/skills/` directory:
+See the [Integrations Guide](integrations/README.md) for tool-by-tool setup.
 
-| Skill | Agents | Triggers On |
+---
+
+## 📋 The team (59 specialist agents)
+
+| Discipline | Count | What they do |
+|-----------|-------|--------------|
+| **Content Marketing** | 7 | Blog, case study, whitepaper, newsletter, copywriting, video scripts, thought leadership |
+| **SEO & Organic Growth** | 6 | Keyword strategy, technical SEO, link building, **AI/AEO/GEO**, local & international |
+| **Paid Media** | 6 | PPC, creative strategy, budget optimization, programmatic, attribution, social ads |
+| **Social Media** | 6 | LinkedIn, YouTube, Reddit, Twitter/X, community, influencer partnerships |
+| **Email Marketing** | 5 | Lifecycle, copywriting, automation, deliverability, newsletter growth |
+| **Design** | 5 | Landing pages, brand identity, presentations, visual content, ad creative |
+| **Sales Enablement** | 6 | Outbound, discovery, battle cards, proposals, pipeline, enablement content |
+| **Product Marketing** | 5 | Positioning, messaging, launch, competitive intel, customer advocacy |
+| **Analytics** | 5 | CRO, customer insights, data storytelling, marketing ops, performance |
+| **Project Management** | 4 | Campaign coordination, resource allocation, scrum, client success |
+| **Client Operations** | 4 | Reporting, QA, legal/compliance, financial tracking |
+
+_These 11 disciplines hold all 59 specialist agents. On top sits the **[CATALYST orchestrator](#️-catalyst-orchestrator)**, which coordinates them._
+
+**→ Full [Agent Index](AGENTS_INDEX.md)** with every agent's role and when to use it.
+
+---
+
+## 🧩 Skills
+
+The agents are grouped into **13 installable skills**, each triggered by natural language:
+
+| Skill | Agents | Triggers on |
 |-------|--------|-------------|
-| **SaaS Marketing Suite** | Router | "help with marketing", "what can you do" |
-| **CATALYST Orchestrator** | 59 | "GTM launch", "campaign plan", "marketing strategy" |
+| **CATALYST Orchestrator** | all 59 | "GTM launch", "campaign plan", "marketing strategy" |
+| **SaaS Marketing Suite** (router) | — | "help with marketing", "what can you do" |
 | **Content Marketing** | 7 | "blog", "case study", "whitepaper", "newsletter" |
-| **SEO Growth** | 6 | "SEO audit", "keyword research", "link building" |
+| **SEO Growth** | 6 | "SEO audit", "keyword research", "AEO", "link building" |
 | **Paid Media Ops** | 6 | "Google Ads", "LinkedIn Ads", "ROAS", "attribution" |
 | **Social Media Ops** | 6 | "LinkedIn strategy", "YouTube", "community" |
 | **Email Marketing Ops** | 5 | "email sequence", "nurture", "deliverability" |
@@ -34,155 +111,61 @@ This installs **13 interactive skills** into your `~/.claude/skills/` directory:
 | **Marketing Project Mgmt** | 4 | "sprint planning", "resource allocation", "QBR" |
 | **Client Operations** | 4 | "client reporting", "QA", "compliance", "budget" |
 
-After installation, restart Cowork. Skills appear automatically and respond to natural language requests.
+Skill sources live in [`plugins/saas-marketing/skills/`](plugins/saas-marketing/skills).
 
 ---
 
-## 📋 Agent Categories
+## 🎛️ CATALYST orchestrator
 
-| Category | Count | Description |
-|----------|-------|-------------|
-| **Content Marketing** | 7 | Blog writing, technical content, copywriting, editing, SEO content |
-| **SEO & Organic Growth** | 6 | Keyword strategy, technical SEO, link building, competitive analysis |
-| **Paid Media** | 6 | PPC strategy, creative strategy, budget optimization, programmatic buying, attribution |
-| **Social Media** | 6 | Platform-specific strategies, community management, content calendar, influencer outreach |
-| **Email Marketing** | 5 | Newsletter growth, copywriting, automation, deliverability, lifecycle design |
-| **Design** | 5 | Landing pages, brand identity, presentations, visual content, ad creative |
-| **Sales Enablement** | 6 | Sales collateral, competitive battle cards, demo scripts, case studies |
-| **Product Marketing** | 5 | Positioning, messaging, launch strategy, market research, win analysis |
-| **Analytics** | 5 | GA4 implementation, dashboard building, UTM strategy, data analysis, attribution |
-| **Project Management** | 4 | Timeline management, resource planning, workflow optimization, stakeholder communication |
-| **Client Operations** | 4 | Legal/compliance, financial tracking, QA, reporting |
-| **Strategy/CATALYST Framework** | 1 | Multi-agent orchestration and campaign coordination |
+**CATALYST** is the coordination layer that runs a multi-agent campaign end to end:
 
-**Total: 59 agents**
+**C**oordination · **A**nalysis · **T**argeting · **A**daptation · **L**everaging · **Y**ield · **S**trategy · **T**eamwork
+
+Instead of prompting each specialist by hand, you give CATALYST a brief and it decomposes the work, assigns specialists, and manages the hand-offs. See the [Workflow Guide](WORKFLOW_GUIDE.md) and the [phased playbooks](strategy/playbooks/).
 
 ---
 
-## 🚀 Quick Start
+## 🔁 Marketing loops
 
-### 1. Clone the Repository
+Workflows are one-shot; **loops repeat**. The [`loops/`](loops/README.md) library holds recurring, agent-run workflows on a cadence:
 
-```bash
-git clone https://github.com/shalintripathi/saas-marketing-agents.git
-cd saas-marketing-agents
-```
-
-### 2. Choose Your Integration Tool
-
-The agents work seamlessly with:
-- **Claude Cowork** – Clickable skills with auto-routing (recommended)
-- **Claude Code** – Native support for agent personas and workflows
-- **Cursor** – IntelliSense and seamless integration
-- **GitHub Copilot** – Direct code and agent context
-- **Aider** – Command-line AI coding assistant
-- **Windsurf** – Agentic IDE with built-in support
-
-See [Integrations Guide](#integrations) for setup details.
-
-### 3. Start Using Agents
-
-Select any agent file from the repository and use it with your preferred tool. Each agent includes:
-- Detailed persona and expertise
-- Specific responsibilities
-- Example workflows
-- Key terminology and frameworks
-
-Example:
-
-```bash
-# Using Claude Code
-claude content-marketing/content-blog-writer.md
-
-# Using Cursor or GitHub Copilot
-# Open agent file → Prompt with context → Start working
-```
+- **[Weekly Content Engine](loops/weekly-content-engine-loop.md)** — every week, ship one publish-ready, AEO/GEO-optimized asset + its distribution plan, with zero manual coordination.
+- _Monthly ABM, quarterly launch, and weekly competitive-intel loops are on the [roadmap](ROADMAP.md)._
 
 ---
 
-## 🛠️ Supported AI Tools
+## 📚 Example workflows
 
-| Tool | Support | Setup |
-|------|---------|-------|
-| **Claude Cowork** | Full | `./scripts/install.sh --tool cowork` — clickable skills |
-| **Claude Code** | Full | Install Claude Code CLI and reference agent files |
-| **Cursor** | Full | Open `.md` files; use `@` mentions for agent context |
-| **GitHub Copilot** | Full | Reference agent files in comments; use Copilot Chat |
-| **Aider** | Full | Run `aider --model claude-opus` and reference agents |
-| **Windsurf** | Full | Open agents in Flow mode; leverage agentic IDE features |
+Full worked campaigns live in [`examples/`](examples/README.md):
 
-See [integrations/README.md](integrations/README.md) for detailed setup instructions.
+- [Product launch](examples/workflow-product-launch.md) · [ABM campaign](examples/workflow-abm-campaign.md) · [Demand-gen campaign](examples/workflow-demand-gen-campaign.md) · [Content engine](examples/workflow-content-engine.md)
 
 ---
 
-## 🧠 CATALYST Framework
+## 🔎 Built for AI search (AEO/GEO)
 
-The **CATALYST** framework is the orchestration layer that coordinates multiple agents across a B2B SaaS marketing campaign:
-
-- **C**oordination: Manage agent workflows and dependencies
-- **A**nalysis: Aggregate insights from specialized agents
-- **T**argeting: Focus agent output on specific goals
-- **A**daptation: Adjust strategies based on performance data
-- **L**everaging: Maximize knowledge sharing across agents
-- **Y**ield: Optimize campaign performance with multi-agent synergy
-- **S**trategy: Develop cohesive, data-driven marketing strategies
-- **T**eamwork: Ensure seamless collaboration between agent personas
-
-The CATALYST framework enables sophisticated, multi-layered marketing campaigns by orchestrating agents across different specialties.
-
----
-
-## 📚 Example Workflows
-
-### Launch a New Product
-1. **Product Marketing Agent** – Define positioning and key messages
-2. **Content Marketing Agent** – Create launch blog post and assets
-3. **Design Agent** – Design landing page and promotional graphics
-4. **Social Media Agent** – Build awareness campaign across channels
-5. **Paid Media Agent** – Set up launch ad campaigns
-6. **Sales Enablement Agent** – Prepare sales collateral
-
-### Optimize Paid Advertising
-1. **Paid Media Budget Optimizer** – Analyze spend and performance
-2. **Paid Media PPC Strategist** – Refine keyword and bid strategy
-3. **Paid Media Creative Strategist** – Test new ad creatives
-4. **Analytics Agent** – Track performance against goals
-5. **Paid Media Attribution Analyst** – Measure true ROI
-
-### Build Organic Presence
-1. **SEO Strategist** – Develop keyword and link strategy
-2. **Content Marketing Agent** – Create optimized blog content
-3. **Technical SEO Agent** – Ensure site crawlability and indexing
-4. **Social Media Agent** – Amplify content across channels
-5. **Analytics Agent** – Monitor organic growth metrics
+Buyers increasingly ask an AI engine instead of clicking ten links — so the vendors an engine *cites* shape the shortlist. The **[AEO/GEO Playbook](guides/aeo-geo-playbook.md)** is a sourced, practitioner-grade guide to getting cited by ChatGPT, Perplexity, Google AI Overviews, and Copilot: what measurably works (quotations, statistics, cited sources), how each engine differs, and what *not* to do. It's a **living document** we intend to keep current as the answer engines change.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! To add a new agent:
+Contributions are welcome — new agents, better agents, new loops, and freshness fixes. See [CONTRIBUTING.md](CONTRIBUTING.md), the [ROADMAP](ROADMAP.md), and the [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md). Good first contributions are listed in the [maintenance backlog](maintenance/backlog.md).
 
-1. **Review** [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
-2. **Create** your agent file in the appropriate category directory
-3. **Follow** the required frontmatter and section format
-4. **Submit** a pull request with a description
+---
 
-For detailed instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
+## ⭐ Star this repo
+
+If this saves you time, a star genuinely helps other marketers find it — and it's the signal that tells us which parts to invest in next. Thank you.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License – see [LICENSE](LICENSE) for details.
+[MIT](LICENSE) — free to use, modify, and distribute.
 
----
+<div align="center">
 
-## 🎯 Get Started Today
+Built by [**Shivaa Tripathi**](https://github.com/shalintripathi) · [Report an issue](https://github.com/shalintripathi/saas-marketing-agents/issues) · [Changelog](CHANGELOG.md)
 
-Pick any agent that fits your needs and start building. With 59 specialized personas at your fingertips, you have a complete AI-powered marketing agency ready to go.
-
-**Questions or feedback?** [Open an issue](https://github.com/shalintripathi/saas-marketing-agents/issues) on GitHub.
-
----
-
-**Created by Shivaa Tripathi** | [GitHub](https://github.com/shalintripathi)
+</div>

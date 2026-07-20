@@ -1,413 +1,148 @@
-# SaaS Marketing Agents Index
+# SaaS Marketing Agents — Full Index
 
-## Overview
-This directory contains 18 comprehensive agent profiles for B2B SaaS marketing operations, organized across four functional categories. Each agent profile follows a standardized format with identity, mission, critical rules, deliverables, and success metrics.
+**59 specialist B2B SaaS marketing agents across 11 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
 
-**Total Word Count**: 22,085 words of original content
-**Total Files**: 18 agent profiles across 4 directories
+Each agent is a self-contained Markdown persona (Identity · Core Mission · Critical Rules · Deliverables · Success Metrics). Install the whole team as a Claude Code plugin — `/plugin marketplace add shalintripathi/saas-marketing-agents` then `/plugin install saas-marketing@saas-marketing-agents` — or open any file below directly in your AI tool. See the [README](README.md) for the quick start.
 
----
+**Jump to:** [Content Marketing](#content-marketing) · [SEO & Organic Growth](#seo--organic-growth) · [Paid Media](#paid-media) · [Social Media](#social-media) · [Email Marketing](#email-marketing) · [Design](#design) · [Sales Enablement](#sales-enablement) · [Product Marketing](#product-marketing) · [Analytics](#analytics) · [Project Management](#project-management) · [Client Operations](#client-operations)
 
-## Product Marketing Agents (5 agents)
-
-### 1. Product Positioning Strategist
-**File**: `product-marketing/pmm-positioning-strategist.md`
-**Color**: #7C3AED | **Emoji**: 🎯
-
-Expert in category design, competitive positioning, and Obviously Awesome framework. Identifies the market frame that makes products the obvious choice.
-
-**Key Deliverables**:
-- Positioning Strategy Document (30+ pages)
-- Positioning Statement & Framework
-- Competitive Positioning Battle Card
-- Message Architecture & Proof Points
-- Sales & Marketing Enablement Playbook
-- Persona-Specific Positioning Guide
-
-### 2. Product Launch Manager
-**File**: `product-marketing/pmm-launch-manager.md`
-**Color**: #DC2626 | **Emoji**: 🚀
-
-Orchestrates product launches with tiered frameworks, internal enablement, and analyst relations. The conductor ensuring every team hits the right note on launch day.
-
-**Key Deliverables**:
-- Tiered Launch Strategy & Playbook
-- Master Launch Timeline & Gantt Chart
-- Launch Readiness Checklist & Audit
-- Sales Enablement Package
-- Analyst Briefing Plan & Materials
-- Launch Campaign Calendar & Assets
-- Launch Day Communications Guide
-
-### 3. Competitive Intelligence Specialist
-**File**: `product-marketing/pmm-competitive-intelligence.md`
-**Color**: #2563EB | **Emoji**: 🔬
-
-Intelligence analyst who monitors competitors and prevents surprises. Builds battle cards, win/loss analysis, and competitive monitoring systems.
-
-**Key Deliverables**:
-- Competitive Landscape Map & Analysis
-- Detailed Competitive Profiles
-- Battle Card Collection
-- Win/Loss Analysis Report
-- Pricing Intelligence Report
-- G2/Capterra Reputation Analysis
-- Competitive Intelligence Dashboard
-
-### 4. Messaging Architect
-**File**: `product-marketing/pmm-messaging-architect.md`
-**Color**: #059669 | **Emoji**: 💬
-
-Distills complex SaaS products into messages that stick. Builds message houses, value propositions, and proof point architectures.
-
-**Key Deliverables**:
-- Message House Framework
-- Value Proposition Framework by Persona
-- Proof Point Library & Evidence Mapping
-- Message Use Case Library
-- Website Copy & Value Prop Templates
-- Sales Enablement Messaging Guide
-- Email & Campaign Messaging Playbook
-- Brand Voice & Tone Guidelines
-
-### 5. Customer Advocacy Manager
-**File**: `product-marketing/pmm-customer-advocacy.md`
-**Color**: #EA580C | **Emoji**: 🌟
-
-Transforms happy customers into advocates. Builds reference programs, case studies, and customer advisory boards.
-
-**Key Deliverables**:
-- Customer Reference Program Framework
-- Active Reference Account Database
-- Case Study Development Process & Pipeline
-- Published Case Study Library
-- G2/Capterra & Analyst Review Strategy
-- Customer Advisory Board Program
-- Customer Advocacy Content Strategy
-- Expansion Play & Upsell Program
+> **59 agents** indexed below. Last generated 2026-07-21.
 
 ---
 
-## Analytics Agents (5 agents)
+## Content Marketing
 
-### 1. Marketing Ops Architect
-**File**: `analytics/analytics-marketing-ops-architect.md`
-**Color**: #2563EB | **Emoji**: ⚙️
+_7 agents_
 
-Systems architect who builds the marketing machine. Designs lead lifecycle, MAP/CRM integration, and attribution models.
+| | Agent | File | Role |
+|---|---|---|---|
+| ✍️ | **Content Blog Strategist** | [`content/content-blog-strategist.md`](content/content-blog-strategist.md) | B2B SaaS blog architecture expert who builds organic traffic engines through pillar content and strategic SEO |
+| 📊 | **Content Case Study Producer** | [`content/content-case-study-producer.md`](content/content-case-study-producer.md) | Customer story architect who transforms wins into proof points that accelerate deal cycles and establish credibility |
+| ✏️ | **Content Copywriter** | [`content/content-copywriter.md`](content/content-copywriter.md) | Conversion-obsessed word architect who designs copy that moves SaaS buyers through consideration and into deals |
+| 📰 | **Content Newsletter Curator** | [`content/content-newsletter-curator.md`](content/content-newsletter-curator.md) | Email engagement architect who builds subscriber-obsessed newsletters that generate qualified leads and drive product adoption |
+| 👻 | **Content Thought Leadership Ghostwriter** | [`content/content-thought-leadership-ghostwriter.md`](content/content-thought-leadership-ghostwriter.md) | Executive voice architect who amplifies C-suite visibility through authentic LinkedIn strategy and industry influence |
+| 🎬 | **Content Video Script Writer** | [`content/content-video-script-writer.md`](content/content-video-script-writer.md) | Visual storyteller who engineers B2B video scripts that hook viewers in 3 seconds and drive action within 8 minutes |
+| 📑 | **Content Whitepaper Architect** | [`content/content-whitepaper-architect.md`](content/content-whitepaper-architect.md) | Research-backed thought leadership designer who builds gated authority assets that establish category expertise and qualify enterprise buyers |
 
-**Key Deliverables**:
-- Lead Lifecycle & Stage Definition Document
-- MAP & CRM Architecture Diagram
-- Lead Scoring Model Documentation
-- Field & Object Data Dictionary
-- Integration Workflow Documentation
-- Marketing Attribution Model & Documentation
-- Data Quality Dashboard & Monitoring Process
-- Marketing Operations Runbook
+## SEO & Organic Growth
 
-### 2. Marketing Performance Analyst
-**File**: `analytics/analytics-performance-analyst.md`
-**Color**: #059669 | **Emoji**: 📈
+_6 agents_
 
-Turns data into decisions, not just dashboards. Measures funnel metrics, cohort analysis, and channel ROI.
+| | Agent | File | Role |
+|---|---|---|---|
+| 🤖 | **AI Search Optimizer** | [`seo/seo-ai-search-optimizer.md`](seo/seo-ai-search-optimizer.md) | Forward-thinking strategist optimizing B2B SaaS for AI answer engines and where search is going, not where it's been |
+| ⚡ | **Content Optimizer** | [`seo/seo-content-optimizer.md`](seo/seo-content-optimizer.md) | Surgeon optimizing existing content for search visibility without full rewrites, maximizing content ROI through incremental improvements |
+| 🗝️ | **Keyword Researcher** | [`seo/seo-keyword-researcher.md`](seo/seo-keyword-researcher.md) | Data miner who maps B2B SaaS search landscape, competitive gaps, and buyer intent clusters before content strategy |
+| 🔗 | **Link Building Strategist** | [`seo/seo-link-building-strategist.md`](seo/seo-link-building-strategist.md) | Authority builder who earns links through strategy, PR, and relationship networks—never through buying or manipulation |
+| 🌍 | **Local & International SEO Specialist** | [`seo/seo-local-and-international.md`](seo/seo-local-and-international.md) | Multi-market growth strategist optimizing B2B SaaS for global expansion, localization, and regional keyword strategies |
+| 🔍 | **Technical SEO Auditor** | [`seo/seo-technical-auditor.md`](seo/seo-technical-auditor.md) | Forensic specialist uncovering crawlability issues, Core Web Vitals problems, and technical barriers to ranking |
 
-**Key Deliverables**:
-- Marketing Funnel Metrics Framework
-- Channel Performance & ROI Analysis (Monthly/Quarterly)
-- Cohort Analysis Report
-- Executive Dashboard
-- Campaign Performance Analysis
-- Marketing Mix Modeling Analysis
-- Funnel Conversion Analysis
-- Trend & Anomaly Analysis Report
+## Paid Media
 
-### 3. Conversion Rate Optimizer
-**File**: `analytics/analytics-conversion-rate-optimizer.md`
-**Color**: #DC2626 | **Emoji**: 🔧
+_6 agents_
 
-Treats every page as a revenue lever. Conducts A/B testing, heatmap analysis, and landing page optimization.
+| | Agent | File | Role |
+|---|---|---|---|
+| 📐 | **Attribution Analyst** | [`paid-media/paid-media-attribution-analyst.md`](paid-media/paid-media-attribution-analyst.md) | Truth-seeker ensuring no channel takes unearned credit through multi-touch attribution, incrementality testing, and measurement integrity |
+| 💵 | **Budget Optimizer** | [`paid-media/paid-media-budget-optimizer.md`](paid-media/paid-media-budget-optimizer.md) | CFO-minded marketer maximizing media spend ROI through portfolio optimization, diminishing returns modeling, and scenario analysis |
+| 🎨 | **Creative Strategist** | [`paid-media/paid-media-creative-strategist.md`](paid-media/paid-media-creative-strategist.md) | Creative director optimizing ad creative testing frameworks, messaging angles, and visual strategies for B2B SaaS conversion |
+| 💰 | **PPC Strategist** | [`paid-media/paid-media-ppc-strategist.md`](paid-media/paid-media-ppc-strategist.md) | ROI-obsessed bidder optimizing Google Ads for B2B SaaS conversion value, quality score, and efficient customer acquisition |
+| 🎯 | **Programmatic Media Buyer** | [`paid-media/paid-media-programmatic-buyer.md`](paid-media/paid-media-programmatic-buyer.md) | Algorithmic strategist optimizing display and programmatic buys for B2B SaaS brand awareness, retargeting, and influenced pipeline |
+| 📢 | **Social Ads Specialist** | [`paid-media/paid-media-social-ads-specialist.md`](paid-media/paid-media-social-ads-specialist.md) | Precision B2B targeter optimizing LinkedIn, Meta, and Twitter ads for account-based marketing and high-intent lead generation |
 
-**Key Deliverables**:
-- Conversion Audit & Opportunity Analysis
-- User Research & Behavioral Insights Report
-- A/B Testing Roadmap & Prioritization
-- Heat Map & Session Recording Analysis
-- Form Optimization Framework & Strategy
-- Landing Page Testing Report
-- Pricing Page Optimization Strategy
-- Demo Request Flow Optimization
-- Conversion Analytics Dashboard
+## Social Media
 
-### 4. Marketing Data Storyteller
-**File**: `analytics/analytics-data-storyteller.md`
-**Color**: #7C3AED | **Emoji**: 📊
+_6 agents_
 
-Translator between spreadsheet chaos and executive clarity. Creates board-ready reporting and data visualizations.
+| | Agent | File | Role |
+|---|---|---|---|
+| 🏘️ | **Community Strategist** | [`social/social-community-builder.md`](social/social-community-builder.md) | SaaS community-led growth expert building engaged, self-sustaining communities across Slack, Discord, and forums that drive retention and advocacy |
+| 🤝 | **B2B Influencer & Creator Partnerships Manager** | [`social/social-influencer-partnerships.md`](social/social-influencer-partnerships.md) | SaaS partnership strategist who identifies, recruits, and manages micro-influencers and industry creators to amplify brand reach and drive qualified leads |
+| 💼 | **LinkedIn Organic Strategist** | [`social/social-linkedin-strategist.md`](social/social-linkedin-strategist.md) | B2B SaaS LinkedIn master who transforms brands into industry thought leaders through algorithm-native organic strategies |
+| 🔴 | **Reddit Community Specialist** | [`social/social-reddit-specialist.md`](social/social-reddit-specialist.md) | B2B SaaS expert in authentic Reddit engagement, the 90/10 rule, and building credibility through value-first community contribution |
+| 🐦 | **Twitter/X Strategist** | [`social/social-twitter-strategist.md`](social/social-twitter-strategist.md) | B2B SaaS authority on X/Twitter real-time engagement, thread mechanics, and community-driven growth for tech brands |
+| ▶️ | **YouTube Producer & Content Strategist** | [`social/social-youtube-producer.md`](social/social-youtube-producer.md) | B2B SaaS YouTube specialist who builds searchable, watch-time-optimized educational video content that attracts and converts decision-makers |
 
-**Key Deliverables**:
-- Executive Marketing Dashboard
-- Marketing Business Review Presentation
-- Campaign Post-Mortem Report
-- Customer Quarterly Business Review (QBR)
-- Data Visualization & Template Library
-- Trend Analysis Report
-- Competitive & Market Position Report
-- ROI & Attribution Analysis Report
+## Email Marketing
 
-### 5. Customer Insights Researcher
-**File**: `analytics/analytics-customer-insights-researcher.md`
-**Color**: #0891B2 | **Emoji**: 🔎
+_5 agents_
 
-Voice of the customer who conducts research so the team doesn't guess. Develops personas, jobs-to-be-done, and customer research programs.
+| | Agent | File | Role |
+|---|---|---|---|
+| ⚙️ | **Marketing Automation Engineer** | [`email/email-automation-engineer.md`](email/email-automation-engineer.md) | B2B SaaS automation architect building sophisticated behavioral workflows in Marketo, HubSpot, Pardot, and ActiveCampaign that run 24/7 while marketing sleeps |
+| ✉️ | **Email Copywriter & Conversion Specialist** | [`email/email-copywriter.md`](email/email-copywriter.md) | B2B SaaS email copy expert who understands that subject lines are worth more than email bodies, and that every word drives or kills conversions |
+| 📬 | **Email Deliverability Specialist** | [`email/email-deliverability-specialist.md`](email/email-deliverability-specialist.md) | B2B SaaS email infrastructure expert managing authentication, list health, and spam filter avoidance—the plumber nobody notices when they do their job right |
+| 🔄 | **Email Lifecycle Architect** | [`email/email-lifecycle-architect.md`](email/email-lifecycle-architect.md) | B2B SaaS email journey designer who architects multi-touch campaigns from onboarding through retention, creating product-like experiences in the inbox |
+| 📈 | **Newsletter Growth & Monetization Strategist** | [`email/email-newsletter-growth-strategist.md`](email/email-newsletter-growth-strategist.md) | B2B SaaS newsletter specialist growing subscriber bases through referral programs, strategic partnerships, and converting subscribers into revenue |
 
-**Key Deliverables**:
-- Buyer & User Persona Development
-- Jobs-to-be-Done Analysis
-- Customer Research Report
-- Qualitative Interview Summary
-- Quantitative Survey Analysis & Findings
-- User Testing Report
-- Competitive Positioning Research
-- Customer Feedback Repository & Synthesis
-- Market Segmentation & Sizing
-- Research Roadmap
+## Design
 
----
+_5 agents_
 
-## Project Management Agents (4 agents)
+| | Agent | File | Role |
+|---|---|---|---|
+| 🖼️ | **Ad Creative Producer** | [`design/design-ad-creative-producer.md`](design/design-ad-creative-producer.md) | Digital ad creative designer optimizing platform-specific formats for B2B SaaS performance |
+| 🎨 | **Brand Identity Strategist** | [`design/design-brand-identity-strategist.md`](design/design-brand-identity-strategist.md) | B2B SaaS brand identity expert translating business strategy into cohesive visual systems |
+| ✨ | **Content Visual Designer** | [`design/design-content-visual-designer.md`](design/design-content-visual-designer.md) | Blog and social content designer creating scalable visual systems for marketing self-sufficiency |
+| 📊 | **Presentation Designer** | [`design/design-presentation-designer.md`](design/design-presentation-designer.md) | Sales deck and pitch deck designer creating visual narratives that move buyers through decision journeys |
+| 🖥️ | **UI Landing Page Specialist** | [`design/design-ui-landing-page-specialist.md`](design/design-ui-landing-page-specialist.md) | High-converting landing page designer optimizing visual hierarchy and conversion signals |
 
-### 1. Campaign Coordinator
-**File**: `project-management/pm-campaign-coordinator.md`
-**Color**: #2563EB | **Emoji**: 📋
+## Sales Enablement
 
-Ensures brilliant marketing ideas actually ship on time. Manages campaign timelines, cross-functional coordination, and scope management.
+_6 agents_
 
-**Key Deliverables**:
-- Campaign Charter & Scope Document
-- Campaign Timeline & Project Plan
-- Campaign Stakeholder Map & Communications Plan
-- Campaign Risk & Issue Log
-- Campaign Execution Dashboard
-- Quality Gate Checklist
-- Campaign Retrospective & Lessons Learned
-- Campaign Results & ROI Report
+| | Agent | File | Role |
+|---|---|---|---|
+| ♟️ | **Deal Strategist** | [`sales/sales-deal-strategist.md`](sales/sales-deal-strategist.md) | Complex B2B deal navigator orchestrating multi-stakeholder sales cycles and procurement processes |
+| 🎤 | **Discovery Coach** | [`sales/sales-discovery-coach.md`](sales/sales-discovery-coach.md) | Sales discovery methodology coach building deeper buyer insight through question-driven selling frameworks |
+| 📋 | **Enablement Content Creator** | [`sales/sales-enablement-content-creator.md`](sales/sales-enablement-content-creator.md) | Sales content strategist bridging marketing materials and buyer conversations through battle cards and tools |
+| 🎯 | **Outbound Strategist** | [`sales/sales-outbound-strategist.md`](sales/sales-outbound-strategist.md) | Cold outreach strategist designing signal-based multi-channel sequences for B2B SaaS prospecting |
+| 📊 | **Pipeline Analyst** | [`sales/sales-pipeline-analyst.md`](sales/sales-pipeline-analyst.md) | Pipeline health specialist diagnosing velocity problems and forecasting accuracy issues before they impact revenue |
+| 📝 | **Proposal Architect** | [`sales/sales-proposal-architect.md`](sales/sales-proposal-architect.md) | B2B SaaS proposal strategist designing winning proposals and RFP responses that sell when you're not in the room |
 
-### 2. Resource Allocator
-**File**: `project-management/pm-resource-allocator.md`
-**Color**: #059669 | **Emoji**: 👥
+## Product Marketing
 
-Prevents burnout AND missed deadlines. Plans capacity, manages skills inventory, and balances workload.
+_5 agents_
 
-**Key Deliverables**:
-- Team Skills Inventory & Capacity Map
-- Resource Capacity Plan (12-month rolling)
-- Project Request Intake & Prioritization Process
-- Team Workload & Utilization Dashboard
-- Quarterly Resource & Staffing Plan
-- Skills Gap Analysis & Training Plan
-- Capacity Constraint & Escalation Report
-- Project Backlog & Requests Tracking
-- Resource Plan vs. Actual Analysis
+| | Agent | File | Role |
+|---|---|---|---|
+| 🔬 | **Competitive Intelligence Specialist** | [`product-marketing/pmm-competitive-intelligence.md`](product-marketing/pmm-competitive-intelligence.md) | Competitive analysis and battle card development for B2B SaaS |
+| 🌟 | **Customer Advocacy Manager** | [`product-marketing/pmm-customer-advocacy.md`](product-marketing/pmm-customer-advocacy.md) | Customer marketing, advocacy programs, and reference development for B2B SaaS |
+| 🚀 | **Product Launch Manager** | [`product-marketing/pmm-launch-manager.md`](product-marketing/pmm-launch-manager.md) | Product launch orchestration with tiered frameworks and internal enablement |
+| 💬 | **Messaging Architect** | [`product-marketing/pmm-messaging-architect.md`](product-marketing/pmm-messaging-architect.md) | Message house development and value proposition frameworks for SaaS |
+| 🎯 | **Product Positioning Strategist** | [`product-marketing/pmm-positioning-strategist.md`](product-marketing/pmm-positioning-strategist.md) | B2B SaaS positioning expert using category design and competitive framing |
 
-### 3. Marketing Agile Facilitator
-**File**: `project-management/pm-marketing-ops-scrum-master.md`
-**Color**: #7C3AED | **Emoji**: 🏃
+## Analytics
 
-Brings agile discipline to marketing. Facilitates sprints, retrospectives, and continuous improvement.
+_5 agents_
 
-**Key Deliverables**:
-- Agile Marketing Operating Charter
-- Sprint Backlog & Planning Template
-- Sprint Stories & Acceptance Criteria Template
-- Daily Standup Notes & Issue Tracker
-- Sprint Velocity Chart & Trend Analysis
-- Sprint Retrospective Summary
-- Backlog Grooming & Refinement Session Notes
-- Kanban Board or Sprint Tracking Tool
-- Interrupt & Urgent Request Log
-- Sprint Demo or Show and Tell
+| | Agent | File | Role |
+|---|---|---|---|
+| 🔧 | **Conversion Rate Optimizer** | [`analytics/analytics-conversion-rate-optimizer.md`](analytics/analytics-conversion-rate-optimizer.md) | CRO for B2B SaaS funnels, testing methodology, and landing page optimization |
+| 🔎 | **Customer Insights Researcher** | [`analytics/analytics-customer-insights-researcher.md`](analytics/analytics-customer-insights-researcher.md) | Customer research, surveys, user interviews, and persona development |
+| 📊 | **Marketing Data Storyteller** | [`analytics/analytics-data-storyteller.md`](analytics/analytics-data-storyteller.md) | Executive reporting, data visualization, and campaign post-mortems |
+| ⚙️ | **Marketing Ops Architect** | [`analytics/analytics-marketing-ops-architect.md`](analytics/analytics-marketing-ops-architect.md) | Marketing technology stack, data integration, and lead lifecycle design |
+| 📈 | **Marketing Performance Analyst** | [`analytics/analytics-performance-analyst.md`](analytics/analytics-performance-analyst.md) | Marketing funnel metrics, cohort analysis, and ROI measurement |
 
-### 4. Client Success Manager
-**File**: `project-management/pm-client-success-manager.md`
-**Color**: #EA580C | **Emoji**: 🤝
+## Project Management
 
-Keeps clients happy AND teams productive. Manages QBRs, expectation setting, and scope creep.
+_4 agents_
 
-**Key Deliverables**:
-- Client Engagement Agreement/SOW
-- Client Success Plan
-- Weekly or Bi-Weekly Status Update Template
-- Monthly Check-In Meeting Agenda & Notes
-- Quarterly Business Review Presentation
-- Scope Change Log & Approval Record
-- SLA & Performance Tracking Dashboard
-- Client Satisfaction Survey Results & Action Plan
-- Risk Register & Issue Log
-- Contract Renewal & Expansion Planning Document
+| | Agent | File | Role |
+|---|---|---|---|
+| 📋 | **Campaign Coordinator** | [`project-management/pm-campaign-coordinator.md`](project-management/pm-campaign-coordinator.md) | Marketing campaign project management, agile marketing, and cross-functional coordination |
+| 🤝 | **Client Success Manager** | [`project-management/pm-client-success-manager.md`](project-management/pm-client-success-manager.md) | Agency-client relationship management, QBRs, and expectation setting |
+| 🏃 | **Marketing Agile Facilitator** | [`project-management/pm-marketing-ops-scrum-master.md`](project-management/pm-marketing-ops-scrum-master.md) | Agile marketing practices, sprint planning, and team velocity |
+| 👥 | **Resource Allocator** | [`project-management/pm-resource-allocator.md`](project-management/pm-resource-allocator.md) | Team capacity planning, skills-based assignment, and workload balancing |
 
----
+## Client Operations
 
-## Client Operations Agents (4 agents)
+_4 agents_
 
-### 1. Reporting Specialist
-**File**: `client-ops/ops-reporting-specialist.md`
-**Color**: #2563EB | **Emoji**: 📊
+| | Agent | File | Role |
+|---|---|---|---|
+| 💰 | **Financial Tracker** | [`client-ops/ops-financial-tracker.md`](client-ops/ops-financial-tracker.md) | Marketing budget management, vendor management, and ROI reporting |
+| ⚖️ | **Legal Compliance Officer** | [`client-ops/ops-legal-compliance.md`](client-ops/ops-legal-compliance.md) | Marketing legal compliance, GDPR/CCPA, FTC rules, and risk management |
+| ✅ | **Quality Assurance Manager** | [`client-ops/ops-quality-assurance.md`](client-ops/ops-quality-assurance.md) | Marketing QA, brand compliance, and launch readiness checklists |
+| 📊 | **Reporting Specialist** | [`client-ops/ops-reporting-specialist.md`](client-ops/ops-reporting-specialist.md) | Client reporting, dashboards, and KPI framework design |
 
-Builds dashboards clients actually use. Designs KPI frameworks and automated reporting.
-
-**Key Deliverables**:
-- KPI Framework & Success Metrics Definition
-- Executive Dashboard
-- Detailed Marketing Performance Dashboard
-- Weekly Summary Report
-- Monthly Performance Report
-- Quarterly Business Review Report
-- Campaign Performance Dashboard
-- Channel Performance & Attribution Report
-- Data Integration & Automation Documentation
-- Client Reporting Template Library
-
-### 2. Quality Assurance Manager
-**File**: `client-ops/ops-quality-assurance.md`
-**Color**: #DC2626 | **Emoji**: ✅
-
-Quality gatekeeper who defaults to "needs work." Prevents launches with critical issues.
-
-**Key Deliverables**:
-- Master QA Checklist Framework
-- Brand Guideline Audit & Compliance Report
-- Technical QA Checklist & Test Plan
-- Copy & Messaging Quality Report
-- Legal & Compliance Review Checklist
-- Launch Readiness Checklist
-- QA Findings Log & Severity Tracking
-- Accessibility Compliance Report
-- QA Process Documentation & Training
-- Post-Launch Issue Tracking & Resolution
-
-### 3. Financial Tracker
-**File**: `client-ops/ops-financial-tracker.md`
-**Color**: #059669 | **Emoji**: 💰
-
-Makes marketing accountable to the bottom line. Manages budgets, vendor relationships, and ROI.
-
-**Key Deliverables**:
-- Annual Marketing Budget & Planning
-- Monthly Budget Variance Report
-- Channel Economics & ROI Analysis
-- Campaign ROI Analysis
-- Vendor Contract & Performance Summary
-- Cost Allocation & Reporting by Business Unit
-- Financial Dashboard & KPI Tracking
-- Quarterly Financial Business Review
-- Marketing Spend Audit & Efficiency Analysis
-- Financial Policy & Procurement Guidelines
-
-### 4. Legal Compliance Officer
-**File**: `client-ops/ops-legal-compliance.md`
-**Color**: #7C3AED | **Emoji**: ⚖️
-
-Keeps creative teams out of legal trouble. Ensures GDPR, CCPA, FTC, and trademark compliance.
-
-**Key Deliverables**:
-- Marketing Compliance Policy & Guidelines Manual
-- Privacy Policy & Consent Management Framework
-- Email Marketing Compliance Checklist
-- Advertising Claims Substantiation Process
-- GDPR & CCPA Compliance Audit Report
-- Intellectual Property & Trademark Audit
-- Pre-Launch Compliance Review Checklist
-- Compliance Training Materials & Documentation
-- Data Subject Rights Request Process & Templates
-- Third-Party Service Provider & Vendor Compliance
-- Compliance Issue Log & Risk Register
-
----
-
-## Key Features Across All Agents
-
-✓ **Comprehensive Identity Sections** - Deep domain expertise with distinctive personality
-✓ **Clear Mission Statements** - 3-5 primary objectives defining agent purpose
-✓ **8 Critical Rules** - Non-negotiable operating principles for each agent
-✓ **Detailed Deliverables** - Specific outputs with measurable components
-✓ **Quantified Success Metrics** - 10 concrete KPIs with targets for each agent
-✓ **B2B SaaS Focused** - All content tailored to SaaS marketing context
-✓ **Original Content** - 100% original writing with real frameworks and examples
-✓ **Standardized Format** - Consistent structure across all 18 agent profiles
-
----
-
-## Usage Guidelines
-
-Each agent file follows this standardized markdown structure:
-
-```markdown
----
-name: "Agent Name"
-description: "One-line description"
-color: "#hexcolor"
-emoji: "🎯"
----
-
-# Agent Name
-
-## Identity
-[2-3 sentence persona with deep domain expertise]
-
-## Core Mission
-[3-5 bullet points defining primary objectives]
-
-## Critical Rules
-[8 numbered rules the agent MUST follow]
-
-## Deliverables
-[Specific outputs with details]
-
-## Success Metrics
-[Measurable KPIs with specific targets]
-```
-
-These agents can be used as:
-- Reference guides for team roles and responsibilities
-- Training materials for new team members
-- Performance evaluation frameworks
-- Hiring job descriptions
-- Accountability standards for cross-functional teams
-- Strategic planning documents
-
----
-
-## File Structure
-
-```
-saas-marketing-agents/
-├── AGENTS_INDEX.md (this file)
-├── product-marketing/
-│   ├── pmm-positioning-strategist.md
-│   ├── pmm-launch-manager.md
-│   ├── pmm-competitive-intelligence.md
-│   ├── pmm-messaging-architect.md
-│   └── pmm-customer-advocacy.md
-├── analytics/
-│   ├── analytics-marketing-ops-architect.md
-│   ├── analytics-performance-analyst.md
-│   ├── analytics-conversion-rate-optimizer.md
-│   ├── analytics-data-storyteller.md
-│   └── analytics-customer-insights-researcher.md
-├── project-management/
-│   ├── pm-campaign-coordinator.md
-│   ├── pm-resource-allocator.md
-│   ├── pm-marketing-ops-scrum-master.md
-│   └── pm-client-success-manager.md
-└── client-ops/
-    ├── ops-reporting-specialist.md
-    ├── ops-quality-assurance.md
-    ├── ops-financial-tracker.md
-    └── ops-legal-compliance.md
-```
-
----
-
-*Created: April 3, 2026*
-*Total Content: 22,085 words across 18 comprehensive agent profiles*
