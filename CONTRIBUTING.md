@@ -144,7 +144,7 @@ All agent files must pass our linting checks.
 ### Run Local Linting
 
 ```bash
-./lint-agents.sh content-marketing/content-blog-writer.md
+./lint-agents.sh content/content-blog-strategist.md
 ```
 
 Or lint all agents in a category:

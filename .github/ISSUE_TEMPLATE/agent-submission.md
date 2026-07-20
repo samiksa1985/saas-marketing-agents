@@ -47,7 +47,7 @@ Choose from:
 
 ## Submission Checklist
 
-- [ ] I have read the [CONTRIBUTING.md](../CONTRIBUTING.md) guidelines
+- [ ] I have read the [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines
 - [ ] I have created the agent file with proper YAML frontmatter (name, slug, category, description, expertise)
 - [ ] The agent description is clear and at least 50 words
 - [ ] I have included Core Expertise, Responsibilities, Key Personality Traits sections

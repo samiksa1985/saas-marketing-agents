@@ -33,3 +33,9 @@
 *.ttf binary
 *.otf binary
 *.font binary
+
+# GitHub Linguist — this is a Markdown content/knowledge repo, not a shell project.
+# Count Markdown toward language stats and treat helper scripts as tooling.
+*.md linguist-detectable=true
+*.md linguist-documentation=false
+scripts/*.sh linguist-vendored=true

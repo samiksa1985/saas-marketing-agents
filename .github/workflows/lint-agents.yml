@@ -1,61 +1,43 @@
 name: Lint Agents
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - 'scripts/lint-agents.sh'
+      - '.github/workflows/lint-agents.yml'
   pull_request:
     paths:
-      - 'content-marketing/**'
-      - 'seo-organic-growth/**'
-      - 'paid-media/**'
-      - 'social-media/**'
-      - 'email/**'
-      - 'design/**'
-      - 'sales-enablement/**'
-      - 'product-marketing/**'
-      - 'analytics/**'
-      - 'project-management/**'
-      - 'client-ops/**'
-      - 'strategy/**'
+      - '**/*.md'
+      - 'scripts/lint-agents.sh'
+      - '.github/workflows/lint-agents.yml'
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     name: Lint Agent Files
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up linting environment
+      - name: Lint all agent persona files
         run: |
-          sudo apt-get update
-          sudo apt-get install -y yamllint
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v40
-        with:
-          files: |
-            content-marketing/**/*.md
-            seo-organic-growth/**/*.md
-            paid-media/**/*.md
-            social-media/**/*.md
-            email/**/*.md
-            design/**/*.md
-            sales-enablement/**/*.md
-            product-marketing/**/*.md
-            analytics/**/*.md
-            project-management/**/*.md
-            client-ops/**/*.md
-            strategy/**/*.md
-
-      - name: Run linting on changed files
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            echo "Linting: $file"
-            ./lint-agents.sh "$file" || exit 1
-          done
-
-      - name: Linting complete
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: echo "All agent files passed linting checks ✓"
+          set -euo pipefail
+          # The 59 canonical agent personas live in these 11 category directories.
+          # (strategy/ holds framework docs, not agents, so it is not linted here.)
+          dirs="content seo paid-media social email design sales product-marketing analytics project-management client-ops"
+          count=0
+          fail=0
+          while IFS= read -r file; do
+            count=$((count + 1))
+            if ! bash scripts/lint-agents.sh "$file"; then
+              fail=$((fail + 1))
+            fi
+          done < <(find $dirs -name '*.md' -type f | sort)
+          echo "Linted $count agent files; $fail failed."
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::$fail agent file(s) failed validation."
+            exit 1
+          fi
+          echo "All agent files passed linting checks ✓"

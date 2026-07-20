@@ -19,7 +19,7 @@
 
 ## Checklist
 
-- [ ] I have read and followed the [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines
+- [ ] I have read and followed the [CONTRIBUTING.md](../CONTRIBUTING.md) guidelines
 - [ ] My agent file includes valid YAML frontmatter with all required fields (name, slug, category, description, expertise)
 - [ ] The agent description and sections are at least 50 words each
 - [ ] I have included the following sections: Overview, Core Expertise, Responsibilities, Key Personality Traits, Example Workflows

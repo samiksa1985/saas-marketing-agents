@@ -12,10 +12,10 @@ This guide shows how to use SaaS Marketing Agents with your favorite AI coding t
 
 ```bash
 # Reference an agent file directly
-claude content-marketing/content-blog-writer.md
+claude content/content-blog-strategist.md
 
 # Or copy the agent content into your prompt
-claude --context content-marketing/content-blog-writer.md "Write a blog post about..."
+claude --context content/content-blog-strategist.md "Write a blog post about..."
 ```
 
 **Best for**: Full-featured agent orchestration, CATALYST framework workflows, complex multi-agent projects
@@ -34,14 +34,14 @@ claude --context content-marketing/content-blog-writer.md "Write a blog post abo
 **Usage**:
 
 1. Open Cursor and navigate to your `saas-marketing-agents` folder
-2. Open the agent file you need (e.g., `content-marketing/content-blog-writer.md`)
+2. Open the agent file you need (e.g., `content/content-blog-strategist.md`)
 3. Use `@` mentions to reference the agent in your prompts
 4. Type your request in the Cursor Chat window
 
 Example:
 
 ```
-@content-blog-writer Create a technical blog post about Kubernetes for DevOps SaaS companies
+@content-blog-strategist Create a technical blog post about Kubernetes for DevOps SaaS companies
 ```
 
 **Best for**: Single-agent workflows, quick content generation, interactive editing
@@ -92,7 +92,7 @@ function generateBlogPost() {
 aider --model claude-opus
 
 # In the Aider session, reference agents:
-/add content-marketing/content-blog-writer.md
+/add content/content-blog-strategist.md
 
 # Or paste the agent directly:
 # Here's my agent: [paste agent content]
@@ -160,7 +160,7 @@ Now help me with: [your task]
 Most tools understand file references:
 
 ```
-Using content-marketing/content-blog-writer.md to [your task]
+Using content/content-blog-strategist.md to [your task]
 ```
 
 ### 3. Chain Multiple Agents
@@ -191,8 +191,8 @@ Each agent includes expertise tags. Search agents by specialty:
 Ensure the file path is correct relative to your project root:
 
 ```
-✓ Correct: content-marketing/content-blog-writer.md
-✗ Wrong: saas-marketing-agents/content-marketing/content-blog-writer.md
+✓ Correct: content/content-blog-strategist.md
+✗ Wrong: saas-marketing-agents/content/content-blog-strategist.md
 ```
 
 ### YAML Parsing Error
@@ -202,10 +202,9 @@ Ensure the frontmatter in agent files is valid YAML:
 ```yaml
 ---
 name: "Agent Name"
-slug: "agent-slug"
-category: "category"
-description: "Description"
-expertise: [tag1, tag2]
+description: "One-line role and specialty"
+color: "#7C3AED"
+emoji: "🤖"
 ---
 ```
 
