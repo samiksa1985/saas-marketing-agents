@@ -14,8 +14,8 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 - [ ] Verify install flow end-to-end for Cursor, Copilot, Aider, Windsurf; correct any drift in `integrations/README.md`.
 
 ## P1 — distribution (pre-approved lists only; follow each list's exact rules)
-- [ ] Submit to `langgptai/awesome-claude-prompts` (PR, Business & Marketing section).
-- [ ] Submit to `jmedia65/awesome-ai-marketing` (PR).
+- [x] ~~Submit to `langgptai/awesome-claude-prompts`~~ — assessed 2026-07-21: it's a single-prompt library, not a repo-link list; not a clean fit, skipped.
+- [x] Submit to `jmedia65/awesome-ai-marketing` — done 2026-07-21 ([PR #20](https://github.com/jmedia65/awesome-ai-marketing/pull/20)).
 - [ ] Prepare + submit to `hesreallyhim/awesome-claude-code` (ISSUE form, human-written, no sales language) — only once README + install are polished.
 - [ ] Prepare + submit to `VoltAgent/awesome-agent-skills` (PR, marketing category; lead with genuine usage).
 - [ ] Submit the plugin to the Anthropic community marketplace (`anthropics/claude-plugins-community`) via the in-app form; run `claude plugin validate` first.

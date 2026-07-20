@@ -4,6 +4,14 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-21 — Distribution + discoverability (manual)
+
+**Shipped:** Set 20 GitHub topics + a keyword-rich description. Submitted the repo to `jmedia65/awesome-ai-marketing` under *Workflow Automation → For Developers Building Custom Tools* ([PR #20](https://github.com/jmedia65/awesome-ai-marketing/pull/20)). Stood up the 4×/day maintenance routine.
+
+**Deferred:** higher-bar awesome-lists (`hesreallyhim/awesome-claude-code` issue form, `VoltAgent/awesome-agent-skills` PR) until the repo has some traction; Anthropic community-marketplace submission needs the owner's in-app form (see backlog).
+
+---
+
 ### 2026-07-21 — Bootstrap / v1.1.0 overhaul (manual)
 
 **Shipped:**
