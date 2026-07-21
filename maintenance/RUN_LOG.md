@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-21 — Brand context template + CATALYST wiring (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; all 59 agents pass `scripts/lint-agents.sh`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (well inside the 90-day window).
+
+**Shipped:** Top P1 backlog item — [`templates/brand-context.md`](../templates/brand-context.md), a 13-section fill-in template covering ICP, personas, positioning, messaging pillars, citable proof, competitors, voice/banned words, terminology, compliance, channels, and current goals. Wired the CATALYST orchestrator to load it as **Step 0** before routing any work (`plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md`), and added a "Prerequisite: Brand Context" section to `catalyst-strategy.md` (**both** dual-located copies, with correct relative link per location). Shipped a plugin-local copy at `plugins/saas-marketing/templates/` so plugin installs get the template too. Added pointers in the README quick start and `strategy/QUICKSTART.md`.
+
+The template doubles as an anti-fabrication boundary: agents may only assert customer names, metrics, and certifications recorded in it, and must emit `[NEEDS INPUT: …]` markers otherwise.
+
+**Verified:** re-ran the link check (0 broken, including the 4 new relative links), re-validated both manifests, re-linted the touched files.
+
+**Deferred:** wiring the 12 category skills to read `brand-context.md` — filed as the next P1 item, since a user invoking a category skill directly still gets untailored output.
+
+---
+
 ### 2026-07-21 — Distribution + discoverability (manual)
 
 **Shipped:** Set 20 GitHub topics + a keyword-rich description. Submitted the repo to `jmedia65/awesome-ai-marketing` under *Workflow Automation → For Developers Building Custom Tools* ([PR #20](https://github.com/jmedia65/awesome-ai-marketing/pull/20)). Stood up the 4×/day maintenance routine.

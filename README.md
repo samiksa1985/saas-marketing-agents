@@ -49,6 +49,12 @@ That's it — the 13 skills load as `/saas-marketing:<skill>` (e.g. `/saas-marke
 
 The orchestrator routes positioning to product marketing, assets to content & design, distribution to social/email/paid, and measurement to analytics.
 
+### Then: tell it who you are (15 minutes, biggest quality jump)
+
+Copy [`templates/brand-context.md`](templates/brand-context.md) to `brand-context.md` in your project root and fill it in — ICP, positioning, messaging pillars, voice, banned words, and the proof you can actually cite.
+
+CATALYST reads it before routing anything and passes it to every specialist, so output sounds like *your* company rather than generic B2B SaaS. It also bounds what the agents may assert: customer names, metrics, and certifications not recorded there are surfaced as `[NEEDS INPUT: …]` instead of being invented.
+
 ### Or use the files directly
 
 Every agent is plain Markdown, so it works in any AI tool:

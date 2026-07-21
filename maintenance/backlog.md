@@ -6,7 +6,8 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 - [ ] (none open — health checks pass as of 2026-07-21)
 
 ## P1 — high-leverage
-- [ ] Add `brand-context.md` template + wire the CATALYST orchestrator to read it first, so agent output is tailored to a user's ICP/product/voice.
+- [x] Add `brand-context.md` template + wire the CATALYST orchestrator to read it first, so agent output is tailored to a user's ICP/product/voice. — done 2026-07-21 (`templates/brand-context.md`; orchestrator Step 0).
+- [ ] Wire the 12 category skills to read `brand-context.md` too (currently only the CATALYST orchestrator does; a user invoking `/saas-marketing:content-marketing` directly still gets untailored output).
 - [ ] Add a monthly ABM loop to `loops/` (account selection → tiered messaging → multi-channel sequencing → measurement).
 - [ ] Add a weekly competitive-intel loop to `loops/`.
 - [ ] Expose the 59 personas as native Claude Code subagents under `plugins/saas-marketing/agents/` (convert frontmatter to subagent format; keep skill-referenced copies working).

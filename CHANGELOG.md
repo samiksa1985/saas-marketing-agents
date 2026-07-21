@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Brand context template** ([`templates/brand-context.md`](templates/brand-context.md)) — a fill-in file capturing ICP,
+  positioning, messaging pillars, citable proof, voice, terminology, and compliance constraints. The CATALYST
+  orchestrator now loads it as Step 0 and passes it to every specialist, so output is tailored to your company —
+  and agents may only assert facts recorded there, emitting `[NEEDS INPUT: …]` markers instead of inventing
+  customers, metrics, or certifications. Shipped with the plugin at `plugins/saas-marketing/templates/`.
+
 _Tracked in [ROADMAP.md](ROADMAP.md). This project is actively maintained — see the roadmap for what's next._
 
 ## [1.1.0] — 2026-07-21

@@ -20,6 +20,17 @@ CATALYST operates on five core principles:
 
 5. **Continuous Improvement**: Built-in feedback loops and attribution analysis ensure campaigns improve through iterative optimization and learning.
 
+## Prerequisite: Brand Context
+
+Before any phase begins, CATALYST loads the engagement's **brand context** — a single `brand-context.md` file in the project root capturing ICP, positioning, messaging pillars, citable proof, voice, terminology, and compliance constraints. Start from [`templates/brand-context.md`](../../../templates/brand-context.md).
+
+Every agent receives this file alongside its task brief, and its rules override agent defaults. Two consequences matter:
+
+- **Output is tailored, not generic.** Specialists write in the company's voice, to its ICP, against its real competitors.
+- **Facts are bounded.** Agents may only assert customer names, metrics, certifications, and outcomes recorded in the brand context or supplied in the request. Anything else is emitted as a `[NEEDS INPUT: …]` marker, never invented.
+
+If the file is absent, CATALYST offers to draft one and proceeds on explicitly-labelled assumptions. Phase 0 (Discovery) exists in part to fill the gaps a thin brand context leaves.
+
 ## The 59 CATALYST Agents Across 12 Categories
 
 ### Discovery & Insights (8 agents)

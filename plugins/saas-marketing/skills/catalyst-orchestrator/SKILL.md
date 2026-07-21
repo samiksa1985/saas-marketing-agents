@@ -5,6 +5,19 @@ description: "Master orchestrator for B2B SaaS marketing campaigns using the CAT
 
 # CATALYST Orchestrator: Master Marketing Framework
 
+## Step 0 (always first): Load brand context
+
+**Before routing any work or producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Pass its contents to every specialist agent you route work to, along with the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+Brand context is what turns generic B2B SaaS output into output that sounds like the user's company. Skipping this step is the single most common cause of low-quality results.
+
+---
+
 ## What This Is
 
 CATALYST (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation) is the master orchestration framework for enterprise-scale B2B SaaS marketing. It coordinates 59 specialized agents across 12 functional categories executing campaigns from strategy through optimization. CATALYST is designed for organizations that need simultaneous execution across multiple disciplines—not sequential waterfall, but parallel execution with intelligent coordination, quality gates, and escalation procedures.
@@ -512,6 +525,7 @@ CATALYST is designed for coordinated, multi-phase campaigns. Do NOT use CATALYST
 
 ## Getting Started with CATALYST
 
+0. **Load Brand Context**: Read `brand-context.md` (see [Step 0](#step-0-always-first-load-brand-context)). If it's missing, offer the [template](../../templates/brand-context.md) before going further.
 1. **Assess Initiative Scope**: Is this CATALYST-Full (annual), CATALYST-Sprint (quarterly), or CATALYST-Micro (urgent)?
 2. **Review Current State**: Do you have existing strategy (skip to Phase 2) or starting fresh (start at Phase 0)?
 3. **Identify Key Stakeholders**: Who needs to approve strategy? Who owns execution?

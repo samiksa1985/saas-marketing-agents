@@ -2,6 +2,12 @@
 
 ## Before You Begin: Prerequisites
 
+### 0. Brand Context (do this first — 15 minutes)
+
+Copy [`templates/brand-context.md`](../templates/brand-context.md) to `brand-context.md` in your project root and fill it in. CATALYST reads it before Step 1 and hands it to every specialist it routes work to, so output matches your ICP, positioning, and voice instead of defaulting to generic B2B SaaS. It also defines the boundary on factual claims: agents may only cite customers, metrics, and certifications recorded there.
+
+A partly-filled file is fine — agents ask about gaps rather than inventing answers.
+
 ### 1. Technology Prerequisites
 You need these systems in place (or committed to setup during Phase 2):
 - **CRM System**: HubSpot, Salesforce, or Pipedrive (for lead tracking and pipeline visibility)
