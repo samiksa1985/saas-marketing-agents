@@ -9,7 +9,7 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 - [x] Add `brand-context.md` template + wire the CATALYST orchestrator to read it first, so agent output is tailored to a user's ICP/product/voice. — done 2026-07-21 (`templates/brand-context.md`; orchestrator Step 0).
 - [x] Wire the 12 category skills to read `brand-context.md` too, so invoking a category skill directly (e.g. `/saas-marketing:content-marketing`) is as tailored as going through CATALYST. — done 2026-07-22 (Step 0 block in all 13 `SKILL.md` files).
 - [x] Add a monthly ABM loop to `loops/` (account selection → tiered messaging → multi-channel sequencing → measurement). — done 2026-07-22 (`loops/monthly-abm-loop.md`; persistent account ledger carries state between runs).
-- [ ] Add a weekly competitive-intel loop to `loops/`.
+- [x] Add a weekly competitive-intel loop to `loops/`. — done 2026-07-22 (`loops/weekly-competitive-intel-loop.md`; watchlist + snapshot carry state, severity triage gate, public-sources-only boundary).
 - [ ] Add the Step 0 brand-context block to `loops/weekly-content-engine-loop.md` (it predates the template; the monthly ABM loop has one).
 - [ ] Expose the 59 personas as native Claude Code subagents under `plugins/saas-marketing/agents/` (convert frontmatter to subagent format; keep skill-referenced copies working).
 - [ ] Add a 60–90s demo GIF/asset for the README hero (orchestrator taking one brief and routing it).

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Weekly competitive-intel loop** ([`loops/weekly-competitive-intel-loop.md`](loops/weekly-competitive-intel-loop.md)) — a
+  fast weekly change-detection loop, distinct from the quarterly deep-dive the `pmm-competitive-intelligence` agent
+  runs on its own. Three parallel sweeps (public sources, search surface, AI-answer citations) diff against last
+  week's snapshot, then a **triage gate** assigns `watch` / `notify` / `act` severity, and only `act` items reach
+  messaging and battle cards. Carries a **competitor watchlist + snapshot** between runs, requires a source URL and
+  read-date on every claim, requires a second source or field corroboration before acting, sets an explicit
+  public-sources-only ethical boundary (no fake trials, no NDA-fishing), and treats a quiet week as a valid outcome
+  rather than manufacturing a finding.
 - **Monthly ABM loop** ([`loops/monthly-abm-loop.md`](loops/monthly-abm-loop.md)) — the recurring counterpart to the
   one-shot ABM workflow. Seven steps across account re-scoring, buying-committee coverage, tiered messaging, asset
   refresh, multi-channel sequencing, measurement, and next-cycle planning. Carries a persistent **account ledger**

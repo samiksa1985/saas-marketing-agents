@@ -136,8 +136,9 @@ Instead of prompting each specialist by hand, you give CATALYST a brief and it d
 Workflows are one-shot; **loops repeat**. The [`loops/`](loops/README.md) library holds recurring, agent-run workflows on a cadence:
 
 - **[Weekly Content Engine](loops/weekly-content-engine-loop.md)** — every week, ship one publish-ready, AEO/GEO-optimized asset + its distribution plan, with zero manual coordination.
+- **[Weekly Competitive Intel](loops/weekly-competitive-intel-loop.md)** — every week, diff your competitor watchlist against last week, triage what actually changed by severity, and update only the battle cards the change invalidates. Most weeks the honest answer is "nothing moved," and the loop says so.
 - **[Monthly ABM](loops/monthly-abm-loop.md)** — every month, re-score your target accounts against new signals, refresh tiered messaging, ship the next multi-channel touch, and retire what isn't working. Carries an account ledger between runs so coverage compounds.
-- _Quarterly launch and weekly competitive-intel loops are on the [roadmap](ROADMAP.md)._
+- _A quarterly launch loop is on the [roadmap](ROADMAP.md)._
 
 ---
 
