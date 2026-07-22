@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Monthly ABM loop** ([`loops/monthly-abm-loop.md`](loops/monthly-abm-loop.md)) — the recurring counterpart to the
+  one-shot ABM workflow. Seven steps across account re-scoring, buying-committee coverage, tiered messaging, asset
+  refresh, multi-channel sequencing, measurement, and next-cycle planning. Carries a persistent **account ledger**
+  between runs, so each month starts from what the last month learned; includes suppression rules for accounts in
+  live sales conversations and a fabrication guard on account research.
 - **Brand context template** ([`templates/brand-context.md`](templates/brand-context.md)) — a fill-in file capturing ICP,
   positioning, messaging pillars, citable proof, voice, terminology, and compliance constraints. The CATALYST
   orchestrator now loads it as Step 0 and passes it to every specialist, so output is tailored to your company —

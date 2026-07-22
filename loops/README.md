@@ -18,7 +18,7 @@ Each loop template below specifies:
 | Loop | Cadence | What it produces |
 |------|---------|------------------|
 | [Weekly Content Engine](weekly-content-engine-loop.md) | Weekly | One publish-ready, AEO/GEO-optimized asset + its distribution plan |
-| _Monthly ABM loop_ | Monthly | _(planned — see [ROADMAP](../ROADMAP.md))_ |
+| [Monthly ABM](monthly-abm-loop.md) | Monthly | An updated account ledger, a tiered multi-channel touch plan, and a read-out of what moved |
 | _Quarterly launch loop_ | Quarterly | _(planned)_ |
 | _Weekly competitive-intel loop_ | Weekly | _(planned)_ |
 

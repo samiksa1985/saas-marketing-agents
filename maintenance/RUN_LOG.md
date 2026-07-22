@@ -4,6 +4,22 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-22 — Monthly ABM loop added to the loops library (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across every `.md` in the repo; `marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (inside the 90-day window); `scripts/lint-agents.sh` run across all 69 category `.md` files — **59/59 agent personas pass**. The 10 reported failures are all non-agent documents in `strategy/` (`QUICKSTART.md`, `EXECUTIVE-BRIEF.md`, `catalyst-strategy.md`, `coordination/handoff-protocols.md`, the six phase playbooks), which are not agent files and correctly do not carry the agent frontmatter/section schema. Not a P0; noted so future runs don't re-investigate.
+
+**Shipped:** Top P1 backlog item — [`loops/monthly-abm-loop.md`](../loops/monthly-abm-loop.md). Deliberately *not* a rewrite of [`examples/workflow-abm-campaign.md`](../examples/workflow-abm-campaign.md), which stands a program up from zero over 3–4 weeks; this is what you run every month afterwards. The defining mechanic is a persistent **account ledger** (tier, stage, committee coverage, last touch, change-vs-last-cycle, next action + owner) that step 1 reads and step 6 rewrites, so each run starts from the previous run's evidence. Seven steps mapped to real agent filenames: `pmm-competitive-intelligence` → `analytics-customer-insights-researcher` → `pmm-messaging-architect`/`pmm-positioning-strategist` → `sales-enablement-content-creator` → `sales-outbound-strategist` + email/LinkedIn/paid builders → `sales-pipeline-analyst` + `analytics-performance-analyst` → `pm-campaign-coordinator`. Includes a Step 0 brand-context block matching the 13 skills, with an ABM-specific fabrication guard (account research is the easiest place in this repo for an agent to invent firmographics, funding, or named contacts — all must be sourced or `[NEEDS INPUT: …]`), suppression rules so accounts in live sales conversations are never auto-sequenced, and a "where this loop goes wrong" section.
+
+**No fabricated benchmarks:** the measurement section defines *what* to track per account (progression, committee coverage, time-in-stage, first-touch channel, message resonance) and explicitly tells users to baseline from their own first three cycles, since published ABM benchmarks swing wildly with deal size and list quality. No invented numbers were added.
+
+**Also updated:** loops index table (`loops/README.md`), README loops section, `ROADMAP.md` (ABM removed from "Next"), `CHANGELOG.md` `[Unreleased]`, backlog item marked done.
+
+**Verified:** re-ran the full link check after edits — 0 broken links, including the 3 new relative links in the loop file and the new README/loops-index entries. Manifests re-validated. `loops/` is browse-only (not shipped inside `plugins/`), so no dual-location copy was needed.
+
+**Deferred:** the weekly content engine loop predates `brand-context.md` and has no Step 0 block — worth adding for consistency, filed as a small backlog item rather than expanding this run.
+
+---
+
 ### 2026-07-22 — Brand context wired into all 12 category skills (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links; `marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (inside the 90-day window). No agent files touched this run, so no lint needed.
