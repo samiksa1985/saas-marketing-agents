@@ -4,6 +4,18 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-22 — Brand context wired into all 12 category skills (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links; `marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (inside the 90-day window). No agent files touched this run, so no lint needed.
+
+**Shipped:** Top P1 backlog item — added the same **Step 0: Load brand context** block that the CATALYST orchestrator already had to all 12 category `SKILL.md` files (`content-marketing`, `seo-growth`, `paid-media-ops`, `social-media-ops`, `email-marketing-ops`, `design-ops`, `sales-enablement`, `product-marketing-ops`, `marketing-analytics`, `marketing-project-mgmt`, `client-operations`, `saas-marketing-suite`). Invoking a category skill directly now loads `brand-context.md` first, hands it to the specialists it routes to, and applies the same anti-fabrication boundary — only proof recorded in the file may be asserted; everything else gets a `[NEEDS INPUT: …]` marker. Wording is identical across all 13 skills so the behaviour can't drift between entry points.
+
+**Verified:** re-ran the link check (0 broken, including the 12 new `../../templates/brand-context.md` relative links, which resolve to the plugin-local template); re-validated both manifests; confirmed all 13 skills now contain the Step 0 heading and that frontmatter is intact.
+
+**Deferred:** the remaining P1 items — ABM and competitive-intel loops, native subagents under `plugins/saas-marketing/agents/`, README demo GIF, cross-editor install verification, and the higher-bar awesome-list submissions.
+
+---
+
 ### 2026-07-21 — Brand context template + CATALYST wiring (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; all 59 agents pass `scripts/lint-agents.sh`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (well inside the 90-day window).

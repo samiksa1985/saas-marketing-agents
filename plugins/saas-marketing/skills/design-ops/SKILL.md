@@ -5,6 +5,17 @@ description: "Design operations and creative excellence for B2B SaaS marketing. 
 
 # Design Operations
 
+## Step 0 (always first): Load brand context
+
+**Before producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Hand its contents to every specialist agent you route work to, alongside the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+---
+
 ## What This Is
 
 Design Operations brings together visual designers, brand strategists, and creative specialists to deliver high-impact creative assets across all B2B SaaS marketing channels. This skill orchestrates your design team to build cohesive brand experiences, from landing pages and sales presentations to ad creative and product UI. Whether you need a complete brand identity system, a data-driven infographic, a conversion-optimized landing page, or a polished sales deck, Design Operations routes your request to the right specialist and ensures consistent execution against brand standards.

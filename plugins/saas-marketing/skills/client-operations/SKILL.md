@@ -5,6 +5,17 @@ description: "Client reporting, quality assurance, and financial operations mana
 
 # Client Operations
 
+## Step 0 (always first): Load brand context
+
+**Before producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Hand its contents to every specialist agent you route work to, alongside the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+---
+
 ## What This Is
 
 Client Operations is the execution and accountability hub for B2B SaaS marketing. While other teams create campaigns and drive traffic, this team ensures everything is measured, compliant, and delivered to client standards. The team manages four critical functions:

@@ -5,6 +5,17 @@ description: "End-to-end SEO operations for B2B SaaS organic visibility. Use thi
 
 # SEO Growth Skill
 
+## Step 0 (always first): Load brand context
+
+**Before producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Hand its contents to every specialist agent you route work to, alongside the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+---
+
 ## What This Is
 
 The SEO Growth skill coordinates a team of 6 specialized agents to drive sustainable organic visibility for B2B SaaS companies. From foundational keyword research and technical audits to advanced AI search optimization and international expansion, this skill orchestrates every component of a modern SEO program. This team handles organic search strategy, execution, and measurement—enabling you to build compounding organic traffic that reduces your reliance on paid channels.

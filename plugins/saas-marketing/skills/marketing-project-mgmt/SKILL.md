@@ -5,6 +5,17 @@ description: "Marketing project management and execution excellence for B2B SaaS
 
 # Marketing Project Management
 
+## Step 0 (always first): Load brand context
+
+**Before producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Hand its contents to every specialist agent you route work to, alongside the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+---
+
 ## What This Is
 
 Marketing Project Management brings together campaign coordinators, client success managers, resource allocators, and agile marketing coaches to execute campaigns with precision and keep teams focused on high-impact work. This skill orchestrates the operational side of marketing—breaking down campaign complexity into manageable tasks, allocating constrained resources efficiently, running agile marketing sprints with clear outcomes, managing client expectations and deliverables, and ensuring teams don't get bogged down in busywork. Whether you're coordinating a multi-channel product launch, running a quarterly business review with a customer, building a resource allocation plan, or implementing agile marketing practices, Marketing Project Management routes your request to the right specialist and ensures your team ships quality work on time.

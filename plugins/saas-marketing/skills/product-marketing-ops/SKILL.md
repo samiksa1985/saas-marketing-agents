@@ -5,6 +5,17 @@ description: "Product marketing and go-to-market strategy for B2B SaaS launches 
 
 # Product Marketing Operations
 
+## Step 0 (always first): Load brand context
+
+**Before producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Hand its contents to every specialist agent you route work to, alongside the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+---
+
 ## What This Is
 
 Product Marketing Operations brings together positioning strategists, launch managers, messaging architects, competitive intelligence specialists, and customer advocacy leaders to build market-winning strategies for product launches and ongoing positioning. This skill orchestrates your go-to-market strategy to establish clear market positioning, build competitive differentiation, launch new products and features with impact, and develop the customer proof that drives sales pipeline. Whether you're launching a new product category, repositioning your solution in response to competitive threats, building customer advocacy for analyst briefings, or conducting win/loss analysis to understand market dynamics, Product Marketing Operations routes your request to the right specialist and ensures your GTM strategy aligns positioning, messaging, and customer proof.

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and agents may only assert facts recorded there, emitting `[NEEDS INPUT: …]` markers instead of inventing
   customers, metrics, or certifications. Shipped with the plugin at `plugins/saas-marketing/templates/`.
 
+### Changed
+- **All 12 category skills now load `brand-context.md` first**, not just the CATALYST orchestrator. Invoking a
+  skill directly (e.g. `/saas-marketing:seo-growth`) applies the same brand tailoring and the same
+  anti-fabrication boundary as going through the orchestrator.
+
 _Tracked in [ROADMAP.md](ROADMAP.md). This project is actively maintained — see the roadmap for what's next._
 
 ## [1.1.0] — 2026-07-21

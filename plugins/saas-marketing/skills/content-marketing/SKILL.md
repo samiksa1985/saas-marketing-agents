@@ -5,6 +5,17 @@ description: "Master orchestrator for B2B SaaS content creation. Use this skill 
 
 # Content Marketing Skill
 
+## Step 0 (always first): Load brand context
+
+**Before producing any deliverable, look for a `brand-context.md` file** in the user's project root (also check `./.claude/brand-context.md` and `./docs/brand-context.md`). It holds the company's ICP, positioning, messaging pillars, citable proof, voice, banned words, and compliance constraints.
+
+- **If it exists:** read it in full and treat it as binding for this run. Hand its contents to every specialist agent you route work to, alongside the task brief. Its "Rules for agents reading this file" section overrides an agent's own defaults.
+- **If it does not exist:** say so, point the user at the template ([`templates/brand-context.md`](../../templates/brand-context.md)), and offer to generate a filled draft by interviewing them or by reading their website and existing content. Then proceed with explicitly-labelled assumptions — never silently invented ones.
+
+**Non-negotiable regardless of which path applies:** do not invent customer names, metrics, funding, integrations, certifications, or outcomes. Only proof recorded in `brand-context.md` (or supplied directly in the request) may be used as fact. Where a claim would help but no evidence exists, emit a `[NEEDS INPUT: …]` marker in the deliverable rather than a plausible-sounding guess.
+
+---
+
 ## What This Is
 
 The Content Marketing skill coordinates a team of 7 specialist agents to produce publication-ready content across multiple formats and channels. From long-form whitepapers and case studies to video scripts, newsletters, and executive thought leadership pieces, this skill orchestrates the entire content creation workflow for B2B SaaS companies. Each agent brings specialized expertise in their content format, enabling you to delegate confidently and scale your content operations.
