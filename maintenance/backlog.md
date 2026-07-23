@@ -13,7 +13,7 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 - [x] Add the Step 0 brand-context block to `loops/weekly-content-engine-loop.md` (it predates the template; the monthly ABM loop has one). — done 2026-07-23 (all 3 loops now load brand context first; citation-specific fabrication guard + 2 checklist items).
 - [ ] Expose the 59 personas as native Claude Code subagents under `plugins/saas-marketing/agents/` (convert frontmatter to subagent format; keep skill-referenced copies working).
 - [ ] Add a 60–90s demo GIF/asset for the README hero (orchestrator taking one brief and routing it).
-- [ ] Verify install flow end-to-end for Cursor, Copilot, Aider, Windsurf; correct any drift in `integrations/README.md`.
+- [x] Verify install flow end-to-end for Cursor, Copilot, Aider, Windsurf; correct any drift in `integrations/README.md`. — done 2026-07-23 (all 6 `--tool` paths exercised against a sandboxed `$HOME`; fixed the Copilot install target — `~/.copilot/agents/*.agent.md`, not `$HOME/.github/agents/*.md`; rewrote the guide against cited vendor docs and added a `Sources` section).
 
 ## P1 — distribution (pre-approved lists only; follow each list's exact rules)
 - [x] ~~Submit to `langgptai/awesome-claude-prompts`~~ — assessed 2026-07-21: it's a single-prompt library, not a repo-link list; not a clean fit, skipped.

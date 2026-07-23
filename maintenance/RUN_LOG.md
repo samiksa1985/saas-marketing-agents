@@ -4,6 +4,27 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-23 — Install flow verified end-to-end; integrations guide corrected against vendor docs (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links; both manifests parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; 59/59 agents pass `scripts/lint-agents.sh` (CI scope); `guides/aeo-geo-playbook.md` last reviewed 2026-07-21, well inside the 90-day window. The top P1 item (native subagents) is a 59-file change — too large for one run under the "keep runs small" rule, so it stays queued for a dedicated pass.
+
+**Shipped:** The next unblocked P1 item — verified the install flow end-to-end and corrected the drift it exposed in [`integrations/README.md`](../integrations/README.md) and [`scripts/install.sh`](../scripts/install.sh).
+
+Four confirmed drift points, each checked against the vendor's own docs (now cited in a new **Sources** section with a `Last reviewed` date):
+
+- **GitHub Copilot — wrong install target.** `install.sh` preferred `$HOME/.github/agents/`, which is not a real location: `.github/agents/` is *repository*-scoped, and the personal-scope directory is `~/.copilot/agents/`. Agents also need the `NAME.agent.md` extension, not plain `.md`. Both fixed; the guide now documents repo vs. personal scope in a table and notes that VS Code also detects `.claude/agents/`.
+- **Aider — invalid model and misdescribed command.** `--model claude-opus` is not a documented alias (`opus` and `sonnet` are). `/edit` is an alias for `/editor` (opens an editor to compose a prompt), not a way to iterate on output. Personas should load with `/read-only`, not `/add`, so aider doesn't rewrite the persona while working.
+- **Windsurf — dead URL and legacy-only format.** `codeium.com/windsurf` 301s to `windsurf.com`. Current rules live in `.devin/rules/*.md` (preferred) or `.windsurf/rules/*.md`; the legacy single-file `.windsurfrules` the script writes is still read, so it works, but the guide now shows the current convention and the global-rules path.
+- **Claude Code — invented CLI flags, missing primary path.** `claude <file>` and `claude --context <file>` are not real invocations, and the guide never mentioned the plugin marketplace install that the README leads with. Replaced with the `/plugin marketplace add` flow plus correct `@`-mention usage.
+
+Also added a **Using the install script** section with a verified `--tool` → destination table, flagged that `aider`/`windsurf` write into the *current* directory, corrected the Cursor section (`.mdc` is required — plain `.md` in `.cursor/rules` is ignored; these install as *Apply Intelligently* rules), and replaced the stale "Claude Code: up to 200k tokens" line with repo-measured agent sizes (~680–2,900 words, median ~1,270) and per-tool context controls.
+
+**Verified:** ran all six `--tool` paths against a sandboxed `$HOME` and confirmed every destination in the new table matches what the script actually writes, including the corrected `~/.copilot/agents/*.agent.md`; `bash -n scripts/install.sh` clean; re-ran the link check (0 broken) and the full 59-agent lint (0 failures) after editing; sandbox removed and working tree confirmed clean of test artifacts.
+
+**Deferred:** exposing the 59 personas as native subagents (large, needs its own run); the README demo GIF (needs a human to record).
+
+---
+
 ### 2026-07-23 — Brand context wired into the weekly content engine loop (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across every `.md` in the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (2 days old, well inside the 90-day window). No agent files touched this run, so no lint needed.

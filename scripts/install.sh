@@ -80,7 +80,9 @@ detect_cursor() {
 }
 
 detect_copilot() {
-    if [ -d "$HOME/.github" ] || [ -d "$HOME/.copilot" ]; then
+    # Personal-scope Copilot custom agents live in ~/.copilot/agents.
+    # (.github/agents is repository-scoped, not a home-directory location.)
+    if [ -d "$HOME/.copilot" ] || command -v copilot &> /dev/null; then
         return 0
     fi
     return 1
@@ -252,21 +254,14 @@ install_to_cursor() {
 
 install_to_copilot() {
     local agent_file=$1
-
-    # Try both possible Copilot directories
-    local target_dir=""
-    if [ -d "$HOME/.github" ]; then
-        target_dir="$HOME/.github/agents"
-    elif [ -d "$HOME/.copilot" ]; then
-        target_dir="$HOME/.copilot/agents"
-    else
-        mkdir -p "$HOME/.github/agents"
-        target_dir="$HOME/.github/agents"
-    fi
+    # Personal-scope custom agents. Repository-scope equivalent is .github/agents/
+    # inside the target repo — copy there manually to share with a team.
+    local target_dir="$HOME/.copilot/agents"
 
     mkdir -p "$target_dir"
 
-    local filename=$(basename "$agent_file")
+    # Copilot custom agents use the NAME.agent.md extension.
+    local filename="$(basename "$agent_file" .md).agent.md"
     cp "$agent_file" "$target_dir/$filename"
 
     if [ -f "$target_dir/$filename" ]; then
@@ -395,7 +390,7 @@ OPTIONS:
                         - cowork    Claude Cowork (~/.claude/skills/)
                         - claude    Claude Code (~/.claude/agents/)
                         - cursor    Cursor (~/.cursor/rules/)
-                        - copilot   GitHub Copilot (~/.github/agents/)
+                        - copilot   GitHub Copilot (~/.copilot/agents/)
                         - aider     Aider (CONVENTIONS.md)
                         - windsurf  Windsurf (.windsurfrules)
                         - all       All detected tools (default)
@@ -478,11 +473,11 @@ main() {
         print_error "No supported AI tools detected"
         echo ""
         echo "Please install one of the following:"
-        echo "  - Claude Code (https://claude.ai/)"
+        echo "  - Claude Code (https://www.anthropic.com/claude/code)"
         echo "  - Cursor (https://www.cursor.com/)"
         echo "  - GitHub Copilot (https://github.com/copilot)"
         echo "  - Aider (https://aider.chat/)"
-        echo "  - Windsurf (https://windsurf.dev/)"
+        echo "  - Windsurf (https://windsurf.com/)"
         exit 1
     fi
 
@@ -549,7 +544,7 @@ main() {
                 echo "  Location: $HOME/.cursor/rules/"
                 ;;
             copilot)
-                echo "  Location: $HOME/.github/agents/ or $HOME/.copilot/agents/"
+                echo "  Location: $HOME/.copilot/agents/"
                 ;;
             aider)
                 echo "  Location: ./CONVENTIONS.md"

@@ -36,6 +36,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exactly where an agent will invent a number, misattribute a quote, or cite a page that doesn't say what the
   sentence claims. Every statistic and quotation must now name its source, link to it, and date the underlying
   data, and two new checklist items enforce that before publish.
+- **[`integrations/README.md`](integrations/README.md) rewritten against current vendor docs**, which are now cited
+  in a `Sources` section with a `Last reviewed` date. Adds the Claude Code plugin install as the primary path,
+  a verified `--tool` → destination table for `scripts/install.sh`, and per-tool notes on rules formats
+  (Cursor requires `.mdc`; Windsurf's current location is `.devin/rules/`; Copilot needs `NAME.agent.md`).
+
+### Fixed
+- **`scripts/install.sh` installed GitHub Copilot agents to a location Copilot never reads.** It preferred
+  `$HOME/.github/agents/` — but `.github/agents/` is repository-scoped, and the personal-scope directory is
+  `~/.copilot/agents/`. Files also kept a plain `.md` extension instead of the required `NAME.agent.md`.
+  Both corrected, and Copilot detection no longer keys off an unrelated `$HOME/.github` directory.
+- **Stale and incorrect integration instructions.** `claude <file>` / `claude --context <file>` (not real
+  invocations), `aider --model claude-opus` (not a valid alias — `opus` is), `/edit` described as output
+  iteration (it opens an editor to compose a prompt), the dead `codeium.com/windsurf` URL, `windsurf.dev` in the
+  install script's help text, and a hardcoded "Claude Code: up to 200k tokens" context claim.
 
 _Tracked in [ROADMAP.md](ROADMAP.md). This project is actively maintained — see the roadmap for what's next._
 
