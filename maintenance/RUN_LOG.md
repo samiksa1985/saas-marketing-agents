@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-23 — Native-subagents item scoped as a design issue (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 172 `.md` files; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; 59/59 agent personas pass `scripts/lint-agents.sh` (the 10 reported failures are `strategy/` docs, not agents); README badge counts (59 agents / 13 skills) accurate and all 59 agents present in `AGENTS_INDEX.md` by path; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21, well inside the 90-day window.
+
+**No code shipped — this run produced a design proposal instead.** The top unblocked P1 item ("expose the 59 personas as native Claude Code subagents") is a large, design-sensitive change: it touches 59 agent files (66 skill-copies today), changes frontmatter shape (current `name` is a Title-Case display string + `emoji`, not the lowercase-slug + trigger-style `description` native subagents want), and forces a decision the P2 "de-duplicate agent sources" item already flags — personas live in 2 places now, and a native `agents/` dir makes a 3rd hand-maintained copy unless one source generates the rest. Per the routine's "large changes get proposed in an issue first / keep runs small" rules, I filed [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1) rather than committing a half-done conversion.
+
+**The issue is substantive, not a restatement:** it records the verified current state (per-category file counts, the exact frontmatter gap, that filenames are already clean slugs), proposes a concrete format mapping, and surfaces six decisions to settle before implementation — single source of truth, description-rewrite strategy, CATALYST-vs-auto-delegation UX, `tools` scoping, docs/badge sync, and `claude plugin validate` — plus a per-discipline incremental rollout plan. Backlog line annotated with the issue link and its two blocking decisions; item left **open** (proposed, not done).
+
+**Verified:** issue created successfully (`gh issue view 1`); re-ran the link check after editing `backlog.md` and this log — 0 broken links; both manifests still parse. No agent or plugin files were touched, so no dual-location copy was needed.
+
+**Deferred:** the native-subagents implementation itself (awaiting the two in-thread decisions on #1); the README demo GIF (needs a human to record); the higher-bar awesome-list submissions, which the list rules require to be human-written.
+
+---
+
 ### 2026-07-23 — Install flow verified end-to-end; integrations guide corrected against vendor docs (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links; both manifests parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; 59/59 agents pass `scripts/lint-agents.sh` (CI scope); `guides/aeo-geo-playbook.md` last reviewed 2026-07-21, well inside the 90-day window. The top P1 item (native subagents) is a 59-file change — too large for one run under the "keep runs small" rule, so it stays queued for a dedicated pass.
