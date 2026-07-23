@@ -8,6 +8,16 @@ This loop turns a topic into a finished, cited, distribution-ready asset by rout
 
 ---
 
+## Step 0 (always first): Load brand context
+
+Read `brand-context.md` from the project root (or `./.claude/brand-context.md`, `./docs/brand-context.md`) and pass it to every specialist in the loop. If it doesn't exist, point the user at [`templates/brand-context.md`](../templates/brand-context.md) and proceed with explicitly-labelled assumptions. The ICP, messaging pillars, voice rules, and banned words all live there — without them this loop produces competent writing about the wrong reader.
+
+**Citations are the highest-risk step in this loop for fabrication.** This loop actively rewards cited statistics and direct quotations, because they are among the strongest levers for getting an asset cited by AI engines — which makes it the exact place an agent will invent a plausible number, attribute a quote to a real analyst who never said it, or link to a source that doesn't say what the sentence claims. **Every statistic and quotation must come from a page the agent actually read, and carry the source name, the URL, and the date of the underlying data.** Anything unsourced is written as a `[NEEDS INPUT: …]` marker, never as a fact. The same applies to your own proof: customer names, metrics, integrations, and certifications may only be asserted if they are recorded in `brand-context.md`.
+
+A fabricated statistic is worse here than anywhere else in this repo, because this loop is designed to make content *quotable* — and a published fake number gets picked up and repeated with your name on it.
+
+---
+
 ## Inputs
 
 - **Topic focus** for the week (or "auto" — let the strategist pick from the content gap list)
@@ -34,12 +44,14 @@ This loop turns a topic into a finished, cited, distribution-ready asset by rout
 
 ## Handoff rule
 
-Each step receives *only* the previous step's structured output plus the original brief — not the whole thread. This keeps specialists focused and context-lean (the hand-off discipline that makes multi-agent loops reliable).
+Each step receives *only* the previous step's structured output plus the original brief and the brand context — not the whole thread. This keeps specialists focused and context-lean (the hand-off discipline that makes multi-agent loops reliable). Brand context is the exception to the context-lean rule: it travels with every step, because voice and proof constraints apply just as much to the distribution copy in step 6 as to the draft in step 3.
 
 ## Weekly checklist (what "done" looks like)
 
 - [ ] Opens with a self-contained 40–60 word answer
 - [ ] Contains ≥2 cited statistics and ≥1 credible quotation
+- [ ] Every statistic and quotation names its source, links to it, and dates the underlying data — and the linked page actually says what the sentence claims
+- [ ] No `[NEEDS INPUT: …]` markers survive into the published version
 - [ ] Has ≥3 outbound links to authoritative sources
 - [ ] Named author byline + `Person` JSON-LD
 - [ ] Dated, with a genuine ~90-day refresh reminder set

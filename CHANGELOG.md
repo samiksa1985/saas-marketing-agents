@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **All 12 category skills now load `brand-context.md` first**, not just the CATALYST orchestrator. Invoking a
   skill directly (e.g. `/saas-marketing:seo-growth`) applies the same brand tailoring and the same
   anti-fabrication boundary as going through the orchestrator.
+- **The weekly content engine loop now has a Step 0 brand-context block** ([`loops/weekly-content-engine-loop.md`](loops/weekly-content-engine-loop.md)),
+  matching the ABM and competitive-intel loops — all three loops now load brand context first. Its fabrication
+  guard is aimed at the risk specific to this loop: it rewards cited statistics and direct quotations, which is
+  exactly where an agent will invent a number, misattribute a quote, or cite a page that doesn't say what the
+  sentence claims. Every statistic and quotation must now name its source, link to it, and date the underlying
+  data, and two new checklist items enforce that before publish.
 
 _Tracked in [ROADMAP.md](ROADMAP.md). This project is actively maintained — see the roadmap for what's next._
 

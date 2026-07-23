@@ -4,6 +4,22 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-23 — Brand context wired into the weekly content engine loop (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across every `.md` in the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (2 days old, well inside the 90-day window). No agent files touched this run, so no lint needed.
+
+**Shipped:** The top open P1 backlog item — a **Step 0: Load brand context** block in [`loops/weekly-content-engine-loop.md`](../loops/weekly-content-engine-loop.md). This loop predated `templates/brand-context.md`; the ABM and competitive-intel loops added since the template already had one, so this was the last inconsistency. All three loops now load brand context first, and the loop's handoff rule was updated to carry brand context through every step — an explicit exception to its otherwise context-lean rule, since voice and proof constraints apply to the step-6 distribution copy just as much as to the step-3 draft.
+
+**The fabrication guard is loop-specific, not boilerplate.** Each loop's Step 0 names the risk particular to that loop (accounts research for ABM, competitor claims for competitive intel). For this loop it is **citations**: the loop actively rewards cited statistics and direct quotations because those are among the strongest levers for earning AI-engine citations — which makes it precisely where an agent will invent a plausible number, attribute a quote to a real analyst who never said it, or link a source that doesn't support the sentence. The block now requires every statistic and quotation to come from a page the agent actually read and to carry source name + URL + date of the underlying data, with `[NEEDS INPUT: …]` markers for anything unsourced, and extends the same rule to the user's own proof (customer names, metrics, integrations, certifications may only be asserted if recorded in `brand-context.md`). The stated reason: this loop is designed to make content *quotable*, so a published fake number gets repeated onward with the user's name attached.
+
+**Also added:** two items to the weekly "done" checklist — every statistic and quotation names its source, links to it, dates the underlying data, and the linked page actually says what the sentence claims; and no `[NEEDS INPUT: …]` markers survive into the published version.
+
+**Verified:** re-ran the full link check after the edits — 0 broken links, including the new `../templates/brand-context.md` relative link (confirmed the target file exists); re-validated both manifests; confirmed all 3 loop files now contain the Step 0 heading. `loops/` is browse-only (not shipped inside `plugins/`), so no dual-location copy was needed.
+
+**Deferred:** the remaining P1 items — native subagents under `plugins/saas-marketing/agents/`, README demo GIF, cross-editor install verification, and the higher-bar awesome-list submissions (`hesreallyhim/awesome-claude-code`, `VoltAgent/awesome-agent-skills`, Anthropic community marketplace — the last needs the owner's in-app form).
+
+---
+
 ### 2026-07-22 — Weekly competitive-intel loop added to the loops library (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across every `.md` in the repo; `marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 (inside the 90-day window). No agent files touched this run, so no lint needed.
