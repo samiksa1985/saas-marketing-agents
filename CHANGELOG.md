@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **README hero demo** ([`assets/catalyst-demo.svg`](assets/catalyst-demo.svg)) — an animated SVG showing the CATALYST
+  orchestrator take one product-launch brief, load `brand-context.md` as Step 0, select CATALYST-Sprint mode, and
+  route the work to named specialists across nine disciplines. Self-contained (no scripts, no external fonts or
+  requests, ~8 KB), honours `prefers-reduced-motion`, and degrades to a complete, readable frame where CSS
+  animation doesn't run. Every agent named in it is a real agent in this repo, and it is labelled an illustration
+  rather than a recorded session.
 - **Weekly competitive-intel loop** ([`loops/weekly-competitive-intel-loop.md`](loops/weekly-competitive-intel-loop.md)) — a
   fast weekly change-detection loop, distinct from the quarterly deep-dive the `pmm-competitive-intelligence` agent
   runs on its own. Three parallel sweeps (public sources, search surface, AI-answer citations) diff against last

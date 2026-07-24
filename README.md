@@ -16,6 +16,10 @@ Install a full B2B SaaS marketing org into Claude Code: 59 role-based agent pers
 
 [Quick start](#-quick-start) · [The 59 agents](#-the-team-59-agents) · [Skills](#-skills) · [CATALYST](#️-catalyst-orchestrator) · [Loops](#-marketing-loops) · [AEO/GEO](#-built-for-ai-search-aeogeo) · [Contributing](#-contributing)
 
+<img src="assets/catalyst-demo.svg" alt="The CATALYST orchestrator takes one product-launch brief, loads brand-context.md, selects CATALYST-Sprint mode, and routes the work to named specialist agents across product marketing, content, SEO/AEO, design, paid media, social, email, sales enablement, and analytics." width="880">
+
+<sub>Illustration of the routing flow — every agent shown is a real agent in this repo.</sub>
+
 </div>
 
 ---

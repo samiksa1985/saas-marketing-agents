@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 660" width="940" height="660" role="img" aria-labelledby="demoTitle demoDesc">
+  <title id="demoTitle">CATALYST orchestrator routing a single product-launch brief</title>
+  <desc id="demoDesc">An illustration of a Claude Code session: the CATALYST orchestrator loads brand-context.md, selects CATALYST-Sprint mode, and routes one product-launch brief to specialist agents across product marketing, content, SEO/AEO, design, paid media, social, email, sales enablement, and analytics.</desc>
+
+  <style>
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 15px;
+    }
+    .t   { fill: #e9e4da; }
+    .d   { fill: #8b8275; }
+    .lbl { fill: #b9b1a4; }
+    .a   { fill: #d97757; }
+    .g   { fill: #79b36b; }
+    .c   { fill: #7fbfd0; }
+    .y   { fill: #d9b45f; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(7px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes blink {
+      0%, 49%   { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    .r     { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+    .caret { animation: blink 1.06s step-end infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .r     { animation: none; opacity: 1; transform: none; }
+      .caret { animation: none; }
+    }
+  </style>
+
+  <!-- window -->
+  <rect x="8" y="8" width="924" height="644" rx="14" fill="#171512" stroke="#2e2a24" stroke-width="1.5"/>
+  <rect x="8" y="8" width="924" height="45" rx="14" fill="#1e1b17"/>
+  <rect x="8" y="39" width="924" height="14" fill="#1e1b17"/>
+  <line x1="8" y1="53" x2="932" y2="53" stroke="#2e2a24" stroke-width="1.5"/>
+  <circle cx="36" cy="30" r="5.5" fill="#c9605a"/>
+  <circle cx="56" cy="30" r="5.5" fill="#c9a24a"/>
+  <circle cx="76" cy="30" r="5.5" fill="#5f9e57"/>
+  <text class="mono d" x="470" y="35" font-size="13" text-anchor="middle">saas-marketing-agents — CATALYST orchestrator</text>
+
+  <!-- the brief -->
+  <g class="r mono" style="animation-delay:.4s">
+    <text x="44" y="94"><tspan class="a">&gt; </tspan><tspan class="t">/saas-marketing:catalyst-orchestrator</tspan></text>
+  </g>
+  <g class="r mono" style="animation-delay:1.5s">
+    <text class="t" x="44" y="122" xml:space="preserve">  Plan the launch for our SOC 2 automation feature.</text>
+  </g>
+  <g class="r mono" style="animation-delay:2.4s">
+    <text class="t" x="44" y="146" xml:space="preserve">  ICP: Heads of Security at 200-1000-seat B2B SaaS.</text>
+  </g>
+  <g class="r" style="animation-delay:3.0s">
+    <rect class="caret" x="503" y="134" width="9" height="16" fill="#d97757"/>
+  </g>
+
+  <!-- step 0 -->
+  <g class="r mono" style="animation-delay:4.0s">
+    <text class="a" x="44" y="184">Step 0 · brand context</text>
+  </g>
+  <g class="r mono" style="animation-delay:4.5s">
+    <path d="M46 202.5 l4.5 5 l8-10.5" fill="none" stroke="#79b36b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="d" x="68" y="208"><tspan class="lbl">brand-context.md</tspan> loaded - ICP, pillars, voice, citable proof</text>
+  </g>
+  <g class="r mono" style="animation-delay:5.1s">
+    <text class="d" x="68" y="232">claims not recorded there surface as <tspan class="y">[NEEDS INPUT: ...]</tspan>, never invented</text>
+  </g>
+
+  <!-- mode -->
+  <g class="r mono" style="animation-delay:5.9s">
+    <text x="44" y="270"><tspan class="a">Mode · CATALYST-Sprint</tspan><tspan class="d" dx="26">2-4 weeks · 20-30 agents · 6 phase gates</tspan></text>
+  </g>
+
+  <!-- routing -->
+  <g class="r mono" style="animation-delay:6.6s">
+    <text class="a" x="44" y="308">Routing the brief</text>
+  </g>
+
+  <g class="r mono" style="animation-delay:7.1s">
+    <text class="lbl" x="64" y="336">product marketing</text><text class="d" x="232" y="336">→</text>
+    <text class="c" x="258" y="336">pmm-positioning-strategist · pmm-messaging-architect</text>
+  </g>
+  <g class="r mono" style="animation-delay:7.5s">
+    <text class="lbl" x="64" y="366">content</text><text class="d" x="232" y="366">→</text>
+    <text class="c" x="258" y="366">content-blog-strategist · content-case-study-producer</text>
+  </g>
+  <g class="r mono" style="animation-delay:7.9s">
+    <text class="lbl" x="64" y="396">seo / aeo</text><text class="d" x="232" y="396">→</text>
+    <text class="c" x="258" y="396">seo-ai-search-optimizer · seo-keyword-researcher</text>
+  </g>
+  <g class="r mono" style="animation-delay:8.3s">
+    <text class="lbl" x="64" y="426">design</text><text class="d" x="232" y="426">→</text>
+    <text class="c" x="258" y="426">design-ui-landing-page-specialist · design-ad-creative-producer</text>
+  </g>
+  <g class="r mono" style="animation-delay:8.7s">
+    <text class="lbl" x="64" y="456">paid media</text><text class="d" x="232" y="456">→</text>
+    <text class="c" x="258" y="456">paid-media-social-ads-specialist · paid-media-ppc-strategist</text>
+  </g>
+  <g class="r mono" style="animation-delay:9.1s">
+    <text class="lbl" x="64" y="486">social</text><text class="d" x="232" y="486">→</text>
+    <text class="c" x="258" y="486">social-linkedin-strategist · social-community-builder</text>
+  </g>
+  <g class="r mono" style="animation-delay:9.5s">
+    <text class="lbl" x="64" y="516">email</text><text class="d" x="232" y="516">→</text>
+    <text class="c" x="258" y="516">email-lifecycle-architect · email-copywriter</text>
+  </g>
+  <g class="r mono" style="animation-delay:9.9s">
+    <text class="lbl" x="64" y="546">sales enablement</text><text class="d" x="232" y="546">→</text>
+    <text class="c" x="258" y="546">sales-enablement-content-creator · sales-outbound-strategist</text>
+  </g>
+  <g class="r mono" style="animation-delay:10.3s">
+    <text class="lbl" x="64" y="576">analytics</text><text class="d" x="232" y="576">→</text>
+    <text class="c" x="258" y="576">analytics-performance-analyst · analytics-data-storyteller</text>
+  </g>
+
+  <!-- gate + footer -->
+  <g class="r mono" style="animation-delay:11.1s">
+    <line x1="44" y1="600" x2="896" y2="600" stroke="#2e2a24" stroke-width="1.5"/>
+    <text class="d" x="44" y="626" font-size="14"><tspan class="g">Phase gate 1</tspan> · positioning defensible · pillars tied to research · KPIs quantifiable</text>
+  </g>
+</svg>

@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-24 — README hero demo asset (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` both parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` (reviewed 2026-07-21) and `integrations/README.md` (2026-07-23) are both well inside the 90-day window.
+
+**Shipped:** the README hero demo — [`assets/catalyst-demo.svg`](../assets/catalyst-demo.svg), the repo's first image asset. It shows the arc the README describes but never demonstrated: one product-launch brief → Step 0 brand-context load → CATALYST-Sprint mode selection → fan-out to named specialists across nine disciplines → Phase gate 1.
+
+**Why an animated SVG and not a GIF.** The previous run deferred this item as "needs a human to record," which was the blocker for a screen capture, not for the item itself. An SVG removes the blocker and is strictly better here: ~8 KB versus megabytes, text stays crisp at any width, it is diffable in review, and it needs no recording session to update when the agent roster changes. Built with CSS opacity/transform reveals only — no `<script>`, no SMIL, no external fonts or network requests (verified: 0 script tags, XML parses). It **degrades correctly**: elements carry their visible state as attributes and CSS animation only hides-then-reveals them, so where animation doesn't run the reader gets the complete final frame rather than a blank box. A `prefers-reduced-motion: reduce` block disables the motion outright.
+
+**Honesty constraints applied.** Every one of the 18 agents named in the demo was checked to exist as a real file in this repo (each resolved to 2 paths, the expected dual location) — no invented specialists. The mode line uses CATALYST-Sprint's own documented envelope from the orchestrator skill (2–4 weeks, 20–30 agents, 6 phase gates) rather than made-up numbers. No metrics, outcomes, or customers appear anywhere in it. The README caption labels it an *illustration of the routing flow*, so it can't be mistaken for a recorded session, and the `alt` text plus SVG `<title>`/`<desc>` carry the same content for screen readers.
+
+**Deviation from the backlog spec, noted deliberately:** the item asked for 60–90s. The reveal completes in ~12s. A hero asset that takes a full minute to become legible fights the README instead of serving it; the full arc is visible either way. Backlog item annotated with the reasoning.
+
+**Verified:** rendered the file in a browser and confirmed both a mid-animation frame (staged reveal and blinking caret actually running) and the completed frame — no text overflow past the card, all glyphs (`→`, `·`, drawn checkmark) present, nine routing rows aligned. Two whitespace bugs found and fixed by that render: SVG collapses the leading spaces used to indent the brief under the command (fixed with `xml:space="preserve"`) and the gap on the Mode line (fixed with `dx`). Re-ran the link check after editing `README.md`, `CHANGELOG.md`, `backlog.md`, and this log — 0 broken links; both manifests still parse. No agent files touched, so no dual-location sync was needed and `lint-agents.sh` was not in scope.
+
+**Deferred:** the native-subagents implementation (still blocked on the two decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1)); the awesome-list submissions, which remain unsuitable for an automated run — `awesome-claude-code` requires a human-written issue and `awesome-agent-skills` asks submitters to lead with genuine usage. Both need the maintainer.
+
+---
+
 ### 2026-07-23 — Native-subagents item scoped as a design issue (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across 172 `.md` files; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; 59/59 agent personas pass `scripts/lint-agents.sh` (the 10 reported failures are `strategy/` docs, not agents); README badge counts (59 agents / 13 skills) accurate and all 59 agents present in `AGENTS_INDEX.md` by path; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21, well inside the 90-day window.
