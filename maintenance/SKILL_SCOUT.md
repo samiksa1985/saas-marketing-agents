@@ -51,7 +51,7 @@ We build on the community; we never plagiarize or break a license.
 - **Expression is not.** Never copy prose, prompts, or file content verbatim. Everything we ship is
   **written from scratch in our own format and voice.**
 - **Permissive sources** (MIT, Apache-2.0, BSD, ISC, CC-BY, CC0, Unlicense): if you directly adapt
-  material, add a short "Adapted from / inspired by [name](url) — [license]" note and comply with the
+  material, add a short `Adapted from / inspired by <name> (<url>) — <license>` note and comply with the
   license's notice requirements.
 - **Restrictive, no-license, or copyleft/NC/ND sources:** **ideas only.** Do not create a derivative
   of their expression. Credit the inspiration; do not adopt their text.
