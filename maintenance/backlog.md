@@ -23,6 +23,17 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 - [ ] Submit the plugin to the Anthropic community marketplace (`anthropics/claude-plugins-community`) via the in-app form; run `claude plugin validate` first.
 - [ ] Revisit `kyrolabs/awesome-agents` and `sindresorhus/awesome` once the repo has ≥40 stars and 30+ days of history.
 
+## P1 — skill curation (from scout 2026-07-21; the daily scout works these one per run — see [scout-ledger.md](scout-ledger.md))
+- [x] Enhance `paid-media-attribution-analyst` with a Bayesian-MMM measurement backbone — done 2026-07-21 (src: pymc-marketing, Apache-2.0, ideas-only).
+- [x] Enhance `sales-discovery-coach` with a methodology taxonomy (MEDDPICC/SPIN/Challenger/Gap/Sandler/Value) — done 2026-07-21 (src: gtm-skills, gtmagents; MIT).
+- [ ] Enhance `seo/seo-ai-search-optimizer`: 0-100 passage-citability rubric + citation-regression "tests" + AI Share-of-Voice heatmap (src: Auriti-Labs/geo-optimizer-skill, AgricIDaniel/claude-seo, seranking/seo-skills; MIT, ideas-only).
+- [ ] Enhance `paid-media/paid-media-ppc-strategist`: verify-before-write mutation guardrail + negative-keyword pipeline + weighted audit score (src: fourteenwm/ppc-ai-skills, AgriciDaniel/claude-ads; MIT).
+- [ ] Enhance `paid-media/paid-media-social-ads-specialist`: creative-fatigue rule + Pixel/CAPI Event-Match-Quality audit (src: TheMattBerman/meta-ads-kit; MIT).
+- [ ] Enhance `product-marketing/pmm-positioning-strategist`: named frameworks (Dunford Obviously Awesome, Crossing the Chasm, JTBD, StoryBrand, Blue Ocean ERRC) + portfolio-before-messaging (src: wondelai/skills, realjaymes/marketingagentskills; MIT).
+- [ ] Enhance `client-ops/ops-quality-assurance`: Four U's copy-scoring rubric + AI-tell / banned-word screen (src: cgallic/kai-cmo-harness, sergebulaev/linkedin-skills; MIT).
+- [ ] PROPOSAL (open an issue first) — new agent `seo/seo-programmatic-strategist` for scaled template-page SEO (integration / comparison / vs / alternatives / glossary pages, index-bloat guardrails). Net-new persona; decide scope/overlap with content-blog-strategist & pmm-competitive first (src: coreyhaines31, kostja94, claude-seo; MIT).
+- [ ] PROPOSAL (needs legal validation) — `client-ops/ops-legal-compliance`: AI-disclosure readiness (EU AI Act Art. 50) + C2PA content-provenance posture (src: indranilbanerjee/digital-marketing-pro, cgallic/kai-cmo-harness; MIT).
+
 ## P2 — later
 - [ ] Add a golden input/output example per agent.
 - [ ] GitHub Pages catalog with copy-to-clipboard for all 59 agents.

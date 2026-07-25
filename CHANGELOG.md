@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Skill Scout — a second recurring job** ([`maintenance/SKILL_SCOUT.md`](maintenance/SKILL_SCOUT.md) + [`maintenance/scout-ledger.md`](maintenance/scout-ledger.md)): monitors GitHub/web for high-value marketing skills, compares them to our inventory, and either enhances an existing agent or adds a missing one — under a hard, ideas-only licensing guardrail. First pass evaluated 53 open-source sources → 7 enhance / 3 add-proposals / 5 already-have.
+- **Attribution analyst gains a Bayesian-MMM measurement backbone**, and **the discovery coach gains a sales-methodology taxonomy** (MEDDPICC/SPIN/Challenger/Gap/Sandler/Value), both adapted ideas-only from open-source skills and credited in-file.
 - **README hero demo** ([`assets/catalyst-demo.svg`](assets/catalyst-demo.svg)) — an animated SVG showing the CATALYST
   orchestrator take one product-launch brief, load `brand-context.md` as Step 0, select CATALYST-Sprint mode, and
   route the work to named specialists across nine disciplines. Self-contained (no scripts, no external fonts or

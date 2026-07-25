@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-21 — Skill Scout: new job + first pass + 2 enhancements (manual)
+
+**New capability:** stood up the second recurring job — the **Skill Scout** ([SKILL_SCOUT.md](SKILL_SCOUT.md) + [scout-ledger.md](scout-ledger.md), a daily task). It monitors GitHub/web for high-value marketing skills, compares them to our inventory, and either enhances an existing agent or adds a missing one — under a hard licensing guardrail (learn ideas, never copy prose; attribute permissive adaptations; ideas-only for restrictive/unlicensed sources).
+
+**First pass (6-agent survey→synthesis workflow):** evaluated 53 open-source marketing skills/collections across 5 disciplines → 7 enhance, 3 add-proposals, 5 already-have. All logged in the [scout ledger](scout-ledger.md) with verdicts, sources, and licenses.
+
+**Shipped 2 enhancements** (ideas-only, credited in-file, both dual-located copies synced, linted):
+- `paid-media-attribution-analyst` — a Bayesian-MMM measurement backbone (adstock/saturation, uncertainty, geo-holdout incrementality; names PyMC-Marketing / Google Meridian / Meta Robyn). Src: pymc-marketing (Apache-2.0).
+- `sales-discovery-coach` — a discovery methodology taxonomy (SPIN / Gap / MEDDPICC / Challenger / Sandler / Value + when to use each). Src: gtm-skills, gtmagents (MIT).
+
+**Queued:** 5 more enhancements + 2 proposals in the [backlog](backlog.md) for the daily scout. Notably, one surveyed "add" idea (shared context + cascading state-passing) was already implemented by the maintenance routine's `brand-context.md` work — the two jobs are converging.
+
+---
+
 ### 2026-07-24 — README hero demo asset (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` both parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` (reviewed 2026-07-21) and `integrations/README.md` (2026-07-23) are both well inside the 90-day window.
