@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-25 — Skill Scout: pre-send safety gate for the automation engineer (automated)
+
+**Focus discipline:** email / analytics / marketing-ops — chosen because the [scout ledger](scout-ledger.md)'s first pass covered it thinnest (one email row, one client-ops row, zero analytics rows).
+
+**Scouted (5 new sources, all logged with verdicts):** `CosmoBlk/email-marketing-bible` (MIT, 246★, refreshed mid-2026), `thatrebeccarae/claude-marketing` (MIT, 81★), `OpenClaudia/openclaudia-skills` (MIT, 590★, updated 2026-07-24), `cognyai/claude-code-marketing-skills` (MIT repo, paywalled GA4 audit), `SpillwaveSolutions/running-marketing-campaigns-agent-skill` (MIT), plus two aggregators dismissed as discovery layers.
+
+**Shipped:** a **pre-send safety gate** in [`email/email-automation-engineer.md`](../email/email-automation-engineer.md) (and its plugin twin). The gap was real and specific: that agent is 226 lines of sophisticated lead-scoring and workflow architecture with exactly *one* line about testing before scale, and a repo-wide grep found no send-approval concept anywhere in the email discipline. It is also the highest-stakes gap in the collection — every other agent produces a draft a human reviews, while this one describes wiring live flows in an ESP, where a single wrong action reaches an entire list and cannot be undone.
+
+The section adds: three **blast-radius tiers** (contained ≤50 known addresses / defined segment / broadcast-or-unenumerable) with an escalating approval bar, and an explicit rule that approval is per-send and never inherited; **read-only by default** for ESP/CRM/CDP credentials with write scopes opt-in per task and send/schedule never implied by a write scope, plus an aggregates-not-records rule; a **9-item pre-send checklist** (audience resolved to a number not a rule · suppressions incl. customers-on-prospect-sends and open opportunities · cross-flow collision check · merge-field and link/UTM rendering · one-click unsubscribe + postal address + lawful basis · SPF/DKIM/DMARC alignment and complaint-rate headroom · seed send across Gmail/Outlook/mobile incl. dark mode and image-blocked · a **named kill switch** · warm-up ramp for new domains/IPs or >30% volume jumps); and a **fail-loud** rule returning `[NEEDS INPUT: …]` instead of proceeding on assumption.
+
+**Sourcing & licensing:** ideas-only, written from scratch in our voice, credited in-file to `CosmoBlk/email-marketing-bible` (MIT — the pre-send-gate framing) and `thatrebeccarae/claude-marketing` (MIT — the read-only-by-default connector posture). No prose reused from either.
+
+**No fabricated numbers:** the one external threshold cited (bulk senders under 0.30% spam-complaint rate, recommended under 0.10%) and the `List-Unsubscribe` / `List-Unsubscribe-Post` header requirement were both verified against [Google's Email sender guidelines](https://support.google.com/a/answer/81126) (read 2026-07-25) and are consistent with the <0.1% target our `email-deliverability-specialist` already holds. Google's DMARC requirement permits a `none` policy, so the gate asks for passing authentication with From-domain alignment rather than overstating an enforcement requirement.
+
+**Also updated:** [scout-ledger.md](scout-ledger.md) (7 sources, 1 enhance / 2 watch / 4 dismissed), `CHANGELOG.md` `[Unreleased]`, [backlog.md](backlog.md).
+
+**Filed, not actioned (one change per run):** a new skill-curation item to give `analytics-marketing-ops-architect` a **web-analytics instrumentation quality audit** (GA4 key events, custom dimensions, PII in event params, attribution settings, `(not set)` traffic, UTM-to-channel alignment) — verified as a genuine gap: that agent is thorough on CRM/MAP data quality and silent on the measurement layer every other analytics agent depends on. Also annotated the P2 "MCP tool recipes" item as a promote-to-P1 candidate, since OpenClaudia (590★) is evidence the field is shifting from advisory personas to skills wired into live APIs.
+
+**Verified:** both copies of the agent byte-identical (`diff`) and passing `scripts/lint-agents.sh`; full-repo internal-link check clean (0 broken) after edits.
+
+---
+
 ### 2026-07-21 — Skill Scout: new job + first pass + 2 enhancements (manual)
 
 **New capability:** stood up the second recurring job — the **Skill Scout** ([SKILL_SCOUT.md](SKILL_SCOUT.md) + [scout-ledger.md](scout-ledger.md), a daily task). It monitors GitHub/web for high-value marketing skills, compares them to our inventory, and either enhances an existing agent or adds a missing one — under a hard licensing guardrail (learn ideas, never copy prose; attribute permissive adaptations; ideas-only for restrictive/unlicensed sources).

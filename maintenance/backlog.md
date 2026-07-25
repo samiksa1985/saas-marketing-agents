@@ -31,13 +31,15 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 - [ ] Enhance `paid-media/paid-media-social-ads-specialist`: creative-fatigue rule + Pixel/CAPI Event-Match-Quality audit (src: TheMattBerman/meta-ads-kit; MIT).
 - [ ] Enhance `product-marketing/pmm-positioning-strategist`: named frameworks (Dunford Obviously Awesome, Crossing the Chasm, JTBD, StoryBrand, Blue Ocean ERRC) + portfolio-before-messaging (src: wondelai/skills, realjaymes/marketingagentskills; MIT).
 - [ ] Enhance `client-ops/ops-quality-assurance`: Four U's copy-scoring rubric + AI-tell / banned-word screen (src: cgallic/kai-cmo-harness, sergebulaev/linkedin-skills; MIT).
+- [x] Enhance `email/email-automation-engineer` with a pre-send safety gate (blast-radius tiers, read-only-by-default scopes, 9-item pre-send checklist) — done 2026-07-25 (src: CosmoBlk/email-marketing-bible, thatrebeccarae/claude-marketing; MIT, ideas-only).
+- [ ] Enhance `analytics/analytics-marketing-ops-architect` with a **web-analytics instrumentation quality audit** (GA4 key-event config, custom dimensions, PII in event parameters, attribution/lookback settings, `(not set)` traffic diagnosis, UTM-to-channel-grouping alignment). The agent is thorough on CRM/MAP data quality and silent on the measurement layer feeding every other analytics agent (verified 2026-07-25). Ideas-only; the comparable third-party skill is paywalled, so write from Google's public GA4 docs with read-dates (src noted: cognyai/claude-code-marketing-skills, SpillwaveSolutions campaign skill).
 - [ ] PROPOSAL (open an issue first) — new agent `seo/seo-programmatic-strategist` for scaled template-page SEO (integration / comparison / vs / alternatives / glossary pages, index-bloat guardrails). Net-new persona; decide scope/overlap with content-blog-strategist & pmm-competitive first (src: coreyhaines31, kostja94, claude-seo; MIT).
 - [ ] PROPOSAL (needs legal validation) — `client-ops/ops-legal-compliance`: AI-disclosure readiness (EU AI Act Art. 50) + C2PA content-provenance posture (src: indranilbanerjee/digital-marketing-pro, cgallic/kai-cmo-harness; MIT).
 
 ## P2 — later
 - [ ] Add a golden input/output example per agent.
 - [ ] GitHub Pages catalog with copy-to-clipboard for all 59 agents.
-- [ ] MCP tool recipes (GA4, GSC, HubSpot, Ahrefs) to move agents from advisory to executable.
+- [ ] MCP tool recipes (GA4, GSC, HubSpot, Ahrefs) to move agents from advisory to executable. **Consider promoting to P1** — the 2026-07-25 scout found the market moving decisively this way (OpenClaudia's 34 skills wire straight into Resend/HubSpot/GA4 APIs). Any such work inherits the pre-send safety gate now in `email-automation-engineer`: read-only scopes by default, writes opt-in per task, sends never implied.
 - [ ] Evaluation harness: rubrics + regression checks for agent output.
 - [ ] De-duplicate agent sources (single source of truth; generate the browseable and installable copies).
 
