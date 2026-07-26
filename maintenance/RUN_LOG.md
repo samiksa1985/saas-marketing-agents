@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-26 — Positioning Strategist: named-framework toolkit + portfolio-first discipline (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; every `Last reviewed` date in-repo is well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). No P0, so pulled the top unblocked backlog item.
+
+**Item selected:** the top P1 *high-leverage* item (native subagents) stays blocked on two in-thread decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are human-gated (README-polish condition, star thresholds, human-written issue forms, an in-app marketplace form) and not appropriate to submit autonomously. The top genuinely-unblocked, right-sized item was the next skill-curation entry — and PMM was the least-recently-touched track (last enhanced 2026-07-21, behind two same-day paid-media runs and a 2026-07-25 email pass): enhance `pmm-positioning-strategist`.
+
+**Shipped:** a new **"The Positioning Toolkit: Named Frameworks and When to Reach for Each"** section in **both** dual-located copies (`product-marketing/` and `plugins/saas-marketing/skills/product-marketing-ops/agents/`, verified byte-identical), placed after Critical Rules like the social-ads enhancement. It converts "do positioning" into a diagnose-then-pick-a-lens method — five canonical frameworks, each with an explicit *when to reach for it*:
+- **Dunford, *Obviously Awesome*** — the five components (competitive alternatives → unique attributes → value → target-market characteristics → market category) for a mis-framed product; deepens the "Obviously Awesome" framework the deliverables already reference.
+- **Moore, *Crossing the Chasm*** — beachhead segment / whole product / peer-reference base when adoption stalls before the pragmatist majority, with a caveat that a feature in an established category has no chasm to force.
+- **Jobs-to-be-Done** — progress across functional/emotional/social dimensions and the four forces (push, pull, anxiety, habit) as the demand-side truth that *precedes* messaging.
+- **StoryBrand SB7** — customer-as-hero, brand-as-guide clarity discipline used to *express* a settled position, not discover one.
+- **Blue Ocean ERRC** — Eliminate–Reduce–Raise–Create to draw a divergent value curve out of a feature-parity category.
+Plus a **"Portfolio before message"** discipline: resolve company category → each product's relationship to that spine → per-product buyer/job differences *before* any single product's positioning statement, framed as the most expensive positioning debt a growing SaaS accumulates.
+
+**Sourcing & licensing:** ideas-only, written from scratch in the agent's voice. Frameworks attributed in-file to their authors (Dunford; Moore; the JTBD tradition incl. Christensen and Bob Moesta's four forces; Miller; Kim & Mauborgne). Credited for the curation idea to [`wondelai/skills`](https://github.com/wondelai/skills) (MIT, "Frameworks from Bestselling Books") and [`realjaymes/marketingagentskills`](https://github.com/realjaymes/marketingagentskills) (MIT) — both verified via GitHub API this run. **No numeric claims** are made anywhere in the section, so there is nothing to fabricate.
+
+**Verified:** both copies byte-identical (`diff` clean); `scripts/lint-agents.sh` passes on both (all checks green); repo-wide internal `.md` link check clean (0 broken) after edits; both new external links (the two source repos) return HTTP 200; both manifests still parse.
+
+**Deferred:** the remaining skill-curation queue (`ops-quality-assurance` Four-U's + AI-tell screen; `analytics-marketing-ops-architect` GA4 instrumentation audit); the two issue-first proposals; native subagents (#1, blocked); distribution submissions (human-gated). One change per run.
+
+---
+
 ### 2026-07-26 — Social Ads Specialist: creative-fatigue rule + Meta EMQ audit (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across 178 checked (up from 172 files as the repo has grown); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 and `integrations/README.md` 2026-07-23 — both well inside the 90-day window. No P0, so pulled the top unblocked backlog item.
