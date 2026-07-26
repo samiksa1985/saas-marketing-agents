@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-26 — Quality Assurance Manager: Four U's copy-scoring rubric + AI-tell screen (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 186 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; every `Last reviewed` date in-repo is well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23); `scripts/lint-agents.sh` run across all 11 category dirs — **59/59 agent personas pass**. No P0, so pulled the top unblocked backlog item.
+
+**Item selected:** the top P1 *high-leverage* item (native subagents) stays blocked on two in-thread decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are human-gated (README-polish condition, star thresholds, human-written issue forms, an in-app marketplace form) and not appropriate to submit autonomously. The top genuinely-unblocked, right-sized item was the next skill-curation entry: enhance `ops-quality-assurance` with a Four U's rubric + AI-tell screen.
+
+**Shipped:** a new **"Scoring Copy: The Four U's and the AI-Tell Screen"** section in **both** dual-located copies (`client-ops/ops-quality-assurance.md` and `plugins/saas-marketing/skills/client-operations/agents/ops-quality-assurance.md`, verified byte-identical), placed after Critical Rules like the recent PMM and social-ads enhancements. Two parts:
+- **The Four U's** — a scoring pass that grades headlines/leads/CTAs on **Useful, Ultra-specific, Unique, Urgent**, each *weak/adequate/strong* with a one-line diagnostic and a required fix. One editorial gate: weak on **Useful or Ultra-specific → back regardless of the other two** (the two failures that most reliably lose the reader). The bar is flagged as editorial convention, not a measured threshold; the Urgent dimension explicitly forbids manufactured scarcity and cross-references the FTC compliance rule already in the agent.
+- **The AI-tell / banned-word screen** — two buckets: *hollow modifiers* that fail Ultra-specific by construction (cutting-edge, world-class, seamless, robust, synergy, unlock, elevate…) → replace with the fact they stand in for or cut; and *machine-cadence tells* (opener clichés, the "not just X, but Y" reflex, delve/tapestry/realm/harness, em-dash strings, a tacked-on "In conclusion"). Framed as a **flag, not a verdict**: triggers a second read and a rewrite for concreteness, never an auto-reject and never an authorship accusation. Explicit rule against reporting any "percent-AI" figure (no reliable measure exists → would violate the no-fabricated-metrics guardrail); positioned as a complement to, not a replacement for, the brand-voice audit.
+
+**Sourcing & licensing:** ideas-only, written from scratch in the agent's voice. The Four U's (Useful/Urgent/Unique/Ultra-specific) attributed in-file to Michael Masterson / AWAI. Screen idea credited to [`cgallic/kai-cmo-harness`](https://github.com/cgallic/kai-cmo-harness) (MIT) and [`sergebulaev/linkedin-skills`](https://github.com/sergebulaev/linkedin-skills) (MIT) — both verified via GitHub API this run (MIT confirmed). Word lists are illustrative, not exhaustive; **no detection-accuracy or other numeric claims** are made.
+
+**Verified:** both copies byte-identical (`diff` clean); `scripts/lint-agents.sh` passes on both (all checks green); section order correct (after Critical Rules, before Deliverables); both new external links return HTTP 200; both manifests still parse.
+
+**Deferred:** the remaining skill-curation queue (`analytics-marketing-ops-architect` GA4 instrumentation audit); the two issue-first proposals; native subagents (#1, blocked); distribution submissions (human-gated). One change per run.
+
+---
+
 ### 2026-07-26 — Positioning Strategist: named-framework toolkit + portfolio-first discipline (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; every `Last reviewed` date in-repo is well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). No P0, so pulled the top unblocked backlog item.
