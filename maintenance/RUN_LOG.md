@@ -4,6 +4,31 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-26 — Skill Scout: audit evidence grading, a spend-change gate, and the search-term loop (automated)
+
+**Focus discipline:** paid media / paid social. Rotation put content/SEO-AEO (shipped earlier today) and email/analytics/ops (2026-07-25) behind us, leaving paid and PMM/sales tied at 2026-07-21; paid won on queue depth — two open backlog enhancements to PMM/sales' one.
+
+**Scouted (5 sources, all logged in [scout-ledger.md](scout-ledger.md)):** `AgriciDaniel/claude-ads` (enhance), `fourteenwm/ppc-ai-skills` (enhance), `hyperfx-ai/marketing-skills` (watch), `Hainrixz/claude-ads` (dismissed — same lineage as AgriciDaniel), `Linked-API/linkedin-skills` + `sergebulaev/linkedin-skills` (dismissed — LinkedIn organic/outreach, not paid social; automated DM outreach is off-limits for us).
+
+**Why this item:** it was the top queued paid-media backlog entry, and the primary source had grown substantially since the 2026-07-21 first pass (now ~7.5k★, 12 platforms, capability-gated mutations), which raised rather than lowered its value.
+
+**Shipped:** a new **"Operating a Live Account: Evidence, Gates, and the Search-Term Loop"** section in [`paid-media/paid-media-ppc-strategist.md`](../paid-media/paid-media-ppc-strategist.md) and its plugin twin. Three parts:
+- **Evidence grading** — four control states (`pass`/`fail`/`unknown`/`not applicable`) with `unknown` never rounding to `pass`, and two reported numbers instead of one: health (scored only over resolved checks, N/A dropped from the denominator) and evidence coverage (≥80% graded · 60–79% provisional · <60% insufficient → publish the missing access, not a score). Partial runs must be labelled partial; waste figures must derive from spend actually classified in that account, never from an imported benchmark.
+- **The spend-change gate** — read-only by default with write scope per task and *"recommend" never implying "apply"*; three blast-radius tiers (contained/reversible → live spend or delivery, needing a diff, a spend delta, and approval inside a **written** ceiling → structural or wide-blast, needing explicit per-change approval, including anything touching shared lists or account-level negatives since those reach Search, PMax, Shopping, App, Smart, and Local at once); plus verify-state-immediately-before-write, prefer pause to remove, one variable per verification window, and idempotency + a named rollback. Explicitly framed as the same posture as the email agent's pre-send gate — different currency, identical logic.
+- **The search-term loop** — cadence follows volume, not the calendar; pull search terms (and report the share of spend on *no* visible term as its own line, since it's the hard ceiling on what the loop can clean); n-gram rollup so you negate recurring patterns not one-off strings; eight intent buckets, two of which (competitor brand, own brand) are decisions rather than reflexes; **independent double-classification with disagreements routed to human review**, because the expensive error is negating a converting term; a cross-level conflict check before adding; deliberate level choice; gated apply (Tier 1 at ad-group level, **Tier 3** at shared-list/account level); and measurement in both directions — a list that cuts spend and conversions in the same proportion shrank the account rather than optimizing it.
+
+**Sourcing & licensing:** ideas-only, written from scratch in our voice. Credited in-file to `AgriciDaniel/claude-ads`, `fourteenwm/ppc-ai-skills`, and `hyperfx-ai/marketing-skills` (all MIT). No prose reused from any source.
+
+**No fabricated numbers:** the only hard figures are Google's own documented negative-keyword rules and limits — negatives don't match close variants ("flowers" blocks *red flowers*, not *red flower*), 10,000 negatives per campaign, 5,000 per list, 20 lists per manager or child account, 1,000 account-level negatives, 1,000 max on Display/Video — each cited to Google Ads Help with read-date 2026-07-26. The coverage bands (80/60) are adopted structure and presented as thresholds to set, not measured constants.
+
+**Also updated:** [scout-ledger.md](scout-ledger.md) (new dated block, 5 sources with verdicts), `CHANGELOG.md` `[Unreleased]`, [backlog.md](backlog.md) (item marked done; a second market signal noted against the MCP-recipes item).
+
+**Verified:** both copies of the agent byte-identical (`diff`) and passing `scripts/lint-agents.sh`; all 6 new external links resolve (3 GitHub repos, 3 Google Ads Help pages); repo-wide internal `.md` link check clean after edits.
+
+**Deferred:** the remaining queued paid item (`paid-media-social-ads-specialist`: creative-fatigue rule + Pixel/CAPI Event-Match-Quality audit, src `TheMattBerman/meta-ads-kit`) — one change per run.
+
+---
+
 ### 2026-07-26 — Skill curation: measurement backbone for the AI Search Optimizer (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 and `integrations/README.md` 2026-07-23 — both well inside the 90-day window. No P0, so pulled the top unblocked backlog item.
