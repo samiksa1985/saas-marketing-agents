@@ -4,6 +4,27 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-26 — Skill curation: measurement backbone for the AI Search Optimizer (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 and `integrations/README.md` 2026-07-23 — both well inside the 90-day window. No P0, so pulled the top unblocked backlog item.
+
+**Why this item:** the top P1 "high-leverage" item (native subagents) stays blocked on two open decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the distribution items are gated on README polish / star thresholds. The highest-priority genuinely unblocked, right-sized item was the queued skill-curation enhancement for `seo-ai-search-optimizer` (scout-vetted 2026-07-21).
+
+**Shipped:** a **"Measuring Citability: Score, Regress, Map"** section in [`seo/seo-ai-search-optimizer.md`](../seo/seo-ai-search-optimizer.md) (and its plugin twin). Three instruments, each turning a Field-Guide lever into something you can run on a schedule:
+- **Passage-Citability Score (0–100)** — an 8-row rubric (self-contained answer capsule, direct quotation, cited statistic, outbound citations, extractable structure, author + `Person`/`Author` schema, freshness, minus a keyword-stuffing penalty) with 80/60 interpretation bands. Weights track the GEO study's *measured* per-lever effect sizes; the composite is flagged **directional editorial judgement, not a validated model**.
+- **Citation-Regression Tests** — a baseline-diff suite (capsule still answers ≤60 words · cited evidence still resolves against the live source · schema still validates · freshness in-window · citation still held per tracked query/engine · no new stuffing/thin-content drift), framed like software regression tests, with a non-determinism caveat and a hard boundary: never record a citation not actually observed.
+- **AI Share-of-Voice Heatmap** — queries × engines (ChatGPT/Perplexity/Google AIO/Gemini/Copilot) colour-coded you / competitor / neither, motivated by the ~11% cross-engine domain overlap already cited in the file; plus an honest-measurement note (sample each query N times, report frequency + sample size + date, flag intermittent cells).
+
+**Sourcing & licensing:** ideas-only, written from scratch in our voice, credited in-file to `Auriti-Labs/geo-optimizer-skill`, `AgricIDaniel/claude-seo`, and `seranking/seo-skills` (all MIT). No prose reused.
+
+**No fabricated numbers:** the only quantitative claims are the per-lever effect sizes (quotations ~+40%, statistics ~+33%, outbound citations ~+28%, fluency ~+29%, keyword stuffing ~−9%, named authors ~2.3×) already present and cited in this file's Field Guide and the [AEO/GEO Playbook](../guides/aeo-geo-playbook.md) to Aggarwal et al., "GEO: Generative Engine Optimization" (KDD 2024). The rubric point weights are explicitly labelled our own directional judgement.
+
+**Also updated:** [scout-ledger.md](scout-ledger.md) (queued row → shipped), `CHANGELOG.md` `[Unreleased]`, [backlog.md](backlog.md) (item marked done).
+
+**Verified:** both copies of the agent byte-identical (`diff`) and passing `scripts/lint-agents.sh`; internal-link check on the changed files clean (0 broken) after edits.
+
+---
+
 ### 2026-07-25 — Skill Scout: pre-send safety gate for the automation engineer (automated)
 
 **Focus discipline:** email / analytics / marketing-ops — chosen because the [scout ledger](scout-ledger.md)'s first pass covered it thinnest (one email row, one client-ops row, zero analytics rows).

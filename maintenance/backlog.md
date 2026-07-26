@@ -26,7 +26,7 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 ## P1 — skill curation (from scout 2026-07-21; the daily scout works these one per run — see [scout-ledger.md](scout-ledger.md))
 - [x] Enhance `paid-media-attribution-analyst` with a Bayesian-MMM measurement backbone — done 2026-07-21 (src: pymc-marketing, Apache-2.0, ideas-only).
 - [x] Enhance `sales-discovery-coach` with a methodology taxonomy (MEDDPICC/SPIN/Challenger/Gap/Sandler/Value) — done 2026-07-21 (src: gtm-skills, gtmagents; MIT).
-- [ ] Enhance `seo/seo-ai-search-optimizer`: 0-100 passage-citability rubric + citation-regression "tests" + AI Share-of-Voice heatmap (src: Auriti-Labs/geo-optimizer-skill, AgricIDaniel/claude-seo, seranking/seo-skills; MIT, ideas-only).
+- [x] Enhance `seo/seo-ai-search-optimizer`: 0-100 passage-citability rubric + citation-regression "tests" + AI Share-of-Voice heatmap — done 2026-07-26 (new "Measuring Citability: Score, Regress, Map" section in both copies; rubric weights flagged directional; ideas-only, credited to Auriti-Labs/geo-optimizer-skill, AgricIDaniel/claude-seo, seranking/seo-skills; MIT).
 - [ ] Enhance `paid-media/paid-media-ppc-strategist`: verify-before-write mutation guardrail + negative-keyword pipeline + weighted audit score (src: fourteenwm/ppc-ai-skills, AgriciDaniel/claude-ads; MIT).
 - [ ] Enhance `paid-media/paid-media-social-ads-specialist`: creative-fatigue rule + Pixel/CAPI Event-Match-Quality audit (src: TheMattBerman/meta-ads-kit; MIT).
 - [ ] Enhance `product-marketing/pmm-positioning-strategist`: named frameworks (Dunford Obviously Awesome, Crossing the Chasm, JTBD, StoryBrand, Blue Ocean ERRC) + portfolio-before-messaging (src: wondelai/skills, realjaymes/marketingagentskills; MIT).

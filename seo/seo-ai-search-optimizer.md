@@ -81,3 +81,52 @@ _Concrete, sourced tactics. Full detail and citations in the [AEO/GEO Playbook](
 - **Per-engine:** ChatGPT and Perplexity share only ~11% of cited domains — track and optimize each engine separately.
 
 **Off-page (highest-correlating signals):** branded web mentions and **YouTube** presence correlate most strongly with AI visibility; for B2B SaaS, **Reddit ≈ 6× G2** for citations, and current **G2 / Capterra / TrustRadius** listings are table stakes.
+
+## Measuring Citability: Score, Regress, Map
+
+"Optimize for AI citations" only becomes a program when it is measurable. These three instruments turn the Field Guide's levers into a repeatable audit → monitor → benchmark loop. Treat every number below as **directional**: the per-lever effect sizes come from the GEO study (Aggarwal et al., KDD 2024), but the composite weightings are our editorial judgement, not an empirically validated model — tune them against what actually gets cited for your domain.
+
+### 1. Passage-Citability Score (0–100)
+
+Score a single passage or page — the unit an engine actually lifts — on how quotable it is. Weights track the study's measured levers (quotations, statistics, outbound citations, fluency) rather than legacy blue-link factors.
+
+| Dimension | Points | What earns full marks |
+|---|---:|---|
+| **Self-contained answer capsule** | 20 | A 40–60 word answer to the target query in the first ~150 words that stands alone with no anaphora ("this tool", "as above") |
+| **Direct quotation from a credible, named source** | 15 | An attributed quote a reader could verify — strongest single lever in the study (~+40%) |
+| **Cited statistic / quantitative data** | 15 | A specific number with its source and date (~+33%) |
+| **Outbound authoritative citations** | 15 | Links to primary/authoritative sources; helps lower-ranked pages most (~+28%) |
+| **Extractable structure** | 15 | Clean H2/H3s, a table, or an FAQ-style Q&A block that isolates the passage |
+| **Named author + bio + `Person`/`Author` JSON-LD** | 10 | Visible byline with real expertise, mirrored in schema (~2.3× citation odds) |
+| **Freshness (updated ≤90 days)** | 10 | Genuine content update, not a touched timestamp |
+| **Penalty — keyword stuffing / filler** | −10 | Stuffing measured *negative* for AI visibility (~−9%); deduct when present |
+
+**Bands:** **80–100** strong citation candidate, ship as-is; **60–79** citable but leaving citations on the table — fix the two lowest-scoring rows; **<60** unlikely to be cited — rebuild the capsule and add sourced evidence before publishing. Score competitors' ranking passages the same way to see the gap you're closing.
+
+### 2. Citation-Regression Tests
+
+Citability decays silently — a stat goes stale, a source link 404s, a redesign strips the schema, an engine changes what it lifts. Run this suite as a scheduled check against a stored baseline and **alert on drops**, exactly like a software regression suite. Because AI answers are non-deterministic, a single miss is a signal, not proof — sample before you conclude (see the heatmap note).
+
+- **Capsule still answers** the target query in ≤60 self-contained words.
+- **Evidence still resolves:** every cited stat/quote link returns 200 *and* the source still states the claim (verify against the live page, never assume).
+- **Schema still validates:** `Person`/`Author`, `Organization`, and any `FAQPage`/`Article` JSON-LD pass a validator with no dropped required fields.
+- **Freshness in-window:** last *substantive* update ≤90 days for pages you've committed to maintain.
+- **Citation held:** for each tracked query, brand still appears in ≥1 target engine at the sampled frequency from last run (drop of >1 engine = investigate).
+- **No new drift:** no keyword-stuffing, thin-content, or filler introduced since baseline.
+
+Store the prior run's result per URL, diff each field, and treat any red as a ticket. **Boundary:** these tests confirm or deny citations against live engine output — never record a citation you did not actually observe.
+
+### 3. AI Share-of-Voice Heatmap
+
+Because ChatGPT and Perplexity overlap on only ~11% of cited domains, a single blended "AI visibility" number hides where you're actually losing. Map it instead — **rows = your tracked queries, columns = engines** (ChatGPT, Perplexity, Google AI Overviews, Gemini, Bing/Copilot) — and color each cell by who owns the answer:
+
+| Query | ChatGPT | Perplexity | Google AIO | Gemini | Copilot |
+|---|---|---|---|---|---|
+| _"best cloud telephony API"_ | 🟩 you | 🟨 competitor | ⬜ neither | 🟨 competitor | 🟩 you |
+| _"twilio alternative for …"_ | ⬜ | 🟩 you | 🟩 you | ⬜ | 🟨 competitor |
+
+🟩 cited · 🟨 competitor cited, you absent · ⬜ neither cited (a green-field capsule opportunity). Columns of yellow reveal an engine-specific gap; rows of white reveal an unclaimed question. Re-run on a fixed cadence and diff to track share over time.
+
+**Honest-measurement note:** AI answers vary run to run, personalize, and shift with model updates — sample each query **N times** (e.g., 3–5, fresh sessions, logged out) and record citation *frequency*, not a single pull. Report the sample size and date alongside the map; a cell is only "cited" if you observed it, and contested or intermittent cells should be flagged as such rather than rounded up.
+
+_Passage-citability rubric, citation-regression testing, and AI share-of-voice heatmap concepts informed by the open-source [Auriti-Labs/geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill), [AgricIDaniel/claude-seo](https://github.com/AgricIDaniel/claude-seo), and [seranking/seo-skills](https://github.com/seranking/seo-skills) (MIT) — ideas only, written from scratch. Per-lever effect sizes from Aggarwal et al., "GEO: Generative Engine Optimization" (KDD 2024); full detail and citations in the [AEO/GEO Playbook](https://github.com/shalintripathi/saas-marketing-agents/blob/main/guides/aeo-geo-playbook.md)._
