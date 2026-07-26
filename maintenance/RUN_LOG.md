@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-26 — Social Ads Specialist: creative-fatigue rule + Meta EMQ audit (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 178 checked (up from 172 files as the repo has grown); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` last reviewed 2026-07-21 and `integrations/README.md` 2026-07-23 — both well inside the 90-day window. No P0, so pulled the top unblocked backlog item.
+
+**Item selected:** the top P1 *high-leverage* item (native subagents) stays blocked on two in-thread decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are human-gated (traction thresholds, "human-written" issue forms, an in-app marketplace form) and not appropriate to submit autonomously. So the top genuinely-unblocked item was the next skill-curation entry: enhance `paid-media-social-ads-specialist`.
+
+**Shipped:** a new **"Reading the Two Silent Signals: Creative Fatigue and Match Quality"** section in **both** dual-located copies (`paid-media/` and `plugins/saas-marketing/skills/paid-media-ops/agents/`, verified byte-identical). Two parts:
+- **Creative fatigue** read as a coordinated decline (frequency ↑, first-time-impression ratio ↓, CPM ↑ vs flat/falling CTR, CVR ↓ while CTR holds) rather than any single metric, with directional B2B refresh triggers (frequency ≥ 2.5 cold, 4–5 retargeting), a queue-not-rescue fix, and an explicit fatigue-vs-audience-exhaustion distinction. Ties back to the agent's existing Critical Rule 5.
+- **Event Match Quality audit** as its own line item: CAPI *alongside* the Pixel; correct parameter hashing (`em`/`ph`/name/geo/`external_id` SHA-256, `client_ip_address`/`client_user_agent`/`fbc`/`fbp` un-hashed); `event_id`+`event_name` deduplication inside Meta's 48-hour window; EMQ ≥ 7 target before scaling — under a hashed, consent-gated, aggregates-only PII boundary that mirrors the email and PPC gates.
+
+**Sourcing:** ideas-only, credited in-file to [`TheMattBerman/meta-ads-kit`](https://github.com/TheMattBerman/meta-ads-kit) (MIT, verified via GitHub API this run). EMQ scoring, customer-information parameters + hashing rules, and deduplication behaviour each cited to Meta's own developer docs (Dataset Quality API, Customer Information Parameters, Handle duplicate events), read 2026-07-26. Numeric fatigue/EMQ thresholds flagged directional, not platform guarantees. No fabricated metrics.
+
+**Verified:** both copies byte-identical (`diff` clean); `scripts/lint-agents.sh` passes on both (all checks green, 1811 words each); re-ran the link check (0 broken across 178 internal links); both manifests still parse.
+
+**Deferred:** the remaining skill-curation queue (pmm-positioning-strategist, ops-quality-assurance AI-tell screen, analytics GA4 instrumentation audit); the two issue-first proposals; native subagents (#1, blocked); distribution submissions (human-gated).
+
+---
+
 ### 2026-07-26 — Skill Scout: audit evidence grading, a spend-change gate, and the search-term loop (automated)
 
 **Focus discipline:** paid media / paid social. Rotation put content/SEO-AEO (shipped earlier today) and email/analytics/ops (2026-07-25) behind us, leaving paid and PMM/sales tied at 2026-07-21; paid won on queue depth — two open backlog enhancements to PMM/sales' one.
