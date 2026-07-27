@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-27 — Scoping issue for `seo-programmatic-strategist` (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 174 markdown files; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`name`/`metadata.version`/`metadata.description` on the marketplace; `name`/`version`/`description` on the plugin); all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). The `Last Updated: 2026-04-03` stamps on the CATALYST strategy playbooks are v1.0 *version footers*, not `Last reviewed` freshness commitments — bumping them with no content change would be a forbidden padding edit, so left untouched. No agents edited, so no lint run needed. **No P0.**
+
+**Item selected:** the P1 *high-leverage* item (native subagents) stays blocked on two in-thread decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are human-gated (README-polish condition, star thresholds, human-written issue forms, an in-app marketplace form) and not appropriate to submit autonomously; and every queued `enhanced-ours` skill-curation entry is now shipped. The top genuinely-unblocked item was the next skill-curation PROPOSAL — `seo-programmatic-strategist` — whose queued action is "open an issue first" (the routine requires net-new/large changes to be proposed as an issue before any code).
+
+**What shipped:** GitHub issue [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2) — a scoping proposal for a net-new `seo-programmatic-strategist` agent (scaled template-page SEO: integration / `vs` / alternatives / use-case / glossary pages, with thin-content + index-bloat guardrails). Includes the **verified overlap analysis** the backlog required before proposing: grepped the SEO/content/PMM agents for `programmatic`, `template page`, `comparison page`, `glossary`, `alternatives page`, `/vs/` → **zero matches** (gap confirmed), plus a table drawing the consume-from / hand-off-to boundary against `seo-keyword-researcher`, `seo-content-optimizer`, `content-blog-strategist`, and `pmm-competitive-intelligence`. Surfaces the real open decision — **net-new 60th agent vs. a capability section on an existing agent** — to settle in-thread before code. Sources credited ideas-only, MIT (per scout ledger 2026-07-21); no fabricated metrics or capabilities. Marked the backlog item scoped + blocked-on-decision.
+
+**Verified:** re-ran the broken-link check (0/174), re-validated both manifests after editing `backlog.md` (`jq empty` clean), and confirmed issue #2 is live and labeled `enhancement`. No agent bodies touched, so `lint-agents.sh` was not applicable this run.
+
+**Deferred:** implementing the agent (blocked on the #2 scope decision); the `ops-legal-compliance` proposal (needs human/legal validation); the human-gated distribution submissions; and the native-subagents work (#1).
+
+---
+
 ### 2026-07-27 — Marketing Ops Architect: web-analytics instrumentation audit (GA4) (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across 187 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23); `scripts/lint-agents.sh` run on both edited copies — **2/2 pass**. No P0.
