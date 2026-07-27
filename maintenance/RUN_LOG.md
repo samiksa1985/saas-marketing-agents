@@ -4,6 +4,22 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-27 — Marketing Ops Architect: web-analytics instrumentation audit (GA4) (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 187 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23); `scripts/lint-agents.sh` run on both edited copies — **2/2 pass**. No P0.
+
+**Item selected:** the top P1 *high-leverage* item (native subagents) stays blocked on two in-thread decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are human-gated (README-polish condition, star thresholds, human-written issue forms, an in-app marketplace form) and not appropriate to submit autonomously. The top genuinely-unblocked, right-sized item was the next skill-curation entry: enhance `analytics-marketing-ops-architect` with a web-analytics instrumentation quality audit.
+
+**What shipped:** a new **"Auditing the Web-Analytics Measurement Layer (GA4)"** section in both dual-located copies (`analytics/` and `plugins/saas-marketing/skills/marketing-analytics/agents/`). Six read-only-by-default checks — key-event config, custom dimensions/metrics quota + scope, PII in event parameters (fail-loud P0), attribution model/lookback vs. sales cycle, `(not set)`/*Unassigned* diagnosis, UTM→channel-grouping alignment — each graded pass/needs-work/broken with *unknown never rounding to pass*, plus a *Web-Analytics Instrumentation Audit* deliverable folded into the weekly data-quality review.
+
+**Facts verified against Google's GA4 docs (read 2026-07-27), not memory:** standard-property custom-definition limits (50 event-scoped / 25 user-scoped / 10 item-scoped custom dimensions; 50 custom + 5 calculated metrics); the PII prohibition wording ("no data be passed to Google that Google could use or recognize as personally identifiable information (PII)", naming email/mobile/SSN) and the Data-redaction remedy; the three reporting attribution models + configurable key-event lookback window; and rule-based, case-sensitive default channel grouping with *Unassigned* as the no-rule-match fallback. The attribution *default model/window durations* were **not** assertable from the fetched page, so the audit instructs reading the actual Admin setting rather than stating a default — flagged in-file.
+
+**Guardrails:** ideas-only — the trigger source (`cognyai/claude-code-marketing-skills` `/ga4-audit`) is paywalled and was **not** adopted; dimensions credited in-file alongside `SpillwaveSolutions` (MIT). No prose reused. Read-only-by-default framing consistent with the repo's existing send/spend gates. No fabricated metrics.
+
+**Deferred:** the remaining scout proposals (`seo-programmatic-strategist`, `ops-legal-compliance`) still need an issue / legal validation first; `analytics-marketing-ops-architect` GA4 audit item now closed.
+
+---
+
 ### 2026-07-26 — Quality Assurance Manager: Four U's copy-scoring rubric + AI-tell screen (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across 186 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; every `Last reviewed` date in-repo is well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23); `scripts/lint-agents.sh` run across all 11 category dirs — **59/59 agent personas pass**. No P0, so pulled the top unblocked backlog item.
