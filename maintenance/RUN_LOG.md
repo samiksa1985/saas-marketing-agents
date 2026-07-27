@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-28 — Skill Scout: the third loss mode (buyer indecision) for the Deal Strategist (automated)
+
+**Focus discipline (by rotation):** PMM / sales / GTM — last the *focus* on 2026-07-21, while content/SEO-AEO, email/analytics/ops, and paid/social have each had a dedicated run since.
+
+**Scouted (6 sources, all logged in [scout-ledger.md](scout-ledger.md)):** [LeadMagic/gtm-skills](https://github.com/LeadMagic/gtm-skills) (MIT, 205 skills, pushed 2026-07-20) → **enhance**; [manojbajaj95/claude-gtm-plugin](https://github.com/manojbajaj95/claude-gtm-plugin) → dismissed (its persistent-workspace idea is what we already ship as `brand-context.md` + loop ledgers); [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) re-checked after its 2026-07-23 push → dismissed (new `launch`/`product-marketing`/`pricing` skills, same checklist format, shallower than our PMM agents); `gtmagents/gtm-agents` + `gtm-skills/gtm` → dismissed (already mined 07-21, stale since April/February); [alyssonfranklin/b2b-agents](https://github.com/alyssonfranklin/b2b-agents) → dismissed (unlicensed, and its "B2B" marketing folder is per-channel social personas).
+
+**Gap verified before writing:** grepped the repo for `indecision|no.decision|JOLT|omission bias|status quo` — the concept was absent. `sales-deal-strategist` models a loss as *competitor won* or *status-quo preferred* (Rule 7), and "status quo" appears 3 times repo-wide, always framed as a value problem to be solved with more cost-of-inaction pressure.
+
+**What shipped:** a new **"The Third Loss Mode: Deals Lost to Indecision, Not to a Competitor"** section in both dual-located copies of [`sales/sales-deal-strategist.md`](../sales/sales-deal-strategist.md), plus a **`No-Decision Loss Mix`** success metric. The section separates indecision (a *risk* problem — the buyer is already convinced and afraid of being wrong) from status-quo preference (a *value* problem), states the operational rule that follows — **never escalate urgency on a stalled deal before diagnosing which mode you're in** — and adapts the four JOLT moves to multi-threaded enterprise deals: judge *and locate* the indecision (whose?), offer a recommendation instead of options, limit the exploration (a data room is not an answer to anxiety), and take risk off the table by restructuring the downside within deal-desk/legal limits. Two parts are ours rather than adapted: **run the play through the champion** (the person carrying the most personal risk), and **classify every no-decision loss** by mode with evidence, so the largest loss bucket stops being undifferentiated.
+
+**Sourcing discipline:** ideas only — no third-party prose reused. The JOLT framework is attributed to Matthew Dixon & Ted McKenna (*The JOLT Effect*, 2022); the source skill that surfaced it is credited to LeadMagic (MIT). Statistics (2.5M recorded conversations; 40–60% of losses ending in no decision; the 44/56 status-quo-vs-indecision split) cited to two Dixon-affiliated sources read 2026-07-28, and the **84% figure explicitly flagged as inconsistently framed between them** (an 84% increase in loss likelihood vs. backfiring 84% of the time) — direction well-evidenced, magnitude directional.
+
+**Verified:** `lint-agents.sh` passes on both copies (2/2); `diff` confirms the twins are byte-identical; all three added links resolve (`challengerinc.com` 200, `jolteffect.com` 200, and the LeadMagic repo confirmed live + MIT via the GitHub API after a sandbox `curl` timeout). No fabricated metrics; no personal data.
+
+**Deferred:** `abm/multi-thread-orchestration`, `sales-revops/transparency-selling`, and the `sales-plays/*-signal-play` family from the same source — noted in the ledger for a future run rather than crammed into this one (one change per run).
+
+---
+
 ### 2026-07-27 — Scoping issue for `seo-programmatic-strategist` (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across 174 markdown files; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`name`/`metadata.version`/`metadata.description` on the marketplace; `name`/`version`/`description` on the plugin); all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). The `Last Updated: 2026-04-03` stamps on the CATALYST strategy playbooks are v1.0 *version footers*, not `Last reviewed` freshness commitments — bumping them with no content change would be a forbidden padding edit, so left untouched. No agents edited, so no lint run needed. **No P0.**
