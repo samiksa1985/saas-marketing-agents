@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-28 — Freshness pass: FAQ rich-results now settled + GSC-vs-Bing AI report distinction (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; before this run the two `Last reviewed` dates were `guides/aeo-geo-playbook.md` 2026-07-21 and `integrations/README.md` 2026-07-23 — both inside the 90-day window. No P0.
+
+**Item selected:** the backlog is genuinely quiet for autonomous, unblocked internal work — the P1 subagents item is blocked in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); both PROPOSALs are blocked (issue-#2 scope decision; legal validation); distribution items are the human-gated promotion track; and the `LeadMagic/gtm-skills` scout mine that fed the previous four runs today is now fully worked (JOLT ✓, multi-thread ✓, transparency ✓, signal-play found already-covered). That routes to **ROUTINE step 3 — the freshness pass** on the AEO/GEO playbook + `seo-ai-search-optimizer`, updating only if something genuinely changed.
+
+**What genuinely changed (verified against Google's own docs, read 2026-07-28):**
+1. **FAQ rich results** — the playbook (§3) and both `seo-ai-search-optimizer` copies (line 79) described them as *"being removed in 2026"* (present-continuous). They are now gone and the deprecation is phased and dated: rich results stopped appearing **May 7 2026**; the search-appearance filter, rich-result report, and Rich Results Test support were dropped in **June 2026**; and **Search Console API support ends August 2026** — an imminent date the docs never stated. `FAQPage` remains a valid Schema.org type Google still reads to understand a page, so the *keep-the-structure* advice is unchanged; only the tense and the concrete end-date needed fixing. Sources: [Google FAQ structured-data doc](https://developers.google.com/search/docs/appearance/structured-data/faqpage), [Search Engine Journal](https://www.searchenginejournal.com/google-drops-faq-rich-results-from-search/574429/).
+2. **GSC Search Generative AI performance report** — checklist item 15 grouped it with Bing's report under *"track citations."* Google's report (launched June 2026) is **impressions-only** — it counts times your links were *shown* in AI Overviews/AI Mode, with **no clicks, CTR, or query data** — i.e. visibility, not citations. **Bing Webmaster Tools' AI Performance report** is the one that reports actual **citations** (Total Citations, page-level Citation Activity). Item 15 now draws that distinction, and the report is added to the playbook's Sources. Source: [Google Search Console Help — Generative AI performance report](https://support.google.com/webmasters/answer/16984139).
+
+**Shipped:** `guides/aeo-geo-playbook.md` — FAQ line rewritten (was `_Contested:_`, now `_Now settled (2026):_` with the phased dates), checklist item 15 split into the impressions-vs-citations distinction, GSC report added to Sources, `Last reviewed` bumped to 2026-07-28. Both dual-located copies of `seo-ai-search-optimizer.md` — line 79 FAQ clause moved to past tense with the Aug-2026 API note. No effect sizes, study figures, or GEO tactics touched (those were current); no fabricated metrics.
+
+**Verified:** both `seo-ai-search-optimizer` copies `diff`-identical; `scripts/lint-agents.sh` on both — **2/2 pass**; broken-internal-link scan clean repo-wide. All four added links are external and point to Google/authoritative docs.
+
+**Deferred:** the still-blocked subagents (#1), `seo-programmatic-strategist` (#2), and `ops-legal-compliance` (legal) items; the human-gated distribution submissions.
+
+---
+
 ### 2026-07-28 — Discovery Coach: transparency selling (proactive disclosure to disarm) (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). No P0.

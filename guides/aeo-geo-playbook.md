@@ -2,7 +2,7 @@
 
 **How to get your content cited by AI answer engines — ChatGPT, Perplexity, Google AI Overviews & AI Mode, and Microsoft Copilot.**
 
-> _Last reviewed: 2026-07-21. This is a living document — AI search changes fast, and this repo commits to keeping it current. Effect sizes below come from named studies; treat them as directional, not guarantees. Contested points are flagged._
+> _Last reviewed: 2026-07-28. This is a living document — AI search changes fast, and this repo commits to keeping it current. Effect sizes below come from named studies; treat them as directional, not guarantees. Contested points are flagged._
 
 Search is splitting into three overlapping jobs. This playbook covers all three and tells you where they diverge.
 
@@ -56,7 +56,7 @@ Two strategic implications: effectiveness is **topic-dependent** (statistics win
 - **Name your authors.** Real bylines with real credentials and bios materially raise citation odds (~2.3× in one analysis). Add `Person`/`Author` structured data that mirrors the visible byline.
 - **Organize around entities**, not keyword strings — your product, category, competitors, and the people behind them. Consistent entity naming across text, images, and video helps engines connect the dots.
 - **Structured data that still matters:** `Article`, `Organization`, `BreadcrumbList`, `Product`, `Video`. Mark up only content visible on the page.
-  - _Contested:_ Google is **removing FAQ *rich results* in 2026**, but Bing and GEO practitioners still recommend **FAQ *structure*** because Q&A blocks are easy for engines to extract. Keep the FAQ format; don't rely on the FAQ rich-result appearance.
+  - _Now settled (2026):_ Google **removed FAQ *rich results*** — they stopped appearing May 7 2026, the search-appearance filter, rich-result report, and Rich Results Test support were dropped in June, and **Search Console API support for them ends August 2026**. But `FAQPage` is still a valid Schema.org type Google reads to understand a page, and Bing + GEO practitioners still recommend **FAQ *structure*** because Q&A blocks are easy for engines to extract. Keep the FAQ markup and format; just don't expect the rich-result appearance.
 
 ---
 
@@ -94,7 +94,7 @@ Two strategic implications: effectiveness is **topic-dependent** (statistics win
 12. Seed and engage authentically in the subreddits your buyers read (~6× G2 for B2B SaaS).
 13. Keep G2 / Capterra / TrustRadius listings current — table stakes.
 14. Ensure clean crawlability and submit updates via IndexNow for Bing/Copilot.
-15. Track citations per engine separately (GSC Generative-AI report + Bing Webmaster Tools' AI Performance report) — never assume one strategy transfers.
+15. Track per engine separately — and know the two reports measure different things: **GSC's Search Generative AI performance report** shows AI Overviews/AI Mode **impressions only** (visibility that your links were shown — no clicks, CTR, or query data yet), while **Bing Webmaster Tools' AI Performance report** shows actual **citations** (Total Citations, page-level Citation Activity). Never assume one strategy — or one metric — transfers.
 
 ---
 
@@ -110,6 +110,7 @@ Two strategic implications: effectiveness is **topic-dependent** (statistics win
 ## Sources
 
 - Google — [AI features & your website](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) · [Creating helpful content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content) · [Spam policies](https://developers.google.com/search/blog/2024/03/core-update-spam-policies) · [FAQ structured data (rich-result deprecation)](https://developers.google.com/search/docs/appearance/structured-data/faqpage)
+- Google — [Search Generative AI performance report (impressions-only; AI Overviews/AI Mode)](https://support.google.com/webmasters/answer/16984139) · [Introducing the report (Search Central, June 2026)](https://developers.google.com/search/blog/2026/06/gen-ai-performance-reports)
 - Bing/Microsoft — [AI Performance in Bing Webmaster Tools](https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview) · [Copilot guidance for public websites](https://learn.microsoft.com/en-us/microsoft-copilot-studio/guidance/generative-ai-public-websites)
 - GEO research — [GEO: Generative Engine Optimization (Aggarwal et al., KDD 2024)](https://arxiv.org/abs/2311.09735)
 - Correlational data — [Ahrefs: AI brand-visibility correlations](https://ahrefs.com/blog/ai-brand-visibility-correlations/) · [Ahrefs: AI Overview citations & top 10](https://ahrefs.com/blog/ai-overview-citations-top-10/) · [Profound: AI platform citation patterns](https://www.tryprofound.com/blog/ai-platform-citation-patterns)

@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   customers, metrics, or certifications. Shipped with the plugin at `plugins/saas-marketing/templates/`.
 
 ### Changed
+- **AEO/GEO freshness pass — two now-settled Google facts corrected** ([`guides/aeo-geo-playbook.md`](guides/aeo-geo-playbook.md), both copies of [`seo/seo-ai-search-optimizer.md`](seo/seo-ai-search-optimizer.md)). (1) **FAQ rich results** were described as "being removed in 2026"; they are now *gone* — rich results stopped appearing May 7 2026, the report and Rich Results Test support were dropped in June, and **Search Console API support ends August 2026** (the imminent date was unstated). `FAQPage` markup stays valid and Google still reads it, so the keep-the-structure advice is unchanged. (2) The **GSC Search Generative AI performance report** was grouped with Bing's report under "track citations," but Google's report is **impressions-only** (visibility in AI Overviews/AI Mode — no clicks, CTR, or query data) whereas **Bing Webmaster Tools' AI Performance report** reports actual **citations**; checklist item 15 now distinguishes them. Both facts cited to Google's own docs (read 2026-07-28); playbook `Last reviewed` bumped to 2026-07-28.
 - **All 12 category skills now load `brand-context.md` first**, not just the CATALYST orchestrator. Invoking a
   skill directly (e.g. `/saas-marketing:seo-growth`) applies the same brand tailoring and the same
   anti-fabrication boundary as going through the orchestrator.
