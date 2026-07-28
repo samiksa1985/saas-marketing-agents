@@ -181,6 +181,17 @@ _The JOLT framework — Judge the level of indecision, Offer a recommendation, L
   - Engagement frequency: Champion 2x/week, economic buyer 1x/week, evaluators 1x/week, procurement as-needed
   - Synchronization points: Key group meetings (steering committee, selection narrowing, final approval)
 
+- **Thread Coverage as a State, Not a Count** (grade the map; a headcount hides power gaps)
+  - Five threads can still be single-threaded on *power*: four user relationships with no live economic-buyer contact is a one-thread deal wearing a five-thread costume. A count answers "how many people do I talk to"; coverage answers "is every role that can advance or kill this deal actually held by me." Only the second predicts the outcome — so grade the map, don't tally it.
+  - Grade each decision-critical role — economic buyer, champion, technical/security evaluator, procurement, and any known blocker — on three states rather than present/absent:
+    - **Covered**: a live, direct thread exists. "My champion says finance is comfortable" is the champion covering finance, not you — that role is uncovered until you have first-hand contact.
+    - **Corroborated**: the role's position is confirmed by two independent sources or a first-hand signal, so one relationship leaving can't collapse your read of it. A single-sourced role is a single point of failure — this is where champion risk actually lives.
+    - **Current**: engaged inside the deal's recent-activity window. A thread that has gone quiet for a stage is lapsed, not covered — decay is the quiet reason "closed-won" forecasts slip a quarter.
+  - The deal is multi-threaded when every decision-critical role is Covered, Corroborated, and Current — not when the stakeholder count clears an arbitrary target. A role that fails any of the three is open thread work, and all three failure modes are invisible to a raw count.
+  - Re-grade at every stage gate. Coverage is never won once: reorgs, champion job changes (the political-stability criterion below), and late-arriving skeptics reopen roles you had closed. Treat the map as a live state re-read weekly, not a template filled in at Stage 3.
+
+_Grading thread coverage as a state (Covered / Corroborated / Current) rather than counting stakeholders is an original framing for this repo; credited for surfacing multi-thread-as-measurable-state to [`LeadMagic/gtm-skills`](https://github.com/LeadMagic/gtm-skills) (MIT), whose text was not reused. The signal-play trigger family from the same source (funding / hiring / job-change / launch) was evaluated and found already covered by `sales-outbound-strategist`, so it was not duplicated here._
+
 **Champion Development Strategy**
 - **Champion Identification Criteria** (who has motivation and ability to sell internally)
   - Problem ownership: This problem directly impacts their KPIs and performance
@@ -276,7 +287,8 @@ _The JOLT framework — Judge the level of indecision, Offer a recommendation, L
 - **Sales Cycle Length**: Days from first meeting to contract signed (target 60-90 days for mid-market, 120-180 for enterprise)
 - **Win Rate**: Percentage of opportunities that close (target 25-40% for qualified pipeline)
 - **Forecast Accuracy**: Predicted close dates vs. actual close dates (target 80%+ within 2-week window)
-- **Stakeholder Engagement Score**: Number of active stakeholders per deal (target 3-5 for mid-market, 5-7 for enterprise)
+- **Stakeholder Engagement Score**: Number of active stakeholders per deal (target 3-5 for mid-market, 5-7 for enterprise). Treat as a *proxy only* — a high count can still hide a power gap; pair it with coverage below.
+- **Buying-Committee Coverage**: Share of decision-critical roles (economic buyer, champion, technical evaluator, procurement, known blocker) that are Covered, Corroborated, and Current (target: all critical roles pass all three before Stage 4 / proposal). Measures whether the deal is genuinely multi-threaded on *power*, not on headcount.
 - **Sales Velocity**: Revenue closed per sales rep per month (track improvement over time)
 - **Deal Progression Velocity**: Average days per deal stage (identify bottleneck stages)
 - **Champion Identification Rate**: Percentage of deals with identified champions by Stage 3 (target 80%+)

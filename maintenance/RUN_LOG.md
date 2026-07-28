@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-28 — Deal Strategist: thread coverage as a graded state, not a stakeholder count (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 191 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). No P0.
+
+**Item selected:** the P1 *high-leverage* subagents item stays blocked on the two in-thread decisions in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are the separate promotion track and human-gated (README-polish condition, star thresholds, human-written issue forms, an in-app marketplace form); the two remaining PROPOSAL entries are blocked (issue-#2 scope decision; legal validation). The top genuinely-unblocked item was the skill-curation entry: multi-thread orchestration mechanics + evaluate the signal-play family, from `LeadMagic/gtm-skills` — which required verifying overlap before writing.
+
+**Overlap verified before writing (the required step):** grepped and read both target agents. The **signal-play family was found already covered** by `sales-outbound-strategist` — funding, hiring, job-change, and product-launch triggers all appear across Critical Rule #1, the "Buying Signal Indicators" list, and the T1/T2/T3 "Intent Signal Prioritization"; only earnings-call triggers are absent, and those fit a narrow public-company ICP. So that half was **deliberately not duplicated**. The multi-thread half had a genuine, narrow gap: `sales-deal-strategist` already has an extensive Multi-Threading Execution Plan (Threads 1–5 + engagement frequency), but it reads as a checklist, and the single success metric that measures it — **"Stakeholder Engagement Score: *Number* of active stakeholders (target 3-5)"** — rewards headcount, the exact "count, not coverage" anti-pattern the backlog item named. Five threads can still be single-threaded on the economic buyer.
+
+**What shipped:** a compact **"Thread Coverage as a State, Not a Count"** block, co-located right after the Multi-Threading Execution Plan in both dual-located copies of [`sales/sales-deal-strategist.md`](../sales/sales-deal-strategist.md), plus a new **`Buying-Committee Coverage`** success metric. The block grades each decision-critical role (economic buyer, champion, technical/security evaluator, procurement, known blocker) on three states rather than present/absent — **Covered** (a live *first-hand* thread, not "my champion says finance is fine"), **Corroborated** (two independent sources, so one departure can't collapse the read — where champion risk actually lives), **Current** (engaged inside the recent-activity window; a quiet thread is lapsed, not covered) — and defines multi-threaded as *every critical role passes all three*, re-graded at each stage gate. The existing headcount metric is kept but explicitly reframed as a *proxy only*.
+
+**Sourcing discipline:** ideas-only — no third-party prose reused. The graded-coverage framing is original to this repo; `LeadMagic/gtm-skills` (MIT) credited in-file for surfacing multi-thread-as-measurable-state, and the in-file note records that the signal-play half was evaluated and found already covered. No fabricated metrics; the only added link is external. No personal data.
+
+**Verified:** `scripts/lint-agents.sh` passes on both edited copies (2/2); `diff` confirms the twins are byte-identical; re-ran the broken-internal-link check (0/191).
+
+**Deferred:** earnings-call as a distinct outbound trigger (narrow public-co ICP; not worth a section); the still-blocked subagents (#1), `seo-programmatic-strategist` (#2), and `ops-legal-compliance` (legal) items; the human-gated distribution submissions.
+
+---
+
 ### 2026-07-28 — Skill Scout: the third loss mode (buyer indecision) for the Deal Strategist (automated)
 
 **Focus discipline (by rotation):** PMM / sales / GTM — last the *focus* on 2026-07-21, while content/SEO-AEO, email/analytics/ops, and paid/social have each had a dedicated run since.
