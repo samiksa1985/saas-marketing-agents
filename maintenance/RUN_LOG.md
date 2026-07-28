@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-28 — Discovery Coach: transparency selling (proactive disclosure to disarm) (automated)
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). No P0.
+
+**Item selected:** the P1 *high-leverage* subagents item stays blocked in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the P1 *distribution* items are the human-gated promotion track; the two PROPOSAL entries are blocked (issue-#2 scope decision; legal validation). The remaining genuinely-unblocked candidate was the last un-actioned source idea the scout flagged for future runs on 2026-07-28: `sales-revops/transparency-selling` from `LeadMagic/gtm-skills` (MIT). Verified the gap first — "transparency" appears 69× repo-wide but exclusively as *pricing/attribution/reporting* transparency; the **selling methodology** (Todd Caponi, *The Transparency Sale* — proactive flaw disclosure, ordering of negatives, imperfection-believability, early pricing legibility) had **zero coverage** (grep for Caponi / "transparency sale" / lead-with-weakness returned nothing).
+
+**Shipped:** a new **"Selling by Disclosure (Transparency Selling)"** section in both dual-located copies of `sales-discovery-coach` (`sales/` + `plugins/saas-marketing/skills/sales-enablement/agents/`). Five mechanics (volunteer the flaw first; imperfection > perfection; order negatives by primacy/recency; pre-empt the known objection; make pricing legible early), framed as the trust-building twin of the existing disqualification rigor (Critical Rule 7) and cross-referenced to the Proposal Architect for written pricing mechanics. Chose the Discovery Coach — not the twice-touched-today Deal Strategist — because transparency selling is orthogonal to the Coach's existing question-taxonomy (what you *volunteer* vs. what you *ask*). Ideas-only, our own words; framework attributed to Caponi; the 4.2–4.5-star ratings figure flagged **directional**, attributed to Northwestern's Spiegel Research Center. **No numeric business claims fabricated.**
+
+**Verified:** two copies byte-identical (`diff -q`); `scripts/lint-agents.sh` on both — **2/2 pass**; no broken links introduced.
+
+**Deferred:** distribution submissions (human-gated); subagents (#1) and both proposals (#2, legal) remain blocked.
+
+---
+
 ### 2026-07-28 — Deal Strategist: thread coverage as a graded state, not a stakeholder count (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links across 191 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-21, `integrations/README.md` 2026-07-23). No P0.

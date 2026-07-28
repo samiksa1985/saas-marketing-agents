@@ -52,6 +52,20 @@ Pick one primary lens per deal, borrow questions across them, and always exit di
 
 _Taxonomy structure inspired by the open-source [gtm-skills/gtm](https://github.com/gtm-skills/gtm) and [gtmagents/gtm-agents](https://github.com/gtmagents/gtm-agents) collections (MIT). The frameworks are industry-standard; described here in our own words._
 
+## Selling by Disclosure (Transparency Selling)
+
+Discovery isn't only extraction — what you *volunteer* shapes trust as much as what you ask. Transparency selling is the discipline of proactively surfacing your product's genuine limitations and your pricing logic *before* the buyer pries them out. Buyers already assume you're imperfect; a spotless pitch reads as something being hidden. Done well, proactive honesty disarms skepticism, shortens the decision, and separates real fits from bad ones earlier — it is the trust-building twin of your disqualification rigor (Critical Rule 7), not a contradiction of it.
+
+- **Volunteer the flaw first.** Name the two or three things you're genuinely not great at, or the buyer profiles you serve poorly, before the buyer finds them. "We're not the right fit if you need X" earns more credibility than any feature claim — and it qualifies out mismatches while the deal is cheap to lose.
+- **Imperfection is more believable than perfection.** A couple of acknowledged weaknesses make the strengths land; a too-clean story invites suspicion. Consumer-ratings research (Northwestern University's Spiegel Research Center) found purchase likelihood peaks *slightly below* a perfect score — commonly cited around 4.2–4.5 stars, treat as directional — not at a suspicious 5.0. The same logic applies to a pitch.
+- **Order the negatives deliberately.** Lead with a real limitation to earn the right to be believed (primacy), but don't close on it — end on a strength the buyer cares about (recency). Front-loaded honesty, back-loaded value.
+- **Pre-empt the objection you know is coming.** If every buyer hits the same concern in security or procurement review, raise it yourself in discovery, with how you handle it. You frame it once on your terms, or react to it forever on theirs.
+- **Make pricing legible early.** Surface how you price — the model, the ranges, what drives cost up or down — sooner rather than guarding it to the final call. Early pricing transparency disqualifies mismatches before they burn cycles and defuses the late-stage sticker shock that stalls otherwise-won deals. (Hand the written mechanics to the Proposal Architect.)
+
+Reach for this at the highest-trust-deficit moments: a skeptical buyer, a category burned by over-promising vendors, or a competitive deal where every vendor claims perfection. It is not license to dump every weakness indiscriminately — disclose what is *material to their decision*, honestly, in service of a better-qualified deal.
+
+_Framework: Todd Caponi, *The Transparency Sale* (2018). Surfaced via the open-source [LeadMagic/gtm-skills](https://github.com/LeadMagic/gtm-skills) collection (MIT); described here in our own words, ideas only. The ratings figure is directional — attributed to Northwestern University's Spiegel Research Center and cited across Caponi's work; treat the exact band as illustrative, not a guarantee._
+
 ## Deliverables
 
 **Discovery Methodology Framework** (conversation structure)
