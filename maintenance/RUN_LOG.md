@@ -4,6 +4,32 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-30 — Skill Scout: Marketing Ops Architect scores fit and engagement as two axes (automated)
+
+**Job:** SKILL_SCOUT (market intelligence), not the general maintenance routine.
+
+**Focus discipline (by rotation):** email / analytics / marketing-ops — last the *focus* discipline on 2026-07-25 (shipped 07-27), against paid/social and content/SEO-AEO on 07-26 and PMM/sales/GTM on 07-28.
+
+**Scouted:** 7 sources evaluated (see [scout-ledger.md](scout-ledger.md) for every row and verdict) → 1 enhance, 2 watch, 4 dismissed. Two of the dismissals are unlicensed vendor-bound ESP manuals (`Sequenzy/*`) and three are already-mined sources re-checked for movement in this window.
+
+**The find:** `marketing-operations` in [NEON-Rutger/B2B-revops-skills](https://github.com/NEON-Rutger/B2B-revops-skills) (MIT, 37★, 34 skills, pushed 2026-07-23) models lead scoring as **two independent axes joined by an AND-gate**, not one additive number.
+
+**Overlap verified before writing (the required step):** grepped and read the actual scoring prescriptions across the repo. Our shape was genuinely single-axis: `email/email-automation-engineer.md:90` prescribed *"typically 0-100 scale, with sales handoff threshold at 50+"*, and `strategy/playbooks/phase-2-foundation.md:176` *"Contact becomes MQL at 20+ points."* The dimensions were all there (`Engagement scoring`, `Demographic scoring`, `Firmographic scoring`, `Behavioral scoring`, plus decay at line 74) — but listed as inputs **summed into one score**. Grep for a two-axis gate (`fit score`, `matrix scor`, `both.*threshold`) returned nothing; `recycl` returned only content-recycling. So the gap was real and structural rather than a missing tactic.
+
+**Why it matters:** a summed score lets engagement compensate for fit. A perfect-ICP VP who read two pages and a free-tier student who opened forty emails can land on the same number, so sales works both, rejects one, and stops trusting the model. That is the mechanism behind "your leads are garbage" — a bad shape, not bad point values.
+
+**Grounded in primary sources, not the surfacing repo:** verified that both major MAPs already ship two fields — Adobe Marketo Engage's separate `Demographic Score` and `Behavior Score` operational programs ([op-scoring-demographic](https://experienceleague.adobe.com/en/docs/marketo/using/product-docs/core-marketo-concepts/programs/program-library/op-scoring-demographic), [op-scoring-behavior](https://experienceleague.adobe.com/en/docs/marketo/using/product-docs/core-marketo-concepts/programs/program-library/op-scoring-behavior)) and HubSpot's three-property fit/engagement/total model ([Understand the lead scoring tool](https://knowledge.hubspot.com/scoring/understand-the-lead-scoring-tool)), all read 2026-07-30. Both platforms give you the fields and still let you sum them — so the section makes the point that the fields are the platform's job and the gate is yours.
+
+**Shipped** — new section *"Scoring Fit and Engagement as Two Axes, Not One Number"* in both dual-located copies of `analytics-marketing-ops-architect` (chosen over `email-automation-engineer`: the Architect owns scoring-model *design* and the MQL definition per its Core Mission and Critical Rule #1; the Engineer owns implementation). Placed before the GA4 section so that section's opening line ("Everything above governs the CRM/MAP layer") stays true. Contents: the **AND-gate** (`Fit ≥ F AND Engagement ≥ E`, thresholds back-derived from your own closed-won history); a **four-quadrant disposition table** where low-fit/high-engagement is *investigated, not routed* — with a monthly cluster review, since forty accounts in the same unexpected industry is an ICP finding rather than forty bad leads; **decay engagement, never decay fit** (fit changes on enrichment refresh, not on the calendar — a score that drops while nothing changed is what permanently discredits a model with reps); **recycled vs. disqualified** reason codes so rejections feed back instead of vanishing; and **treat the model like production** (version, never edit live, tag records with the scoring version, judge a challenger on acceptance/conversion rather than score distribution). Plus a new **`Fit/Engagement Routing Precision`** success metric.
+
+**Licensing / accuracy discipline:** ideas only, written from scratch in our voice; source credited in-file (MIT). The surfacing skill's own MQL-acceptance improvement figures ("5-15 percentage points"; "62% to 81%", labelled *practice-based* there) were **deliberately not reproduced** — no fabricated or laundered metrics. Every factual platform claim is quoted from and cited to Adobe/HubSpot documentation with a 2026-07-30 read-date, and all thresholds, cadences, and dispositions are explicitly flagged as calibration guidance rather than benchmarks.
+
+**Verified:** both copies `diff`-identical; `scripts/lint-agents.sh` on both — **2/2 pass**; broken-internal-link scan clean repo-wide.
+
+**Deferred to backlog:** the two ideas from `aaron-he-zhu/aaron-marketing-skills` (Apache-2.0, 2.5k★) — a **frequency opt-down ladder** (weekly → monthly → pause → sunset) as an alternative to a hard unsubscribe, and **consent/suppression as a durable shared record** rather than ESP-local state. Both are real gaps; one change per run, so they wait.
+
+---
+
 ### 2026-07-28 — Freshness pass: FAQ rich-results now settled + GSC-vs-Bing AI report distinction (automated)
 
 **Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; before this run the two `Last reviewed` dates were `guides/aeo-geo-playbook.md` 2026-07-21 and `integrations/README.md` 2026-07-23 — both inside the 90-day window. No P0.

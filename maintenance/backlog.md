@@ -49,3 +49,8 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 ## Notes
 - Social launch posts live in the maintainer's private launch kit and are **posted by a human**, never automated.
 - Keep the README badge counts (agents: 59, skills: 13) and the agent index in sync when agents are added.
+
+## P2 — skill curation (from the [Skill Scout](SKILL_SCOUT.md); see [scout-ledger.md](scout-ledger.md))
+- [ ] Give `email/email-lifecycle-architect` (or `email-deliverability-specialist`) a **frequency opt-down ladder** — weekly → monthly → pause → sunset as a structured alternative to a hard unsubscribe, with each preference choice mapped to the suppression/frequency rule the ESP must honor. Verified gap 2026-07-30: we mention preference centers in `email-lifecycle-architect` but have no opt-down ladder, and "sunset" appears repo-wide only in a *social* agent. Surfaced by `aaron-he-zhu/aaron-marketing-skills` (Apache-2.0) — ideas only; Apache notice requirements apply to any direct adaptation.
+- [ ] Evaluate **consent/suppression as a durable shared record** (a consent registry other agents read) rather than state living inside one ESP — same source, same run. Likely folds into the existing `templates/brand-context.md` + state-ledger pattern rather than becoming a new agent; scope before building.
+- [ ] Re-check `NEON-Rutger/B2B-revops-skills` `revops-data-governance` (field-prefix naming by owning team, data dictionary, deprecation policy) against `analytics-marketing-ops-architect` Critical Rule #3 — noted 2026-07-30 as adjacent but not yet compared in depth.

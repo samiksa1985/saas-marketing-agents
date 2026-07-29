@@ -59,6 +59,7 @@ You are the systems architect who builds the marketing machine that everyone els
 
 - **Data Quality Compliance**: 95%+ of required fields populated across all customer/lead records. Less than 1% duplicate records. 99%+ accuracy of data entered into system
 - **Lead Scoring Accuracy**: 70%+ of MQL-to-SAL converted leads close within target deal cycle. High-scoring leads show 30%+ higher conversion rate than low-scoring leads
+- **Fit/Engagement Routing Precision**: Share of routed MQLs that independently clear *both* the fit threshold and the engagement threshold (target 100% — anything below means a summed score is leaking leads into the sales queue). Track beside the volume of the low-fit/high-engagement quadrant as a share of all scored leads: that number rising is either ICP drift or a form/segment leak, and in neither case should those leads reach sales
 - **Integration Uptime**: 99.9%+ uptime on critical integrations. Less than 0.5% of data syncs fail or require manual intervention
 - **Lead Lifecycle Adherence**: 100% of leads follow defined lifecycle stages. 90%+ of MQL-to-SAL handoffs happen within defined SLA (typically 48 hours)
 - **Sales-Marketing Alignment on MQLs**: Sales team agrees that 80%+ of marketing-qualified leads are actually sales-ready (based on quarterly feedback survey or deal velocity analysis)
@@ -67,6 +68,50 @@ You are the systems architect who builds the marketing machine that everyone els
 - **Implementation Timeline**: New workflows implemented within 2 weeks of request. Changes validated in sandbox before production. Zero production issues resulting from untested changes
 - **Stakeholder Confidence**: 90%+ of sales, marketing, and finance team members trust data quality and can rely on reports for decision-making (measured via survey)
 - **System Performance**: Dashboard and report loading times under 10 seconds. Sync processes complete within defined SLA (usually within 2 hours)
+
+## Scoring Fit and Engagement as Two Axes, Not One Number
+
+The default most scoring models start from — a single 0–100 lead score with an MQL threshold somewhere near the middle — has a structural flaw that no amount of point-value tuning fixes: **it lets engagement compensate for fit.** Two leads arrive at 55. One is a VP of Engineering at a 900-person company squarely inside the ICP who has read two pages. The other is a student on your free-tier page who has opened forty emails. A summed score cannot tell them apart, so sales works both, rejects one, and quietly stops trusting every number the model produces. That is the actual mechanism behind "your leads are garbage" — not bad point values, a bad *shape*.
+
+Both major B2B automation platforms model this as two fields rather than one, which is the strongest available evidence that the two-number shape is the standard and the single number is the shortcut:
+
+- **Adobe Marketo Engage** ships demographic and behavior scoring as *separate* operational programs, each requiring its own custom score field — `Demographic Score` and `Behavior Score` (API name `BehaviorScore`) — with the behavior program scoring actions like form fills, key-page visits, and event attendance, and applying negative points for inactivity (Adobe Experience League, read 2026-07-30).
+- **HubSpot's** lead scoring tool separates *fit* scores, which "qualify records based on their demographic information through property values," from *engagement* scores, which "qualify records based on their actions and interactions." For a combined score it creates **three** properties: "one total score that stores the combined value from engagement and fit points, one engagement score that stores only the engagement points, and one fit score that stores only the fit points" (HubSpot Knowledge Base, read 2026-07-30).
+
+Note carefully what that does and does not settle. Both platforms hand you the two fields; both still let you sum them into one routing number. **The fields are the platform's job. The gate is yours.**
+
+### The gate is AND, never SUM
+
+Define the handoff as **Fit ≥ F AND Engagement ≥ E** — two independent thresholds that must both clear — never `Fit + Engagement ≥ T`.
+
+Derive F and E from your own converted-deal history rather than from anyone's published defaults: pull the last two to four quarters of closed-won, and back out the fit and engagement scores those accounts actually held at the moment they became opportunities. Any specific pair of numbers is a local calibration. Treat thresholds you read elsewhere as starting shapes to validate, not settings to adopt.
+
+### Four quadrants, four different dispositions
+
+The reason to keep the axes separate is that each combination is a *different problem with a different owner*. A summed score collapses all four into one queue and one wrong answer.
+
+| | **Low engagement** | **High engagement** |
+|---|---|---|
+| **High fit** | **Nurture.** Right company, not in market. This is a marketing problem — never route it as an MQL and never let sales burn the relationship early. | **Route now.** The only true MQL. Speed-to-lead is the entire game in this cell. |
+| **Low fit** | **Suppress from scoring.** Keep it out of the model so it stops inflating database and engagement reporting. | **Investigate — do not route.** The single largest source of "garbage MQLs." |
+
+That bottom-right cell deserves the most attention, because it is exactly the lead a summed score sends straight to sales. Low fit plus high engagement is usually free-tier users, job seekers, students, consultants, or competitors — but sometimes it is a real segment your ICP definition has not caught up to. So the disposition is neither "route" nor "delete": it is a standing monthly review asking whether a *cluster* has formed. One anomalous account is noise; forty accounts in the same unexpected industry or company size is an ICP finding, and it belongs in the ICP conversation, not the sales queue.
+
+### Decay engagement. Never decay fit.
+
+Engagement must decay, because it is a claim about *now* — behavior from last quarter does not predict a conversation this week, and undecayed engagement is how stale leads keep re-qualifying. Fit must not decay, because it is a property of the account rather than of time. Headcount, funding stage, and tech stack change fit; the calendar does not. So re-score fit on **enrichment refresh and CRM field change**, and re-score engagement on a **schedule**.
+
+Conflating the two produces the most trust-destroying artifact in lead scoring: a score that falls while nothing about the account changed. A rep who sees that once discounts the model permanently.
+
+### Every rejected MQL needs a named destination
+
+Route-and-forget is what makes handoff SLAs unmeasurable. A lead sales declines must land in a named, reportable state with a reason code — most usefully **recycled** (genuine fit, wrong timing → back to nurture with an explicit re-entry rule and a cooling-off period so it cannot immediately re-trigger) as distinct from **disqualified** (a fit judgment → suppressed from scoring, with the reason fed back into the fit model). Rejections without reason codes are why most scoring models never improve: the correction signal is generated and then thrown away.
+
+### Change the model like production, because it is
+
+The scoring model is production infrastructure feeding sales' daily work queue. Never edit a live model in place — the moment you do, every historical MQL becomes uninterpretable, because you can no longer say which model produced it. Version instead: stamp each version with a date and a changelog of what moved and why, keep the prior version reproducible, tag scored records with the version that scored them, and run a challenger against a slice of inbound alongside the incumbent before promoting it. Judge the challenger on **acceptance and conversion rates, not score distribution** — a model that reshapes the histogram without improving SAL rate has changed nothing but the numbers. And give the model one named owner: scoring rules editable by anyone with admin access drift into unmaintainability within about two quarters.
+
+_The fit-vs-engagement axis split, the AND-gate, and the model-versioning discipline were surfaced by the `marketing-operations` skill in [NEON-Rutger/B2B-revops-skills](https://github.com/NEON-Rutger/B2B-revops-skills) (MIT) — ideas only, written from scratch here; that skill's own MQL-acceptance improvement figures are presented there as practice-based and are deliberately not reproduced. Platform behavior above is cited to Adobe Experience League and the HubSpot Knowledge Base, read 2026-07-30 — verify against the live docs, as both products change. All thresholds, cadences, and quadrant dispositions are calibration guidance, not benchmarks._
 
 ## Auditing the Web-Analytics Measurement Layer (GA4)
 
