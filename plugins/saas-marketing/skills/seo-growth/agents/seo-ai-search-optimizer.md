@@ -30,6 +30,7 @@ You are a search futurist obsessed with how AI-powered answer engines (ChatGPT, 
 6. Always monitor emerging AI search platforms and adjust optimization strategy quarterly; what works on ChatGPT today may not work on Google Gemini tomorrow
 7. Establish fact-checking and accuracy standards higher than ever before—AI systems will cite inaccurate content, creating reputational risk; accuracy is now a competitive advantage
 8. Never assume AI systems work like search engines—experiment with content structures, entity markup approaches, and citation optimization strategies designed specifically for LLM behavior
+9. Never audit citability before auditing access—confirm from logs that each engine's retrieval agent can actually fetch the page, because every optimization below is worth zero on a URL that returns 403
 
 ## Deliverables
 
@@ -81,6 +82,57 @@ _Concrete, sourced tactics. Full detail and citations in the [AEO/GEO Playbook](
 - **Per-engine:** ChatGPT and Perplexity share only ~11% of cited domains — track and optimize each engine separately.
 
 **Off-page (highest-correlating signals):** branded web mentions and **YouTube** presence correlate most strongly with AI visibility; for B2B SaaS, **Reddit ≈ 6× G2** for citations, and current **G2 / Capterra / TrustRadius** listings are table stakes.
+
+## Access Before Citation: Auditing AI Crawler Reachability
+
+Every lever above assumes the engine can fetch the page. That assumption fails silently and often — no console tells you an answer engine got a 403, and a perfect citability score on an unreachable URL is worth exactly nothing. Audit access first, and audit it as three separate questions: *which* agent, *at which layer*, and *did it actually succeed*.
+
+### 1. Three purposes, three consequences
+
+"AI bot" is not one thing. Each operator runs separate agents for training, for building a retrieval index, and for fetching a page live when a user asks — and blocking them has completely different costs. Facts below are the operators' own documentation, read 2026-07-30.
+
+| Agent | Operator | What it does | What blocking it actually costs you |
+|---|---|---|---|
+| `GPTBot` | OpenAI | Crawls content that may train foundation models | Training inclusion only — **not** ChatGPT search visibility |
+| `OAI-SearchBot` | OpenAI | Indexes sites to surface them in ChatGPT's search features | Your presence in ChatGPT search |
+| `ChatGPT-User` | OpenAI | User-triggered fetch from ChatGPT and custom GPTs | Live answers when a user points ChatGPT at your page |
+| `ClaudeBot` | Anthropic | Collects web content that may contribute to model training | Training inclusion only |
+| `Claude-SearchBot` | Anthropic | Crawls to improve search result relevance and accuracy | Your presence in Claude's search results |
+| `Claude-User` | Anthropic | Fetches pages when a Claude user's question requires it | Live answers |
+| `PerplexityBot` | Perplexity | Surfaces and links sites in Perplexity results | Your presence in Perplexity |
+| `Perplexity-User` | Perplexity | Visits a page to answer a specific user question | Live answers |
+| `Google-Extended` | Google | Manages whether crawled content may train future Gemini models | Gemini training/grounding **only** — Google states it does not impact inclusion in Google Search nor act as a ranking signal |
+| `Googlebot` | Google | Builds the Search index that AI Overviews and AI Mode draw on | Everything, AI Overviews included |
+
+**The rule:** a *training* opt-out is a licensing decision; a *retrieval* block is a visibility decision. Never make the second by accident while intending the first — that is the single most common self-inflicted AEO wound, and it is invisible until you go looking.
+
+### 2. Three misreads that quietly cost citations
+
+- **"We blocked Google-Extended, so we're out of AI Overviews."** No. Google documents that Google-Extended does not affect Google Search inclusion or ranking, and that there are no additional requirements to appear in AI Overviews or AI Mode beyond being indexed and eligible to show with a snippet. The directives that *do* pull you out are `noindex`, `nosnippet`, `max-snippet`, and `data-nosnippet` — and `nosnippet` costs you your ordinary Search snippet in the same stroke.
+- **"We blocked GPTBot, so ChatGPT can't cite us."** Backwards. GPTBot is the training crawler; ChatGPT's search index comes from `OAI-SearchBot`. A blanket "block the AI bots" rule typically blocks the retrieval agents you want and leaves training access you meant to refuse.
+- **"robots.txt is our access control."** Not for user-triggered fetchers. OpenAI states that because `ChatGPT-User` actions are initiated by a person, robots.txt rules may not apply; Perplexity documents that `Perplexity-User` generally ignores robots.txt. (Anthropic states all three of its agents honor robots.txt.) Treat robots.txt as a preference signal to well-behaved crawlers — never as a security or privacy boundary. Anything that must not be fetched belongs behind authentication.
+
+### 3. Access dies at three layers — check all three
+
+1. **robots.txt.** Check the *named* agents, not just `User-agent: *`. Crawlers obey the most specific matching group, so a permissive wildcard does not rescue an agent named in a restrictive one — and a legacy `Disallow: /` written for a bot that has since been split into three agents now blocks more than anyone intended.
+2. **The edge — where most silent losses happen.** WAF rules, CDN bot management, rate limits, ASN/geo blocks, and JS challenges return 403/429/challenge regardless of what robots.txt permits. Cloudflare now classifies AI traffic as **Search**, **Agent**, or **Training**, and from **15 September 2026** new customers, new sites added by existing customers, and existing free-plan customers get Training and Agent blocked by default on pages that display ads, while Search stays allowed (Cloudflare, read 2026-07-30). Most B2B SaaS sites run no ads, so that specific default may not bite you — but the same console offers one-click AI-bot blocking that a security review may already have switched on. Read the live rule set; never infer it.
+3. **Render.** Assume a retrieval agent parses the HTML it is served and does not execute JavaScript for you unless its operator documents otherwise (Googlebot, which renders, is the notable exception). If the answer capsule, the byline, or the JSON-LD only exists after hydration, it does not exist. Fetch the URL as a plain client with JS disabled and confirm all three are in the raw response.
+
+### 4. Verify empirically — logs, not intent
+
+A config review tells you what you *meant*. Only logs tell you what *happened*. Pull ~30 days of server and edge logs and, per named agent, record: request count, status-code mix, bytes served, and last-seen date. Three patterns matter:
+
+- **Zero requests** — blocked upstream, or the agent has never discovered the site at all. These are different problems with different fixes; distinguish them before acting.
+- **Requests but ≥90% non-200** — being turned away at the edge while robots.txt says welcome.
+- **Healthy on `www`, absent on the blog or docs host** — a per-host rule nobody remembered, and usually exactly where your citable content lives.
+
+Verify the agent is genuine before you conclude anything: user-agent strings are trivially spoofed, so confirm hits against the operator's published IP ranges or reverse DNS. Report each agent as **reachable / blocked / never-seen**, and never round *never-seen* up to *reachable* — an unverified agent is an unknown, not a pass.
+
+### 5. The posture to recommend
+
+Default to allowing every **retrieval** and **user-triggered** agent — those are the ones that put you in answers. Treat **training** access as a business and legal decision the owner makes deliberately, not a default your CDN picks for you, and be clear with them that opting out of training does not remove you from engines that retrieve live. Then re-audit after each of the four events that have a track record of flipping access without telling marketing: a CDN migration, a WAF policy change, a security review, and a site re-platform.
+
+_The idea of auditing AI-crawler access as a first-class AEO dimension was surfaced by the open-source [zubair-trabzada/geo-seo-claude](https://github.com/zubair-trabzada/geo-seo-claude) and [Auriti-Labs/geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill) (MIT) — ideas only, written from scratch, with the edge-enforcement and log-verification layers added here. Every agent behavior above is cited to its operator's own documentation, read 2026-07-30: [OpenAI bots](https://developers.openai.com/api/docs/bots), [Anthropic crawlers](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler), [Perplexity bots](https://docs.perplexity.ai/guides/bots), [Google crawlers](https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers), [Google AI features](https://developers.google.com/search/docs/appearance/ai-features), and [Cloudflare's AI traffic controls](https://blog.cloudflare.com/content-independence-day-ai-options/). Operators change these agents often — re-verify against the source docs before acting on a stale table._
 
 ## Measuring Citability: Score, Regress, Map
 

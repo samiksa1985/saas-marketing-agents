@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-30 (second run) — Skill Scout: AI Search Optimizer audits crawler access before citability (automated)
+
+**Job:** SKILL_SCOUT (market intelligence), not the general maintenance routine.
+
+**Focus discipline (by rotation):** content / SEO-AEO-GEO. It was tied with paid/social at 2026-07-26; content/SEO won the tiebreak on queue depth — paid shipped *two* enhancements that day and has an empty curation queue, while the SEO corner still holds the open `seo-programmatic-strategist` proposal — and because the AEO/GEO half of this market moves fastest.
+
+**Surveyed:** 10 sources (see [scout-ledger.md](scout-ledger.md) for every verdict) — `zubair-trabzada/geo-seo-claude`, `Auriti-Labs/geo-optimizer-skill` (re-check), `Bhanunamikaze/Agentic-SEO-Skill`, `onvoyage-ai/gtm-engineer-skills`, `Jeffallan/writing-with-agents`, `coleschaffer/copywritingskills-rmbc` + `dtc-copywriting-skills`, `mverab/eGEOagents`, `cxcscmu/AutoGEO`, `gooseworks-ai/goose-skills`, `rampstackco/claude-skills`, `coreyhaines31/marketingskills` (third re-check).
+
+**Shipped:** a new **"Access Before Citation: Auditing AI Crawler Reachability"** section plus **Critical Rule 9** in both dual-located copies of [`seo/seo-ai-search-optimizer.md`](../seo/seo-ai-search-optimizer.md).
+
+The gap was verified before writing: `GPTBot` appeared **nowhere** in the repo, "off-site" nowhere, and robots.txt only in generic technical-SEO crawl-budget lines with no AI-agent awareness — meaning the Field Guide and the citability rubric shipped 07-26 both rested on an unaudited assumption that the engine can fetch the page at all. The section separates training / retrieval-indexing / user-triggered agents per operator, names the three costly misreads (Google-Extended ≠ AI Overviews; GPTBot ≠ ChatGPT search; robots.txt ≠ access control for user fetchers), audits the three layers where access dies (robots.txt → edge/WAF → render), and requires empirical per-agent log verification with *never-seen* never rounding up to *reachable*.
+
+**Not adopted from the source:** `geo-seo-claude`'s own bot tiering places `GPTBot` on the search/retrieval side, which contradicts OpenAI's documentation (GPTBot = training; `OAI-SearchBot` = ChatGPT search). Our table was rebuilt from each operator's primary docs instead. Two layers the source does not cover — **edge/WAF enforcement** and **empirical log verification** — are ours.
+
+**Verified:** both copies re-linted (`scripts/lint-agents.sh`, 2/2 pass) and confirmed byte-identical; all 8 external links in the new section return HTTP 200 (Google's crawler doc had moved — link updated to its current canonical URL); every factual claim about agent behavior traced to the operator's own documentation with a 2026-07-30 read-date.
+
+**Deferred:** the AEO↔Reddit seam surfaced by `onvoyage-ai/gtm-engineer-skills` (filed to backlog, one change per run); `cxcscmu/AutoGEO` re-check pending publication of its extracted rule sets; `Jeffallan/writing-with-agents` (a drafting-process persona is a larger architectural call than a scout run should make).
+
+---
+
 ### 2026-07-30 — Skill Scout: Marketing Ops Architect scores fit and engagement as two axes (automated)
 
 **Job:** SKILL_SCOUT (market intelligence), not the general maintenance routine.
