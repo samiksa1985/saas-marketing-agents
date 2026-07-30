@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-30 (third run) — Lifecycle Architect gains an opt-down ladder (automated)
+
+**Job:** general maintenance routine (`ROUTINE.md`), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Item selection:** P1 high-leverage is exhausted — the only open one (native subagents, [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1)) is blocked on in-thread decisions, as is the programmatic-SEO proposal ([#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2)) and the legal-compliance proposal (needs legal validation). The P1 distribution items all require posting to external third-party repos with human-written framing (`awesome-claude-code` explicitly "human-written"; VoltAgent PR; the Anthropic in-app form) — out of scope for an autonomous run under the "social/third-party posts are human-posted" guardrail. So pulled the top unblocked *in-repo* item: the P2 skill-curation **email frequency opt-down ladder** (backlog line 55).
+
+**Gap verified before writing (required step):** grepped `opt.?down|step.?down|frequency ladder|reduce frequency|fewer emails` repo-wide — the only hit was a single passing bullet in `email-deliverability-specialist.md:146` ("allow subscribers to opt-down…"), with no structured ladder, no sunset rung on a *lifecycle* agent, and — the real value-add — no mapping of each preference choice to the suppression/frequency rule the ESP must actually enforce. Gap was real and structural.
+
+**Shipped:** a new **"The Opt-Down Ladder: A Structured Alternative to the Hard Unsubscribe"** section in both dual-located copies of `email/email-lifecycle-architect.md`. Placed on the Lifecycle Architect (not the Deliverability Specialist) because the ladder is a retention-relationship mechanism adjacent to its existing win-back / churn-prevention / preference-center material; the *sunset* rung is explicitly co-owned with the deliverability specialist rather than duplicating its list-hygiene policy. Four rungs each mapped to concrete ESP enforcement, plus a compliance guardrail (the ladder never gates the real one-click unsubscribe; a pause is a preference, not a legal opt-out) and a pointer to the separate consent-registry scope item.
+
+**Not adopted from the source:** `aaron-he-zhu/aaron-marketing-skills` (Apache-2.0) is bilingual EN/ZH with heavy repo-specific scaffolding (SEND N-dimension vetoes, EQS) that doesn't transfer — ideas only, no text reused, and the opt-down ladder is standard preference-center practice rather than that repo's invention, so it's credited for *surfacing* the pattern.
+
+**Verified:** both copies re-linted (`scripts/lint-agents.sh`, 2/2 pass) and confirmed byte-identical; no new broken internal links; every compliance/deliverability claim cited to a primary source (Google's sender guidelines for the two-day one-click-unsubscribe window, FTC CAN-SPAM, GDPR Art. 7(3)) read 2026-07-30, with the two-day window scoped to bulk marketing mail and transactional excluded.
+
+**Deferred:** the consent-as-durable-shared-record item (backlog line 56 — a scope decision, likely folds into `brand-context.md` + state-ledger) and the AEO↔Reddit seam (line 57); one change per run.
+
+---
+
 ### 2026-07-30 (second run) — Skill Scout: AI Search Optimizer audits crawler access before citability (automated)
 
 **Job:** SKILL_SCOUT (market intelligence), not the general maintenance routine.
