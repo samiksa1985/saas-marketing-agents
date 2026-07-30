@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-30 (fourth run) — Marketing Ops Architect governs the field layer (automated)
+
+**Job:** general maintenance routine (`ROUTINE.md`), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; every `SKILL.md` has `name` + `description`; both `Last reviewed` dates (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23) well inside the 90-day window. No P0.
+
+**Shipped:** Top unblocked skill-curation item (the P1 curation queue is exhausted; the remaining P1s are blocked on issue decisions #1/#2 or human-gated distribution submissions). Compared the `revops-data-governance` skill from `NEON-Rutger/B2B-revops-skills` (MIT — already an established, cited source in this agent) against Critical Rule #3 of the **Marketing Ops Architect**. Rule #3 and the Data Dictionary deliverable already cover field ownership, naming conventions, quality standards, and quarterly audits, but two governance disciplines were genuinely absent (verified by grep first — `prefix` in zero agents; no field-deprecation lifecycle anywhere). Added a **"Governing the Field Layer: Ownership in the Name, and a Retirement Path"** section to **both** dual-located copies: (1) **field-prefix-by-owning-team** naming (`mkt_`/`sales_`/`cs_`/`fin_`/`ops_`/`sys_`) that makes ownership legible at the point of use and structurally prevents cross-team field collisions, with set-at-creation and signpost-not-source-of-truth constraints; and (2) a **four-step field deprecation lifecycle** (mark deprecated → stop writes → map dependents + grace period → archive then remove) folded into the quarterly audit and versioned per Rule #7, because most CRMs delete a field without warning what depends on it. CRM behavior kept vendor-neutral (verify-before-delete note) to avoid asserting platform specifics not verified this run. Ideas-only, written from scratch, source credited in-file.
+
+**Verified:** `bash scripts/lint-agents.sh` passes on both changed copies (4109 words each, frontmatter/sections intact); the two copies `diff` clean (in sync); re-ran the link check (0 broken); both manifests still parse.
+
+**Deferred:** native subagents under `plugins/saas-marketing/agents/` (blocked on #1 decisions); `seo-programmatic-strategist` proposal (blocked on #2); `ops-legal-compliance` proposal (needs legal validation); the higher-bar awesome-list submissions (`hesreallyhim`, `VoltAgent`) and the Anthropic community marketplace (owner's in-app form) — human-gated, not auto-submitted; the two remaining P2 scoping items (consent/suppression as a durable shared record; the AEO↔Reddit seam).
+
+---
+
 ### 2026-07-30 (third run) — Lifecycle Architect gains an opt-down ladder (automated)
 
 **Job:** general maintenance routine (`ROUTINE.md`), one iteration.

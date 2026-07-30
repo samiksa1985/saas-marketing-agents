@@ -136,3 +136,31 @@ Grade each **pass / needs-work / broken** — and, borrowing the CRM audit's dis
 **Deliverable — Web-Analytics Instrumentation Audit.** A short report scoring the six checks pass/needs-work/broken with evidence for each, PII findings flagged P0 at the top, a prioritized remediation list separating *fix at source* from *fix in GA4 config*, and an explicit note of any setting you could not verify. Fold the recurring version into the weekly data-quality review above so the measurement layer is monitored, not just audited once.
 
 _Instrumentation-audit dimensions (key events, custom definitions, PII in parameters, attribution settings, `(not set)` traffic) were surfaced as a genuine gap by the (paywalled, not adopted) `/ga4-audit` in [cognyai/claude-code-marketing-skills](https://github.com/cognyai/claude-code-marketing-skills) and the UTM→channel-grouping check by [SpillwaveSolutions/running-marketing-campaigns-agent-skill](https://github.com/SpillwaveSolutions/running-marketing-campaigns-agent-skill) (MIT) — ideas only, written from scratch. All limits, policy wording, and behavior above are cited to Google's own GA4 documentation (support.google.com/analytics), read 2026-07-27; verify against the live docs, as GA4 quotas and defaults change._
+
+## Governing the Field Layer: Ownership in the Name, and a Retirement Path
+
+Critical Rule #3 assigns every field an owner and Rule #7 version-controls configuration changes — both essential, both recorded in the data dictionary. But a dictionary is a lookup, and nobody opens it in the moment they actually touch a field: building a report, wiring a sync mapping, dropping a field onto a form. Two disciplines close that gap — one that makes ownership visible at the point of use, and one that lets a field die without taking a dashboard down with it.
+
+### Encode the owning team in the field name
+
+Prefix each custom field's API name with its owning function — `mkt_`, `sales_`, `cs_`, `fin_`, `ops_`, and a distinct `sys_` (or a per-source prefix) for fields an integration writes and no human should hand-edit. The dictionary still holds the authoritative owner; the prefix just surfaces that owner everywhere the dictionary isn't open. Two payoffs:
+
+- **Ownership is legible at a glance** — a rep or analyst reading `mkt_last_campaign_touch` in a report builder knows who to ask before trusting or changing it, without leaving the screen.
+- **It structurally prevents the collision that fills CRMs with ambiguous duplicates** — marketing's "Region" and sales' "Region," each with a different picklist and a different definition, become `mkt_region` and `sales_region`, distinguishable at the point of creation instead of discovered in a broken report six months later.
+
+Two constraints make or break the convention. Set the prefix **at creation**: an API name is referenced by every integration, formula, and workflow that touches the field, so renaming it later is itself a breaking change — the exact problem the next section governs. And treat the prefix as a layer *on top of* the dictionary's owner field, never a replacement — a naming convention is a signpost, not a system of record, and it silently rots the moment a field is reassigned without being renamed.
+
+### Give fields a deprecation lifecycle, not a delete key
+
+Rule #3's "data cleanup" fixes bad *values*. It says nothing about retiring the *field itself* — and fields accumulate relentlessly: every sunset campaign, abandoned experiment, and departed field-owner leaves orphaned columns behind. The temptation is to delete them. The danger is that most CRMs will let you delete a field without first telling you what depends on it, and the moment it's gone, every report, workflow, sync mapping, and scoring rule that referenced it breaks — silently, and often discovered only when a downstream number goes wrong. So a field needs a path out, not a delete key:
+
+1. **Mark it deprecated** — flag it in the dictionary with a status, a date, and the deprecating owner, and signal it in place (a `zz_deprecated_` prefix sorts it to the bottom of every picker and telegraphs "stop using"). Nothing is destroyed yet.
+2. **Stop the writes** — disable the forms, imports, workflows, and integration mappings that populate it, so it stops accruing new data and becomes read-only in practice.
+3. **Map dependents, then hold a grace period** — before anything is removed, enumerate what still references the field (reports, dashboards, automations, syncs, scoring rules) and repoint or retire each one. Hold the field through a defined window — a quarter is a sane default — so that work finishes against a still-present field rather than a hole.
+4. **Archive, then remove** — export the historical values before the hard delete. Deletion is irreversible; the values may still be wanted for a backfill, a trend baseline, or an audit long after the field's live use ends.
+
+Fold the deprecation queue into the **same quarterly audit** as the data-quality review, and log each removal as a versioned change (Rule #7) with the reason and the dependents that were repointed — so a field's death is as documented as its birth.
+
+**Two distinctions worth holding.** Deprecating a *field* (a schema change, governed here) is not the same as suppressing *records* (the "suppress from scoring" disposition above) — different objects, different owners, different reversibility. And never collapse deprecation into a single step: the entire value of the lifecycle is the gap between "stop using this" and "this no longer exists," which is where dependents get found and moved.
+
+_Field-prefix-by-owning-team naming and the field deprecation lifecycle were surfaced by the `revops-data-governance` skill in [NEON-Rutger/B2B-revops-skills](https://github.com/NEON-Rutger/B2B-revops-skills) (MIT) — ideas only, written from scratch here. CRM behavior above is described in vendor-neutral terms deliberately: field-deletion dependency handling and soft-delete windows differ across Salesforce, HubSpot, and others and change over time — verify the specific platform's deletion and undelete behavior before removing any field in production._
