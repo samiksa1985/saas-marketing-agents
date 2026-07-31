@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-31 — Quality Assurance Manager learns to name its reference class before scoring copy (automated)
+
+**Job:** maintenance routine, one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across the repo; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Item selection.** P1 high-leverage is exhausted but for the one blocked native-subagents item (#1). The P1 distribution items were **not** auto-actioned: `hesreallyhim/awesome-claude-code` requires a *human-written* issue and a repo-polish judgment, and `VoltAgent/awesome-agent-skills` wants a *genuine-usage* lead I must not fabricate — neither is a clean autonomous ship, and both are for the human. The two P1 skill-curation proposals (#40 `seo-programmatic-strategist`, #41 `ops-legal-compliance`) stay blocked on in-thread decisions / legal validation. In the skill-curation queue two items remained open: the **AEO↔Reddit seam** (P2) and the **ops-QA scoring reference class** (P2). The Reddit seam is a cross-agent *ownership decision* (section on one of two agents vs. a genuine new seam) — issue-shaped under "keep runs small," not a clean single-run edit — so it was **deferred**. The ops-QA item is a bounded, single-agent, shippable enhancement, so it was pulled.
+
+**Gap verified before writing (required step):** grepped `client-ops/` for `reference class|score against|historical performance data|labeling which|which of the three` — **zero hits**. The Four U's rubric shipped 2026-07-26 grades copy only against generic best practice; nothing anywhere tied a copy score to *this brand's own* historical performance or forced the scorer to declare what it was comparing to.
+
+**Shipped:** a new **"The Reference Class: What You're Scoring Against"** section in both dual-located copies of `ops-quality-assurance.md`, placed right after the Four U's section it extends. Content: a three-tier **data gate** — (1) this brand's own historical performance from `brand-context.md`'s "Proof we can actually cite" data, (2) a *named, dated* public benchmark, (3) generic principles as an explicit last resort — with the operative discipline that the **tier label is the deliverable, not a footnote** ("scored strong against this account's last 12 nurture sends (Tier 1)" ≠ "scored strong on generic principles (Tier 3)"). Plus a **staleness trigger** (re-pull first-party data quarterly and after any material audience/offer/volume change; re-verify a benchmark's date and replace it when a newer edition publishes; a score against stale data is flagged, not trusted) and a **never-manufacture-the-comparison** guardrail tying back to the repo's no-fabricated-metrics rule. Ideas-only; credited to the `post-scorer` skill in `charlie947/social-media-skills` (MIT), re-aimed at B2B (the rest of that repo is creator-economy shaped and doesn't transfer). **No benchmark figures asserted** — the tiers describe where a number must come from, never what it is.
+
+**Verify:** both copies byte-identical (`diff` clean); repo-wide broken-link scan clean after demoting a relative `brand-context.md` link to plain text (a relative link resolves in the category copy but not the plugin copy — plain text keeps both identical *and* link-clean); `scripts/lint-agents.sh` on both edited files — **2/2 pass**.
+
+**Deferred:** AEO↔Reddit seam (P2 — needs a cross-agent ownership decision); ops-QA "reference class" is now done, leaving that P2 skill-curation line closed.
+
+---
+
 ### 2026-07-30 (fifth run) — Creative Strategist learns to check power before declaring a verdict (automated)
 
 **Job:** skill scout (`SKILL_SCOUT.md`), one iteration. **Focus discipline:** paid media / social, chosen by rotation — it was last the focus on 2026-07-26, while email/analytics/ops and content/SEO-AEO-GEO both ran earlier today and PMM/sales/GTM ran 07-28. Paid entered with an empty enhancement queue.

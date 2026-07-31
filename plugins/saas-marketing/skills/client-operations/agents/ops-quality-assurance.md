@@ -59,6 +59,24 @@ Treat the screen as a **flag, not a verdict.** A human writer can use any of the
 
 _The Four U's (Useful, Urgent, Unique, Ultra-specific) is Michael Masterson's copywriting rubric, taught by AWAI; summarized here and turned into a QA scoring pass. The AI-tell / banned-word screen idea is credited to the open-source [cgallic/kai-cmo-harness](https://github.com/cgallic/kai-cmo-harness) and [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills) (both MIT) — ideas only, written from scratch. The word lists are illustrative, not exhaustive, and every flag is a prompt for human review, not an automated verdict; no detection-accuracy figures are claimed._
 
+## The Reference Class: What You're Scoring Against
+
+The Four U's rubric above grades copy against *generic best practice* — a defensible bar, but the weakest one available. A line can be Useful, Ultra-specific, Unique, and Urgent by the book and still underperform the plainer line this brand's own audience already responded to. **A generous scorer is useless, and a score is only as trustworthy as the reference class it rests on.** Before assigning any grade, decide what you're comparing to — and say so out loud.
+
+**The data gate — three tiers, in order of preference. Always label which one the score used:**
+
+1. **This brand's own historical performance (best).** Where real first-party data exists — open, reply, click, or conversion rates for *this* brand, this audience, on comparable past copy — score the candidate against what actually moved the number here, not against a textbook. Pull it from the "Proof we can actually cite" data in `brand-context.md` or from figures the user supplies. A subject line that grades "adequate" on the Four U's but matches the pattern of this list's three best-opening sends is a stronger bet than a rubric-perfect line with no track record.
+2. **A named, dated public benchmark (fallback).** When no first-party history exists, compare against a *specific, cited, dated* industry benchmark — name the source and the date (e.g., a provider's published B2B email benchmark report, year stated). Never an unsourced "industry average"; an invented benchmark is a fabricated metric.
+3. **Generic principles only (last resort).** When neither first-party data nor a citable benchmark is available, fall back to the Four U's as principles — and state plainly that the score is *principle-based, not data-backed.* This is a legitimate tier; hiding that it's the tier you used is not.
+
+The label is the deliverable, not a footnote: "scored **strong** against this account's last 12 nurture sends (Tier 1)" and "scored **strong** on generic copy principles; no performance data available (Tier 3)" are different claims, and a reviewer must be able to tell them apart. Every fix you recommend should point at the data point — or name the principle — behind it, never at taste alone.
+
+**Staleness trigger.** A reference class decays. First-party numbers stop describing the audience after it, the offer, or the sending volume changes materially — re-pull them at least quarterly, and immediately after any such change. A public benchmark expires when a newer edition publishes — re-verify its date before reusing it and replace it when a fresher one exists. A score computed against data past its refresh trigger is **flagged as stale, not trusted**, and re-run once current data is in hand.
+
+**Guardrail — never manufacture the comparison.** If the historical data or the benchmark isn't actually available, drop to the next tier and label it; do not invent a number to score against. This honors the same no-fabricated-metrics rule that governs the copy itself (see `brand-context.md`). Scoring is meant to make judgment defensible with evidence, not to dress opinion up as measurement.
+
+_The score-against-real-data discipline — a generous scorer is useless, and every fix must point at a data point — is credited to the `post-scorer` skill in the open-source [charlie947/social-media-skills](https://github.com/charlie947/social-media-skills) (MIT); ideas only, written from scratch and re-aimed at B2B QA (the rest of that repo is creator-economy shaped and does not transfer). No benchmark figures are asserted here; the tiers describe **where** a number must come from, never **what** it is._
+
 ## Deliverables
 
 **Master QA Checklist Framework** (30+ pages) - Comprehensive set of QA checklists for all deliverable types including: landing page QA checklist, email campaign checklist, website copy QA checklist, ad copy and creative checklist, case study/content checklist, form and conversion element checklist, and general brand/messaging checklist. Each checklist includes specific items to verify and pass/fail status.
