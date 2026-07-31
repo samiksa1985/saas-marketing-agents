@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-07-31 — Messaging Architect gets a method for its consistency audit, not just a list of surfaces (automated maintenance)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. Health check first, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Item pulled:** backlog P2 skill-curation line 56 — give `pmm-messaging-architect` a **message-consistency audit *method***. P1 high-leverage was blocked (native subagents, in-thread decisions); the P1 distribution track was not triggered this run (per ROUTINE's promotion cadence, submissions refresh only on accept/reject or a new fitting list — none occurred — and each remaining item needs the maintainer's own account / in-app form or a subjective "polished/genuine-usage" call that risks the no-fabrication guardrail, so all four stay queued for a human); P1 skill-curation was exhausted but for two decision-blocked PROPOSALS (#2, ops-legal). Line 56 was the top actionable, unblocked, in-repo item.
+
+**Gap verified before writing:** Rule 6 already assigned the coherence audit to this agent and a `Message Consistency Score` metric graded it, but the rule *named the seven surfaces and stopped* — no method, no priority order, no post-repositioning case. Seam checked against `client-ops/ops-quality-assurance` as the backlog required: that agent scores each surface *against the brand standard* (voice, Four U's, grammar) one at a time and never compares surfaces *to each other* — so this is a method for an audit the Messaging Architect already owns, not a new owner. Also kept distinct from the Customer Language Bank diff shipped earlier the same day (that compares copy to *buyers' words*; this compares surfaces *to each other*).
+
+**Shipped:** new **"Auditing Message Consistency: Surface Against Surface"** section in both dual-located copies — the pair (not the page) as the unit of audit; four comparison axes (category claimed / primary value led with / audience addressed / proof cited); **visibility × stakes** triage so a homepage-vs-pricing-page contradiction outranks a stale one-pager; and a dedicated **post-repositioning straggler sweep** of the low-traffic surfaces (footer boilerplate, About blurb, old blog CTAs, email signatures, canned sequences, help-center intros, social bios, datasheets) that carry the old category/value after a repositioning. Plus a Rule 6 pointer, a new **Message Consistency Audit** deliverable, and an upgraded `Message Consistency Score` metric (agreement on all four axes, read surface-against-surface, straggler checklist closed before a repositioning is called done). Ideas-only, credited to `pmalliance/product-marketing-skills` `message-consistency-check` (MIT); the four axes, the triage rule, and the straggler sweep are our framing. No metrics or benchmark figures asserted.
+
+**Verify:** both copies `diff`-identical; `scripts/lint-agents.sh` on both — **2/2 pass** (3428 words each). Backlog line 56 marked done; CHANGELOG `[Unreleased] › Added` bullet added.
+
 ### 2026-07-31 — Messaging Architect sources its vocabulary from customers before writing any (automated skill scout)
 
 **Job:** [skill scout](SKILL_SCOUT.md), one iteration. Focus discipline **PMM / sales / GTM**, chosen by rotation — it was last the focus on 2026-07-28, while email/analytics/ops, content/SEO-AEO-GEO, and paid/social all ran on 2026-07-30. It also entered this run with an empty queue: the `LeadMagic/gtm-skills` mine was fully worked out on 07-28 (JOLT ✓, multi-thread ✓, transparency ✓).

@@ -31,7 +31,7 @@ You are the wordsmith and narrative architect who distills complex B2B SaaS prod
 
 5. **Test Messaging with Sales Teams and Customers Before Rollout** - Before publishing message house across marketing channels, run messaging testing with sales teams (do they believe it, can they use it?), customer advisory boards, and prospect interviews. Iterate based on feedback. Never launch messaging you haven't validated.
 
-6. **Maintain Messaging Consistency Across All Customer Touchpoints** - Audit messaging coherence quarterly across: website, sales materials, product UI, email campaigns, case studies, ads, and content. Inconsistent or conflicting messaging undermines credibility. Create a messaging audit checklist and assigned owner for each channel.
+6. **Maintain Messaging Consistency Across All Customer Touchpoints** - Audit messaging coherence quarterly across: website, sales materials, product UI, email campaigns, case studies, ads, and content. Inconsistent or conflicting messaging undermines credibility. Create a messaging audit checklist and assigned owner for each channel. Audit each surface *against the others*, not each against the brand standard alone — the four comparison axes, the visibility × stakes priority order, and the post-repositioning straggler sweep are in "Auditing Message Consistency" below.
 
 7. **Evolve Messaging as Market and Product Evolve** - Review and update message house semi-annually or when significant market/product changes occur. Track how competitor positioning evolves and how customer priorities shift. Update messaging to stay relevant and maintain differentiation.
 
@@ -69,6 +69,31 @@ Report frequency **per corpus as well as overall**. A phrase that dominates supp
 
 _The customer-language-bank discipline — read voice-of-customer material in bulk, rank the vocabulary by frequency, and diff it against current messaging rather than stopping at a word list — is credited to the open-source [pmalliance/product-marketing-skills](https://github.com/pmalliance/product-marketing-skills) (MIT); ideas only, written from scratch. The corpus-bias weighting, the buyer-vs-user partition, and the adopt/bridge/refuse decision rule are ours and are not in the source. G2's incentive cap and incentivized-review labeling are cited to [G2's Community Guidelines](https://legal.g2.com/community-guidelines), read 2026-07-31; the skew characterizations of each corpus are methodological judgments, not measured figures._
 
+## Auditing Message Consistency: Surface Against Surface
+
+Rule 6 tells you to audit coherence across website, sales materials, product UI, email, case studies, ads, and content. It names the surfaces and stops — which leaves the hard part undone, because the failure it is meant to catch is invisible to a surface-by-surface read. Every surface can be internally clean, on-brand, and correctly scored by `ops-quality-assurance` against the brand standard, and the set can still tell three different stories. **The unit of a consistency audit is the *pair*, not the page.** You are not asking "is this surface good?" — that is quality QA's question. You are asking "do these two surfaces claim the same thing as each other?"
+
+Keep this distinct from the two neighbouring checks so the three don't collapse into one vague "audit everything":
+
+- The **Customer Language Bank diff** (above) compares your copy to *buyers' words*.
+- **`ops-quality-assurance`** scores each surface *against the brand standard* — voice, the Four U's, grammar — one surface at a time.
+- **This method** compares your surfaces *to each other* on strategic story. It is the only one of the three that reads across surfaces, so it is the only one that catches a set that is individually flawless and collectively incoherent.
+
+**Compare on four axes, surface against surface.** For each pair of surfaces you audit, read them side by side and ask whether they agree on:
+
+1. **Category claimed** — what market or category does each surface say you are in? (A homepage that says "revenue intelligence platform" beside a sales deck that says "sales analytics tool" has moved the buyer between two mental shelves.)
+2. **Primary value led with** — what is the single outcome each surface opens with? Not "does it mention the value" — what does it *lead* with, since that is what a scanning buyer takes away.
+3. **Audience addressed** — which committee role is the copy written to? A homepage speaking to the CFO beside a pricing page speaking to the practitioner isn't wrong on either page; together they tell the buyer you don't know who you're for.
+4. **Proof cited** — which customers, numbers, or third-party validation carry the claim? Divergent proof (different marquee logos, a metric that is "60%" one place and "over half" another) reads as either carelessness or two teams who never talked.
+
+None of these four is a grammar or brand-voice problem. Each is a *substance* mismatch that only appears when you hold two surfaces up against each other — which is why this audit lives with the Messaging Architect, who owns the story, and not with copy QA, who owns the standard.
+
+**Prioritize by visibility × stakes — do not audit every surface equally.** Rank each surface by its exposure (how many evaluators see it) multiplied by the decision stakes at the moment they see it, and fix contradictions in that order. A homepage-versus-pricing-page mismatch — seen by nearly every serious evaluator at a high-intent moment — outranks a stale one-pager one rep emails twice a quarter. A perfectly reconciled datasheet library while the homepage and pricing page disagree is effort spent exactly where it moves no belief. The point of the ranking is triage: you will never get every surface to agree at once, so agree the surfaces that decide deals first.
+
+**Run a dedicated post-repositioning straggler sweep.** The largest single source of real inconsistency is not slow drift — it is a repositioning that updated the loud surfaces and missed the quiet ones. When the category or the lead value changes, the homepage, the primary deck, and the top landing pages get rewritten the same week; the low-traffic corners that carry the *old* category and value survive untouched for months, precisely because they are low-traffic and nobody re-reads them: footer boilerplate, the "About" blurb, old blog CTAs, email signatures, canned sales-sequence templates, help-center intros, social bios, and PDF datasheets. A prospect who read the new homepage and then hits the old boilerplate cannot reconcile the two, and the newer, more expensive message is the one they distrust. Maintain a straggler checklist keyed to every surface that carries a category or value claim, and treat closing it as **part of the repositioning, not a follow-up task** — a repositioning is not done while a straggler still publishes the old story.
+
+_The surface-against-surface consistency method is credited to the `message-consistency-check` skill in the open-source [pmalliance/product-marketing-skills](https://github.com/pmalliance/product-marketing-skills) (MIT); ideas only, written from scratch. The four comparison axes, the visibility × stakes triage, and the post-repositioning straggler sweep are our framing and are not lifted from the source. No effect sizes or benchmark figures are asserted here._
+
 ## Deliverables
 
 **Message House Framework** (15+ pages) - Comprehensive messaging architecture including: brand narrative and core positioning, 3-5 primary message pillars, supporting sub-messages under each pillar, key differentiators and proof points, and persona-specific variations (by buyer role and buying moment). Includes tone/voice guidelines and messaging principles.
@@ -78,6 +103,8 @@ _The customer-language-bank discipline — read voice-of-customer material in bu
 **Proof Point Library and Evidence Mapping** - Organized collection of proof points supporting each message pillar including: quantified customer results (X% improvement, Y business outcome), customer testimonials organized by use case, case studies summarized with key results, third-party validation (analyst reports, reviews, awards), and data-backed research claims. Mapped to specific message claims.
 
 **Customer Language Bank and Copy Diff** - Ranked vocabulary of the terms buyers actually use, each entry carrying the verbatim phrasing, source corpus, date, and speaker role — partitioned by persona and reported per corpus as well as overall, with over-represented corpora flagged. Paired with a diff against current live copy listing every gap and its verdict (adopt / bridge / refuse), the refuse and bridge items routed to positioning rather than straight to copy. Refreshed at least semi-annually alongside the message house review, and immediately after a repositioning.
+
+**Message Consistency Audit** - A surface-against-surface coherence report rather than a per-surface quality review: the audited surfaces ranked by visibility × stakes, each high-priority pair compared on the four axes (category claimed, primary value led with, audience addressed, proof cited), every mismatch logged with the two surfaces that disagree and a resolution owner, and a standing post-repositioning straggler checklist covering the low-traffic surfaces that carry a category or value claim. Distinct from the copy-quality review owned by `ops-quality-assurance` and from the Customer Language Bank diff above.
 
 **Message Use Case Library** - Messaging guidance for different use cases/scenarios including: use case overview, relevant customer personas, key outcomes for this use case, recommended messages (primary and supporting), relevant proof points and case studies, and sales conversation starter questions.
 
@@ -96,7 +123,7 @@ _The customer-language-bank discipline — read voice-of-customer material in bu
 - **Website Conversion Impact**: 20-35% improvement in conversion rates on website pages after messaging implementation compared to pre-messaging versions
 - **Email Campaign Performance**: 15-25% improvement in email click-through and conversion rates after messaging implementation
 - **Sales Messaging Effectiveness**: Deals where sales actively use positioning and messaging pillars show 15-20% higher win rates compared to deals without messaging usage
-- **Message Consistency Score**: 85%+ consistency rating when auditing website, sales decks, case studies, emails, and ads for alignment with core messaging
+- **Message Consistency Score**: 85%+ of high-visibility surfaces agree on all four audit axes (category claimed, primary value led with, audience addressed, proof cited) when read surface-against-surface — not merely each aligned to the brand standard in isolation. Every repositioning closes its straggler checklist before the change is called done.
 - **Prospect Perception Shift**: Pre-post research showing 40%+ improvement in prospects' understanding of your value proposition and differentiation after exposure to messaging
 - **Case Study and Proof Point Usage**: 70%+ of sales conversations include at least one proof point or customer example supporting message claims (measured via call review)
 - **Customer Testimonial Effectiveness**: Case studies and testimonials featuring messaging-aligned value propositions achieve 25%+ higher engagement than generic case studies
