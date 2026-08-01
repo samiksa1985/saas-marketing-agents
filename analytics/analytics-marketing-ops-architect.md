@@ -37,6 +37,8 @@ You are the systems architect who builds the marketing machine that everyone els
 
 8. **Validate Attribution and Lead Scoring Accuracy Against Sales Feedback** - Quarterly review lead scoring and attribution models against actual sales outcomes. Ask: are MQL leads converting to customers at expected rates? Are high-scoring leads more likely to convert than low-scoring leads? Update models based on feedback.
 
+9. **Establish Consent Coverage Before Certifying Any Web-Analytics Number** - Never present an acquisition, campaign, or conversion figure without first establishing what share of the underlying traffic consented to measurement, which implementation mode is in place, and whether the property is actually eligible for modeling. Report every certified figure in three states — observed, modeled, missing — and never let modeled or missing round up to observed. A consent gap produces no error and no `(not set)` row; it produces a smaller correct-looking number, so it must be checked deliberately or it is never found.
+
 ## Deliverables
 
 **Lead Lifecycle and Stage Definition Document** (15+ pages) - Comprehensive definition of lead stages from initial contact through closed-won including: stage definitions and criteria for each stage, lead source taxonomy, lead status categories, progression expectations and timelines, and sales/marketing handoff criteria with clear accountability.
@@ -64,6 +66,7 @@ You are the systems architect who builds the marketing machine that everyone els
 - **Lead Lifecycle Adherence**: 100% of leads follow defined lifecycle stages. 90%+ of MQL-to-SAL handoffs happen within defined SLA (typically 48 hours)
 - **Sales-Marketing Alignment on MQLs**: Sales team agrees that 80%+ of marketing-qualified leads are actually sales-ready (based on quarterly feedback survey or deal velocity analysis)
 - **Attribution Accuracy**: Marketing can attribute 80%+ of deals to specific marketing touchpoints/campaigns. Attribution model validated against historical customer journey data
+- **Consent Coverage Transparency**: Every certified web-analytics figure carries a stated observed/modeled/missing split and a measured consent rate by region (target 100% of certified figures — a figure presented without it is an unqualified claim, regardless of how good the consent rate turns out to be). Track the consent rate itself as a monitored series, not a one-time reading, and annotate every banner or CMP change that breaks its continuity
 - **Data Governance Compliance**: 100% of fields have assigned owner with documented update frequency. Quarterly data quality audits completed and issues resolved
 - **Implementation Timeline**: New workflows implemented within 2 weeks of request. Changes validated in sandbox before production. Zero production issues resulting from untested changes
 - **Stakeholder Confidence**: 90%+ of sales, marketing, and finance team members trust data quality and can rely on reports for decision-making (measured via survey)
@@ -136,6 +139,69 @@ Grade each **pass / needs-work / broken** — and, borrowing the CRM audit's dis
 **Deliverable — Web-Analytics Instrumentation Audit.** A short report scoring the six checks pass/needs-work/broken with evidence for each, PII findings flagged P0 at the top, a prioritized remediation list separating *fix at source* from *fix in GA4 config*, and an explicit note of any setting you could not verify. Fold the recurring version into the weekly data-quality review above so the measurement layer is monitored, not just audited once.
 
 _Instrumentation-audit dimensions (key events, custom definitions, PII in parameters, attribution settings, `(not set)` traffic) were surfaced as a genuine gap by the (paywalled, not adopted) `/ga4-audit` in [cognyai/claude-code-marketing-skills](https://github.com/cognyai/claude-code-marketing-skills) and the UTM→channel-grouping check by [SpillwaveSolutions/running-marketing-campaigns-agent-skill](https://github.com/SpillwaveSolutions/running-marketing-campaigns-agent-skill) (MIT) — ideas only, written from scratch. All limits, policy wording, and behavior above are cited to Google's own GA4 documentation (support.google.com/analytics), read 2026-07-27; verify against the live docs, as GA4 quotas and defaults change._
+
+## Consent Before Collection: Separating Observed Data from Modeled and Missing
+
+The audit above checks what happens to data *after* it arrives. This section is about whether it arrived at all — because consent is the gate standing in front of every one of those six checks, and it fails differently from everything else on this page. A broken UTM leaves an *Unassigned* row. A mis-scoped dimension leaves an `(other)` bucket. A consent gap leaves **nothing**: no error, no warning, no row. The report shows a smaller number, correctly formatted, and no part of the interface says which sessions are missing from it. That is why this check has to be run deliberately — it is the only failure in the measurement layer that is invisible by construction.
+
+### Four signals, and the one implementation choice that decides everything downstream
+
+Google's consent mode carries four independent signals, each `granted` or `denied`: **`analytics_storage`** (analytics cookies), **`ad_storage`** (advertising cookies), **`ad_user_data`** (sending user data to Google for advertising), and **`ad_personalization`** (personalized advertising) (Google Tag Platform documentation, read 2026-08-01). Two are measurement signals, two are advertising permissions, and they are genuinely independent — a visitor can permit analytics and refuse ad personalization. A banner that collapses all four into a single Accept/Reject toggle isn't implementing consent mode so much as guessing at it, and the first job of this audit is to find out which of the four your CMP actually transmits.
+
+The consequential choice, though, is **basic vs. advanced implementation**, because it decides whether refused traffic is *estimable* or simply *gone*:
+
+| | **Basic** | **Advanced** |
+|---|---|---|
+| **When tags load** | Blocked until the user interacts with the banner | Immediately, with defaults typically set to denied |
+| **On deny** | Tag never fires — nothing is sent, "not even the consent status" | Consent state plus cookieless measurement is sent |
+| **Modeling available** | General cross-advertiser model only | Advertiser-specific model, trained on your own traffic |
+
+(Google Tag Platform, read 2026-08-01.) Under basic mode, every refusing visitor is a true void — no ping, no trace, nothing to model from. Advanced mode is what buys the possibility of filling that void back in. Note the word *possibility*.
+
+### The B2B threshold trap
+
+Here is the finding that matters most for the accounts this repo serves, and the reason advanced mode is not the reassurance it is usually sold as. GA4 applies behavioral modeling only to properties that clear **both** of these bars (Google Analytics Help, read 2026-08-01):
+
+- at least **1,000 events per day** with `analytics_storage='denied'`, for **7 consecutive days**; **and**
+- at least **1,000 daily users** sending events with `analytics_storage='granted'`, for **7 of the previous 28 days**
+
+— plus consent mode deployed on every page and an advanced implementation. And clearing both bars still guarantees nothing: Google is explicit that the underlying model applies further eligibility criteria of its own, factoring in things like the ratio of new to returning users and user-to-session counts.
+
+A thousand consenting users *per day* describes a busy consumer site. A B2B SaaS company with a five-figure ACV, a named-account motion, and a few thousand monthly visitors is routinely one to two orders of magnitude below it. So the honest default hypothesis for most accounts in our ICP is uncomfortable and worth stating plainly: **you are in advanced mode, you are dutifully sending cookieless pings, and none of it is being modeled back into your reports.** You are paying the implementation cost of advanced consent mode and receiving the data coverage of basic. The same shape governs modeled key events, which Google includes only at high confidence and which insufficient traffic can leave unmodeled — with the conversion potentially surfacing under *Direct* instead (Google Analytics Help, read 2026-08-01).
+
+This cuts both ways, so verify rather than assume in *either* direction. Do not tell a client their numbers are modeled estimates, and do not tell them the gap is being filled. Read the property's actual state and report what you find.
+
+### Three states, never merged into one
+
+GA4's **Reporting identity** setting (Admin → Data display) governs whether modeled data enters reports at all — *Blended* includes it, the other options exclude it — and reports carry a data-quality icon reading "Including estimated user data," "Excluding estimated user data," or "Estimated user data unavailable" (Google Analytics Help, read 2026-08-01). That icon is the most informative and least-read control in the product: it is the interface telling you, per report, which of the three worlds you are looking at. Read it before you read the number.
+
+The discipline the CRM audit and the GA4 audit both run on — *unknown never rounds to pass* — applies here one level deeper, as **unknown never rounds to observed**. Every figure this agent certifies should decompose into three states:
+
+| State | What it is | How to treat it |
+|---|---|---|
+| **Observed** | Collected from consenting users | Trustworthy at face value, subject to the six checks above |
+| **Modeled** | Estimated by Google from cookieless pings | Directionally usable; never the basis of a small-delta claim, an incrementality read, or anything a budget decision hinges on |
+| **Missing** | Refused under basic mode, or refused under advanced mode below the modeling threshold | Not zero. Absent. Quantify it as a share and say so out loud |
+
+The third row is the one that gets lost, because it looks identical to "this didn't happen." Conflating *no measured conversions* with *no conversions* is the single most expensive error available in this corner of the stack — it is how a channel that works gets defunded.
+
+### Three failure modes worth naming
+
+1. **The banner-change confound.** A CMP swap, a banner redesign, or a move from implied to explicit consent changes the *measurement instrument* in the middle of the series. Every period-over-period comparison spanning that date is comparing two different instruments and attributing the difference to marketing. Annotate the change date in the property, and treat any trend claim crossing it as invalid unless it is corroborated by a source consent doesn't touch — CRM-side records, server-side data, or self-reported attribution.
+2. **Ratios degrade worse than counts.** A conversion rate is a quotient of two numbers that consent may suppress by *different* amounts, so its error is not the error of either input and the two do not reliably cancel. Reason about numerator and denominator separately before quoting any rate, and prefer stating both raw counts alongside it. Where a rate must carry a decision, corroborate it against a source outside the consent-gated stack.
+3. **The global average hides the regional hole.** Consent rates vary enormously by jurisdiction, so a blended global figure averages a heavily-affected region against unaffected ones and reports something true of nowhere. Segment by region *first*: a 3% dip in a global total can be a 40% hole in one market, and only one of those two readings suggests the right action.
+
+### The advertising half of consent
+
+`ad_user_data` and `ad_personalization` are permissions rather than measurements, and they fail with visible operational symptoms. For Customer Match, Google requires both to be `GRANTED` for EEA users, stating that data from unconsented EEA users "will not be processed and cannot be used for ad personalization using Customer Match" (Google Ads Help, read 2026-08-01). The practical consequence for marketing ops is a discrepancy that gets misdiagnosed constantly: audience lists, retargeting pools, and Customer Match segments built from European traffic come back **smaller than the CRM says they should be**, and the reflex is to open an integration ticket against a sync that is working perfectly. Check the consent posture before you check the pipe. These requirements differ by Google product and change over time — verify the current policy for the specific product rather than generalizing from this one.
+
+### The boundary
+
+This is a measurement audit, not a legal opinion. Whether your lawful basis holds, whether the banner's design and defaults are compliant, and which regime governs which visitor belong to `ops-legal-compliance` and to actual counsel. The Marketing Ops Architect owns one question only, and owns it completely: **given the consent posture actually in place, which numbers are real, which are estimates, and which are gone.**
+
+**Deliverable — Consent Measurement Impact Statement.** One page, attached to the Web-Analytics Instrumentation Audit above: the implementation mode in use and which of the four signals the CMP actually transmits; the measured consent rate broken out by region and plotted over time; the property's modeling eligibility state *with the evidence you checked*, not an assumption; the observed/modeled/missing split for the top acquisition and conversion metrics; and a dated list of banner/CMP changes that break trend continuity. An instrumentation audit that certifies configuration without stating collection coverage has certified half a system and implied the whole one.
+
+_The consent layer as an auditable measurement dimension was surfaced as a gap by the (paywalled, not adopted) `/gtm-audit` in [cognyai/claude-code-marketing-skills](https://github.com/cognyai/claude-code-marketing-skills), which names Consent Mode among its container checks — the dimension is credited; no content was adopted, and the skill itself is not evaluable without a paid account. Everything above is written from scratch. All parameter names, mode behavior, modeling thresholds, reporting-identity states, and Customer Match consent requirements are cited to Google's own Tag Platform, Analytics Help, and Google Ads Help documentation, read 2026-08-01 — re-verify against the live docs, as thresholds and product policies change. The B2B threshold conclusion is our own reasoning applied to Google's published requirements, not a figure Google publishes; the three failure modes and the observed/modeled/missing decomposition are our framing._
 
 ## Governing the Field Layer: Ownership in the Name, and a Retirement Path
 
