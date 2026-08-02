@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-02 — Reddit Specialist gets an answer-engine targeting lens (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 176 markdown files; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; every `SKILL.md` has `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Item pulled:** with P0 clear and the top P1 items blocked (subagent conversion [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); both proposals [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2) and legal), and the distribution items each needing a human-written submission / in-app form / unmet precondition, took the highest unblocked scout item — **Scope the AEO ↔ Reddit seam**. A freshness pass was the wrong call this run: both freshness-tracked docs were reviewed 2026-07-28 (five days ago), so re-passing risks a padding edit.
+
+**Decision made:** the seam is real and resolves as **a section on `social-reddit-specialist`, not a new persona**. Verified the gap by grep first — the Reddit agent had **zero** mentions of AI engines, AEO, or citations; its every Critical Rule, deliverable, and success metric ran through a community-credibility + traffic lens (karma, upvotes, MQLs, UTM). Meanwhile the AEO/GEO Playbook and `seo-ai-search-optimizer` know Reddit ≈ 6× G2 for AI citations but only advise "participate authentically." *AEO-driven thread targeting* — finding the specific threads engines actually lift and structuring answers to be liftable — was owned by neither. It belongs on the Reddit Specialist because it is a new prioritization lens on an activity it already performs (subreddit selection, high-intent-question identification); `seo-ai-search-optimizer` owns *your own site's* citability, so putting third-party-UGC execution mechanics there would stretch its scope.
+
+**Shipped:** a new **"AEO-Aware Thread Targeting"** section + **Critical Rule 9** + an `AI-Answer Presence (AEO)` success metric in both dual-located copies of `social-reddit-specialist` (`social/` and `plugins/saas-marketing/skills/social-media-ops/agents/`). The section covers: the two different targeting questions (where buyers gather vs. which threads engines lift); a method for finding cited threads (query the engines your buyers' questions, logged out, several times each; reverse from Perplexity's exposed sources; prioritize evergreen decision threads over decaying news threads); structuring an answer to be *liftable* not just upvoted (self-contained lead claim before caveats, named specifics over "it depends"); and guardrails that keep the 90/10 rule, no-astroturfing, human-posts-only, and citation-as-signal-not-target intact, with the per-engine strategy handed back to `seo-ai-search-optimizer`.
+
+**Sourcing:** discipline surfaced by the open-source [onvoyage-ai/gtm-engineer-skills](https://github.com/onvoyage-ai/gtm-engineer-skills) `reddit-opportunity-research` (MIT) — ideas only, written from scratch. The 6× G2 and per-engine figures are directional and already sourced in the AEO/GEO Playbook (referenced, not re-asserted); the [Reddit–Google content-licensing deal](https://www.tomsguide.com/ai/google-strikes-dollar60m-deal-with-reddit-for-ai-training-data-what-you-need-to-know) (Feb 2024, ~$60M/yr, terms since contested — verified this run) is cited as the mechanism putting Reddit answers into Google's AI surfaces. No fabricated metrics.
+
+**Verify:** `scripts/lint-agents.sh` on both copies — **2/2 pass**; copies **diff-identical**; broken-link recheck on both edited files — clean (all cross-doc references are absolute GitHub URLs). CHANGELOG `## [Unreleased]` bullet added; backlog item marked done 2026-08-02.
+
+---
+
 ### 2026-08-01 — Marketing Ops Architect learns that consent decides which numbers are real (automated skill scout)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. Focus discipline **email / analytics / marketing-ops** by rotation — it was last the focus on 2026-07-30 (the earliest of that day's three runs) and PMM/sales/GTM ran 07-31. 8 sources evaluated → 1 enhance, 1 watch, 6 dismissed; all rows appended to [scout-ledger.md](scout-ledger.md).
