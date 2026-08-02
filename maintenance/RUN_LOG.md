@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-02 — Content Optimizer learns to find cannibalization the decay triage structurally can't see (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Distribution items assessed, not actioned:** the top unblocked P1s are the awesome-list submissions, but none clears the bar for autonomous execution this run — `awesome-claude-code` is explicitly "human-written," `awesome-agent-skills` requires leading with "genuine usage" (unauthorable without risking a fabricated-usage claim, a hard guardrail), the Anthropic community marketplace goes through an in-app form (not gh-executable), and `awesome-agents`/`sindresorhus` are star-gated at ≥40 (repo is at 2). The blocked P1s (native subagents [#1], programmatic strategist [#2], legal-compliance) remain blocked on human decisions. Dropped to the actionable skill-curation track.
+
+**Shipped:** `seo/seo-content-optimizer.md` (both dual-located copies) — closes the P2 backlog item "cannibalization *detection* method for an existing library," the natural follow-on the decay-triage run (2026-08-02) flagged. **Owner decided at the seam:** detection belongs on the Content Optimizer, not the Blog Strategist. The Blog Strategist's Rule 8 *prevents* cannibalization prospectively (taxonomy governance); the Optimizer's Consolidate disposition *resolves* it — but only once a **decline** puts the cluster on the decay triage. The real gap is the cannibalization that never declined because the pages were never good: three URLs that have alternated on one query for years, none winning, none falling far enough to trip a threshold — structurally invisible to a decline-driven triage. Shipped a new **"Finding Cannibalization the Decay Triage Never Sees"** section (standing library audit, not decline-triggered): cluster from free on-page signals by subset containment / same-primary-keyword / semantic-intent overlap; grade severity as overlap type × ranking disparity (alternation = the true signature, a stable single winner = no-action); a four-way disposition (merge / canonical / differentiate / no-action) that is often *not* removal; two detection guardrails (never merge on lexical overlap alone; free pass yields candidates, SERP alternation confirms them; degrades gracefully without an API budget). Plus a **Cannibalization Audit** deliverable and a **Cannibalization coverage** success metric.
+
+**Gap verified before writing:** grepped `cannibaliz` repo-wide — only prospective prevention (Blog Strategist Rule 8) and decline-triggered resolution (Optimizer Consolidate) existed; standing detection was owned by nobody. Source `blog-cannibalization` in [AgriciDaniel/claude-blog](https://github.com/AgriciDaniel/claude-blog) (MIT), ideas-only; the dual-mode shape credited, the decline-blind framing / subset-containment tell / severity grid / four-way disposition are ours. No fabricated metrics; the new success metric is a process/coverage check baselined from the user's own cycles.
+
+**Verify:** `scripts/lint-agents.sh` on both copies — **2/2 pass**; the two copies are byte-identical (`diff` clean); no internal `.md` links added, repo link check still clean.
+
+**Deferred:** the remaining P2 skill-curation items (cannibalization is now fully worked; next open items are the pricing-owner scope question, the consent-registry evaluation, and the `indranilbanerjee/digital-marketing-pro` re-read). Distribution and the two scoped-but-blocked proposals stay queued for a human.
+
+---
+
 ### 2026-08-02 — Marketing Ops Architect learns a duplicated tag doubles its numbers; container mechanics ruled out of scope (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
