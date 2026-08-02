@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-02 — Marketing Ops Architect learns a duplicated tag doubles its numbers; container mechanics ruled out of scope (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links repo-wide; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Item pulled:** P0 clear; the top P1 items are blocked (subagent conversion [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); both proposals [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2) and legal), and every distribution item needs a human-written submission, an in-app form, or an unmet star precondition. So took the highest unblocked backlog item — the **tag-container hygiene scope question** (P2 skill-curation), whose *first* ask is a scope decision. A freshness pass was again the wrong call: both freshness-tracked docs were reviewed 2026-07-28 (five days ago).
+
+**Decision made — the mechanical half is out of scope.** Orphaned tags that harm no data, tag/trigger/variable naming conventions, routine weekly container diffs, and unpublished-draft governance are analytics-engineering / web-implementation work; this repo is a collection of **advisory** marketing personas that read the container's *effect on the numbers*, not executors that run the container. Declined that half explicitly in-file, so a future run doesn't re-litigate it. The item's source is paywalled (dimensions only), so nothing to adopt regardless.
+
+**Kept the one interpretive sliver that was a real gap.** Verified by reading the existing six-check GA4 audit: check 1 ("fires where it should and **only there**") covers wrong *placement*, not double *counting*, and nothing repo-wide connected "a metric moved with no marketing cause" to "suspect the tag container first" — despite the agent's own thesis being "if instrumentation is wrong, every downstream number inherits the error silently." A duplicated GA4 config/event tag firing twice is the single most common instance of exactly that, and it was unnamed.
+
+**Shipped:** a **seventh GA4 check — "Tag integrity"** — in both dual-located copies (`analytics/` and `plugins/saas-marketing/skills/marketing-analytics/agents/`). It carries only the measurement-invalidating failure (a duplicated tag double-counts sessions/users/key events/imported conversions with no error), the diagnostic tell borrowed from the consent section's banner-change confound (a sharp step with no site release, campaign change, or seasonality is an instrument change until proven otherwise), a requirement to annotate container publishes so trend continuity is checkable, and a **"What this check is not"** paragraph drawing the scope boundary. Updated the section header, the deliverable, and the two consent-section back-references from "six checks" to "seven."
+
+**Sourcing:** the dimension was named by the paywalled, not-adopted `/gtm-audit` in [cognyai/claude-code-marketing-skills](https://github.com/cognyai/claude-code-marketing-skills) — dimension credited, no content adopted, same handling as its `/ga4-audit` (07-27) and consent (08-01) dimensions. The duplicate-tag behavior is quoted verbatim from [Google Analytics Help — Google tag management](https://support.google.com/analytics/answer/12329709), read 2026-08-02 (HTTP 200 this run). No fabricated metrics; the "container is the first suspect" tell is our framing, consistent with the confound already in the consent section.
+
+**Verify:** `scripts/lint-agents.sh` on both copies — **2/2 pass** (6,251 words each, up from 5,871; +380); `diff` confirms the two copies are byte-identical; `grep 'six checks'` returns nothing; the one new external URL returns HTTP 200; no relative links introduced. CHANGELOG `## [Unreleased]` bullet added; backlog item marked done 2026-08-02.
+
+**Deferred:** the analytics agent has now been touched three times in eight days (GA4 audit 07-27, field layer 07-30, consent 08-01, this). It is dense but coherent; no split warranted yet, but future analytics finds should weigh a second persona vs. another section before piling on.
+
+---
+
 ### 2026-08-02 — Content Optimizer learns to diagnose a decline before prescribing a refresh (automated skill scout)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. Focus discipline **content / SEO-AEO-GEO** by rotation — it was last the focus on 2026-07-30 (the second of that day's three runs, ahead of paid/social), while PMM/sales/GTM ran 07-31 and email/analytics/ops ran 08-01. 9 sources evaluated → 1 enhance (2 co-credits), 2 watch, 6 dismissed; every row appended to [scout-ledger.md](scout-ledger.md).
