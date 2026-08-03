@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-03 — Social Ads Specialist learns that delivery is not targeting (automated skill-scout run)
+
+**Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. Distinct from the same-day maintenance run below.
+
+**Discipline (by rotation):** paid media / social. It was last the *focus* on 2026-07-30 (the third of that day's three runs) — the oldest of the four, against PMM/sales/GTM on 07-31, email/analytics/ops on 08-01, and content/SEO-AEO-GEO on 08-02. It also entered this run with an empty enhancement queue.
+
+**Scouted:** 9 sources (see [scout-ledger.md](scout-ledger.md) for every verdict). The paid corner of this market is overwhelmingly Google- and Meta-shaped; the gap was held by a **1★** LinkedIn-only repo, [mardab96/linkedin-ads-claude-skills](https://github.com/mardab96/linkedin-ads-claude-skills) (MIT, 12 skills, pushed 2026-07-23). Star count is not evidence, in either direction — the four highest-starred paid collections surveyed contributed nothing this run.
+
+**Gap verified by grep before writing anything:** `demographics report` → **0 hits repo-wide**. `seniority` → 4 hits, *all* in customer-research recruiting and thought-leadership cadence, **none in any paid-media agent**. `audience expansion` → 6 hits, every one meaning *lookalike expansion as a growth tactic*, never LinkedIn's setting. `Audience Network` → 2 hits, both the same dual-located `phase-4-launch` line recommending Meta's Audience Network for "broader reach" with no B2B caveat. So `paid-media-social-ads-specialist` — whose Identity claims "targeting precision that reaches ideal customer profiles while eliminating waste" — had Rules 4 and 8 governing who you *select* and **no method for checking that delivery honored it**, against two settings LinkedIn turns on by default.
+
+**Shipped:** a new **"Delivery Is Not Targeting: Auditing Who Actually Received the Budget"** section + **Critical Rule 9** + a **Delivery-vs-Targeting Audit** deliverable + an **On-ICP delivery share** success metric, in both dual-located copies. The two defaults in LinkedIn's own words; the opposite-failure-modes distinction (Expansion corrupts *who* → demographics; LAN corrupts *where* → placement split only); the ABM enumeration argument; the ICP-inclusion-set-written-first discipline; four dispositions with **review** (off-ICP but converting → widen the ICP, don't exclude); the three limits of the report (impressions-not-spend proxies, non-random suppression of small facets so fragmented leakage reads clean, structural spill and the over-narrow inverse tell); and LAN's controls held to the same standard our programmatic agent already applies to DSP inventory.
+
+**Sourcing:** ideas only, written from scratch in our voice; no prose reused. Source MIT, credited in-file. Four layers are ours and are labeled as such in the ledger: the opposite-failure-modes framing, the ABM enumeration argument, the suppression consequence, and the over-narrow inverse tell. All platform behavior quoted from and cited to four LinkedIn Marketing Solutions Help articles (a418929 Audience Expansion, a420372 enable/disable LAN, a424171 demographics, a427359 LAN delivery preferences), read 2026-08-03. **No waste percentage asserted** — the 20–30% / 30–40% figures circulating for LAN and Expansion trace to agency blog posts, not to LinkedIn, and were deliberately not reproduced; the section says to measure your own account instead.
+
+**Verify:** `scripts/lint-agents.sh` **2/2 pass**; the two copies are byte-identical (`diff` clean); all five newly-added links return HTTP 200 (four LinkedIn help articles + the source repo).
+
+**Deferred to [backlog.md](backlog.md):** the CPL-vs-CRM reconciliation gap (platform-reported and CRM-derived CPL disagree; report the gap itself as the finding — needs an owner decision between the Attribution Analyst and the Social Ads Specialist first); ad-mastermind's blind-judging **discrimination control** (a decoy concept that invalidates a scoring round when the judge fails to rank it last — a direct answer to the generous-scorer failure mode `ops-quality-assurance` names but cannot detect); and the stale `phase-4-launch` line recommending Meta's Audience Network without a B2B caveat, now inconsistent with what this agent teaches.
+
+---
+
 ### 2026-08-03 — brand-context.md gets a correction-write-back discipline; the two agency-lifecycle architectures declined (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
