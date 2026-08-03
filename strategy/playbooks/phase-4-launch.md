@@ -213,7 +213,7 @@ Set up tracking to measure results:
 **Budget & Bidding**:
 - Daily budget: $20-50/day typical for testing
 - Bid strategy: Lowest cost (Meta optimizes for conversions)
-- Audience network: Include Messenger, Audience Network (broader reach)
+- Placements: new Meta campaigns default to **Advantage+ placements** (formerly "automatic placements"), which include the **Meta Audience Network** — your ads served in third-party apps and sites, largely mobile games and entertainment, not only the Facebook/Instagram feed. Treat that added reach as inventory to vet, not a free win: for B2B, audit the placement breakdown after launch and hold the Audience Network to its own cost-per-lead and lead-quality bar before leaving it on — broad reach on consumer-app inventory is not the same as reaching buyers in a professional context (see the delivery-vs-targeting audit in `paid-media-social-ads-specialist`)
 
 **Tracking & Pixel**:
 - Install Facebook Pixel on website
