@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-03 — Give the Attribution Analyst a platform-vs-CRM CPL reconciliation, gap-as-finding + audit-first ordering (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. A separate, later 2026-08-03 run from the three below it.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (228 checked across 174 files); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0. Remaining P1 items are blocked (native subagents on in-thread decisions [#1]; distribution items are outward third-party submissions with "human-written" / "genuine usage" / in-app-form gates — not fired autonomously on an unattended run; star-threshold lists blocked). P1 skill-curation is fully done. So pulled the top *unblocked* item: the P2 platform-CPL-vs-CRM-CPL reconciliation, which was written as "decide the owner, then write it."
+
+**Shipped:** New **"Two CPLs Disagree: Reconcile the Gap Before Anyone Spends Against It"** section + **Critical Rule 10** + a **CPL reconciliation coverage** success metric on `paid-media-attribution-analyst` (both dual-located copies), and a one-sentence cross-reference on the Social Ads Specialist's **Delivery-vs-Targeting Audit** deliverable (both copies) routing its campaign CPLs through the reconciliation before a scale/pause verdict.
+
+**Gap verified before writing:** `CPL` appeared **nowhere** in the Attribution Analyst — it owned object-level *count* reconciliation (do platform conversions map to CRM objects, 95%-mapping target) but not the derived *ratio*. The two absent disciplines: (1) platform-reported CPL vs CRM-derived CPL diverge per campaign for structural reasons (uncounted-in-CRM conversions, window mismatch, post-hoc disqualification) → reconcile and **report the gap with a decomposition, not the flattering number**; "unmeasured is the finding." (2) The **ordering rule** — audit tracking *first*, because a waste verdict over broken measurement is wrong by construction and confidently. Checked the siblings: PPC Rule 2 ("build tracking before launching") is a *setup* rule, not an *analysis-sequencing* one; the Social Ads delivery section handles a *delivery* confound, not a *measurement* one.
+
+**Seam decision (the item's prior question):** owner = Attribution Analyst (certifies the number); campaign verdict stays with the channel specialists → a section on the owner + a cross-reference from the Social Ads Specialist, not duplicated content. Drawn explicitly in-file ("you certify the number, the channel owns the verdict").
+
+**Guardrails:** ideas-only, credited to `mardab96/linkedin-ads-claude-skills` (MIT); framing (gap-as-finding, "unmeasured is the finding," certify-vs-verdict seam) ours; **no divergence figure asserted** (none exists in a primary source). No personal/sensitive data.
+
+**Verified:** `scripts/lint-agents.sh` on all 4 touched files — **4/4 pass**; both dual copies of each agent **diff-identical**; no internal `.md` links added (only an external MIT-repo URL already present elsewhere in-repo).
+
+**Deferred:** the two open proposals ([#2 programmatic SEO], `ops-legal-compliance`) pending decisions; native subagents [#1]; distribution submissions (human-gated); the remaining P2 scope questions (pricing/packaging owner, consent-registry-as-shared-record, CPL-vs-CRM *verdict* ownership one level up, olson-adam re-check) — each still needs a decision or a condition met before it's an action.
+
+---
+
 ### 2026-08-03 — Fix the stale Meta Audience Network line in the Phase 4 launch playbook (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. Distinct from the two other 2026-08-03 runs below (the same-day maintenance run and the skill-scout run).
