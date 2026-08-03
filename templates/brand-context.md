@@ -17,6 +17,7 @@ These are binding on every agent and take precedence over the agent's own defaul
 3. **Honor the voice, terminology, and banned-words lists.** These are not suggestions.
 4. **Respect "Constraints & compliance"** — regulated claims, required disclaimers, and no-go topics are non-negotiable.
 5. **If a section below is empty or still shows placeholders,** ask the user for it before producing final copy, or clearly flag the assumption you made.
+6. **When you discover a fact here is wrong, flag it for correction — don't just fix it downstream.** If, mid-task, you or the user find that something in this file is outdated or that a cited proof point no longer holds — a reference customer that churned or pulled logo approval, a metric that was revised, a persona pain that field data contradicts — surface it with a `[CORRECT BRAND CONTEXT: <what to change and why>]` marker, the same way you flag `[NEEDS INPUT: …]`. A correction that lives only in the one deliverable that caught it leaves every other agent still reading the stale fact — including a withdrawn proof point that must stop appearing in public copy. Confirmed corrections get logged in §14.
 
 ---
 
@@ -132,6 +133,14 @@ Point agents at the real sources so they don't work from memory.
 - **Best-performing content to emulate:** `<2–3 links>`
 - **Product docs:** `<link>`
 - **Customer research / VoC notes:** `<link or path>`
+
+## 14. Corrections & learnings
+
+> When a fact above is corrected during real work — a proof point withdrawn, a metric revised, a persona pain disproven — **fix it in the section above first**, then log it here with a date. That way the change reaches every agent at once instead of drifting into whichever single deliverable happened to catch it. This log is the audit trail, not the fix. Its most important job is withdrawn proof: an entry here is the standing record that a customer, logo, or number must now *stop* appearing in public copy.
+
+| Date | What changed (section) | Why / evidence | What agents should now do differently |
+|---|---|---|---|
+| `<YYYY-MM-DD>` | `<e.g. §6 — removed <Customer> from the referenceable list>` | `<e.g. logo approval withdrawn; confirmed with legal 2026-05>` | `<e.g. never name <Customer> in public copy; the MTTR stat was theirs — pull it too>` |
 
 ---
 

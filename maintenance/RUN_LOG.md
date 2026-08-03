@@ -4,6 +4,29 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-03 — brand-context.md gets a correction-write-back discipline; the two agency-lifecycle architectures declined (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links across 226 checked; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28, `integrations/README.md` 2026-07-23). No P0.
+
+**Item pulled:** P0 clear; the top P1s stay blocked (subagent conversion [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); both proposals [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2) and legal), and every distribution item needs a human-written submission, an in-app form, or an unmet star gate — none autonomously actionable this run. So took the highest unblocked backlog item: the P2 skill-curation re-read of [indranilbanerjee/digital-marketing-pro](https://github.com/indranilbanerjee/digital-marketing-pro) (MIT, 686★, pushed 2026-08-01), explicitly flagged 2026-08-01 as "worth a real re-read on the next ops run." A freshness pass was again the wrong call — both freshness-tracked docs were reviewed 2026-07-28 (six days ago).
+
+**Read the source directly, not from memory** (`skills/context-engine/two-views-model.md`, `decision-matrix-rerun.md`, `living-instruction-file-spec.md`, `update-back-rule.md`, `client-validation-document/SKILL.md`). Two architecture ideas were in scope; the honest call on each:
+
+- **Two-Views Model (v1 unbiased vs. v2 client-validated) — declined.** It presupposes their 12-Part per-engagement deliverable lifecycle: unbiased research docs produced in Parts 2–4, a formal Part 5 "client validation stop" (ACCEPT/REJECT/EDIT/DEFER on each finding), and selective v2 re-runs governed by a decision matrix, with both versioned views retained forever. This repo deliberately has none of that scaffolding — it is an advisory persona library + one shared `brand-context.md` + stateful loops, not an engagement-document framework. The one portable kernel ("the gap between the unbiased market view and the client's self-view is strategic signal, not something to silently collapse") already lives distributed across `pmm-competitive-intelligence` and the [weekly competitive-intel loop](../loops/weekly-competitive-intel-loop.md), which hold the external/market view against the client's own claims. No change; recorded so a future run doesn't re-open it.
+- **Living Instruction File — cache/auto-update machinery declined, the correction-propagation kernel adopted.** The LIF's core (a single "currently true," read-first, single-source-of-truth file every skill consults) *is* our `brand-context.md`; a second cached layer with versioned-source auto-update triggers would only duplicate it. But its **Update-Back Rule** exposed a real, small gap: `brand-context.md` was read-only-forever, carrying only a vague "review whenever positioning/pricing/ICP changes" footer and **no discipline for a correction discovered mid-work** — even though our *loops* already write corrections back (the ABM ledger, the intel snapshot). Grep-verified before writing: `write.?back / update.?back / propagat / correction` returned **zero hits** in either copy of the template, and no agent anywhere owns "correct brand-context when a fact proves wrong."
+
+**Shipped:** `templates/brand-context.md` (both dual-located copies) — a new **Rule 6** in "Rules for agents reading this file" (when you or the user find a fact here is outdated or a cited proof point no longer holds — a churned reference customer, a withdrawn logo, a revised metric, a persona pain contradicted by field data — surface it with a `[CORRECT BRAND CONTEXT: …]` marker, reusing the existing `[NEEDS INPUT: …]` convention, rather than fixing it only in the one deliverable that caught it) plus a compact **§14 "Corrections & learnings"** dated table whose stated first job is withdrawn proof: a standing record that a customer, logo, or number must now *stop* appearing in public copy. This closes the evidence-integrity loop the file already half-owns (Rules 1–2 forbid inventing proof; nothing let it *retire* proof).
+
+**Sourcing:** ideas only, written from scratch in the template's voice; no prose reused. Source MIT, credited here. No fabricated metrics; the one example table row is an angle-bracketed placeholder, consistent with the rest of the template.
+
+**Verify:** the two copies are byte-identical (`diff` clean); `brand-context.md` is a template, not an agent persona, so `scripts/lint-agents.sh` does not apply; the new blocks add no relative `.md` links (`[CORRECT BRAND CONTEXT: …]`, `§6`, `§14` are plain text, not link syntax); repo-wide link check still 0/226 broken; both manifests still parse.
+
+**Deferred:** the indranilbanerjee re-read is now worked (both architecture ideas resolved). Remaining P2 skill-curation items are the pricing-owner scope question (a maintainer call, not a scout call), and the two consent-registry / durable-shared-record evaluations. Distribution and the two scoped-but-blocked proposals stay queued for a human.
+
+---
+
 ### 2026-08-02 — Content Optimizer learns to find cannibalization the decay triage structurally can't see (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
