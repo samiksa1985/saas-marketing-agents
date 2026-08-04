@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-04 — Legal Compliance Officer learns consent/suppression is one cross-channel record, not per-tool state (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (238 checked repo-wide, re-run after the edit); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28 = 7 days; `integrations/README.md` 2026-07-23 = 12 days). The `2026-04-03` CATALYST stamps are v1.0 version footers, not freshness commitments. No P0.
+
+**Item pulled:** P0 clear; the top P1s stay blocked (subagent conversion [#1]; both proposals [#2] and `ops-legal-compliance`-AI-disclosure need decisions/legal validation; every distribution item needs a human-written submission, an in-app form, or an unmet star gate). A freshness pass was again the wrong call — both freshness-tracked docs were reviewed 7 and 12 days ago. So took the top *unblocked* item: the P2 skill-curation scope evaluation "consent/suppression as a durable shared record." (Confirmed `client-ops/ops-legal-compliance.md` is the original Legal Compliance Officer from the initial 59, **not** the unbuilt `ops-legal-compliance` AI-disclosure/C2PA proposal — no manifest/backlog discrepancy.)
+
+**Gap verified before writing:** `cross-channel` near suppress/consent → **0 hits**; a statement that an opt-out propagates/honored-across channels → **1 partial hit**, `email-deliverability-specialist` line 140, which frames cross-platform suppression sync as *"preventing duplicate sends"* — a deliverability/frequency concern, on the deliverability specialist rather than the consent owner, and never as a legal obligation. Meanwhile `paid-media-social-ads-specialist` builds Meta/LinkedIn **custom audiences from customer email lists** (lines 16–17, 124) with no opt-out-before-upload step. So the consent owner honored opt-outs (Rule 3) but only implicitly per-tool; nothing established the record as one thing every contacting channel reads.
+
+**Scope decision (the item's prior question — "scope before building"):** the item hypothesized this "folds into `brand-context.md` + state-ledger." **Decided against that:** a consent/suppression *record* is contact-level operational PII whose system of record is the CRM/CDP, and `brand-context.md` carries brand config (ICP/voice/positioning), not contact lists. What was missing was not a *place* to store the list but the *discipline* that it is one cross-channel record read before every contact — and discipline is advisory, so the owner is the **Legal Compliance Officer**, not the channel agents and not a new shared file. Single owner, no channel-agent sprawl.
+
+**Shipped (both dual-located copies of `client-ops/ops-legal-compliance.md`):** **Critical Rule 9** ("Treat Consent and Suppression as One Cross-Channel Record, Not Per-Tool State"); a **"Consent Is One Record; Every Channel Reads It Before Contact"** section (per-tool consent fragmentation; GDPR Art. 21 / Art. 7(3) and CCPA/CPRA opt-out bind the *business*, not the tool; the CRM/CDP-not-repo-artifact placement; ad-platform custom/matched-audience uploads as a CPRA "share"/"sale" that must be scrubbed *before* upload and re-scrubbed on each refresh because matched audiences decay, with the service-provider-vs-third-party caveat handed to counsel; the deliverability specialist's line-140 sync raised from hygiene to consent obligation and extended past email to ad + sales channels); and a **Cross-Channel Suppression Coverage** success metric.
+
+**Guardrails:** ideas-only, written in our voice; regulation cited to the primary statutes (GDPR Arts. 21/7(3), CCPA/CPRA sale-and-share), **no fabricated figures**, the CPRA ad-audience reading appropriately hedged for counsel; not personalized legal advice (same advisory register as the file's existing 8 rules); no personal/sensitive data.
+
+**Verified:** `scripts/lint-agents.sh` on both touched files — **2/2 pass**; the two copies **byte-identical** (`diff` clean); no markdown links added (only inline `brand-context.md`/agent-name references), repo-wide broken-link check **0/238** after the edit.
+
+**Deferred:** unchanged — native subagents [#1]; both proposals [#2, `ops-legal-compliance` AI-disclosure]; distribution submissions (human/form/star-gated); the remaining P2 scope questions (pricing/packaging owner, CPL-vs-CRM *verdict* ownership one level up, olson-adam re-check) each still need a decision or a condition met.
+
+---
+
 ### 2026-08-03 — Give the Attribution Analyst a platform-vs-CRM CPL reconciliation, gap-as-finding + audit-first ordering (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. A separate, later 2026-08-03 run from the three below it.
