@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-04 — Messaging Architect gains the third variation axis: segment (automated **skill-scout** run)
+
+**Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: PMM / sales / GTM**, chosen by rotation — it was last the focus on 2026-07-31, the oldest of the four (email/analytics/ops 08-01, content/SEO-AEO-GEO 08-02, paid/social 08-03), and its queue entered this run empty (the `pmalliance` mine was fully worked on 07-31).
+
+**Scouted:** 11 sources → 1 enhance, 2 watch, 8 dismissed. Full rows in [scout-ledger.md](scout-ledger.md).
+
+**Shipped:** a new **"Messaging by Segment: Route the Entry Point, Don't Fork the House"** section plus **Critical Rule 10**, a **Segment Entry-Point Routing Map** deliverable, a **`Segment Routing Integrity`** success metric, and a pointer added to Rule 3 — in both dual-located copies of `pmm-messaging-architect.md`.
+
+The gap sat inside the agent's own Rule 3, which names **two** variation axes (persona, buying moment) and omits **market segment** — the axis sales asks for constantly. Grep-verified before writing: `vertical messaging`, `industry messaging`, and `swap test` returned zero hits repo-wide; every `vertical` hit was an ICP *targeting* dimension or a reference-account *tag*, and the only messaging mention was one clause inside a deliverable ("industry/vertical pages").
+
+The adopted idea is the source's: segment messaging is a **routing** problem, not an authoring one — lock the library, vary only which pillar leads and the one-to-two-line entry point, route by **buying trigger** rather than standing pain, never invent a trigger, and apply the **swap test**. **Six layers are ours:** (a) the two failure modes and their maintenance cost — an averaged message that describes no one, versus a per-vertical fork that makes every repositioning an N-times job and hands the 07-31 consistency audit N× the pairs; (b) an **axis-recognizability test** — one axis per map, and if a buyer wouldn't use it to describe themselves unprompted it is a CRM reporting dimension; (c) **trigger perishability** — a passed compliance deadline reads exactly as persuasive as it did when true, so every trigger carries a date and a review class (deadline / wave / structural) and the map is re-verified quarterly, not semi-annually; (d) the **base-rate counterfactual** — the segment's non-buyers lived through the same regulation and audit season, so a trigger earns its row only if it appears disproportionately in accounts that entered a cycle, read against win/loss with `pmm-competitive-intelligence`; (e) the **segment-proof credibility check** — naming a vertical promises vertical evidence, and `pmm-customer-advocacy` already tags references by vertical/industry, so an unbacked row softens to a segment-*framed* claim or waits with the missing reference logged; (f) the **merge test** — two segments routing to the same pillar with interchangeable entry points are one segment.
+
+**Not adopted:** the source's numeric confidence thresholds (≥60% verified / ≤10% estimated rows) — an arbitrary percentage bar a three-segment map cannot meaningfully meet; replaced with a per-row, per-surface rule under the repo's standing *inferred never rounds to verified* discipline.
+
+**Deferred to backlog:** (1) `Fearofsnakes/pmm-skillset`'s `message-market-fit` — a *method* for Rule 5's un-methodised "test messaging before rollout," including a pre-test feasibility gate and a composite scorecard of mixed quantitative and qualitative signals; the seam with `paid-media-creative-strategist`'s pre-registration discipline (07-30) needs deciding first. (2) The **pricing/packaging scope question** is escalated from "recorded" to "decide" — this run found the third and fourth independent sightings (`taizen-ai`, `genesys-skills`), after `firatcand` and `TerminalSkills` on 07-31.
+
+**Verified:** `bash scripts/lint-agents.sh` → 2/2 passed; both copies diff-identical; no new external links beyond the two GitHub source URLs.
+
+**License posture:** ideas only, written from scratch in our voice; `matteotitta/genesys-skills` is MIT and is credited in-file with our own layers marked as ours. No prose reused. No fabricated metrics — the section asserts no figures at all.
+
+---
+
 ### 2026-08-04 — Legal Compliance Officer learns consent/suppression is one cross-channel record, not per-tool state (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
