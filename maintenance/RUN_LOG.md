@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-05 — Performance Analyst learns to rule out the instrument before naming a cause (automated **skill-scout** run)
+
+**Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: email / analytics / marketing-ops**, chosen by rotation — it was last the focus on 2026-08-01, the oldest of the four (content/SEO-AEO-GEO 08-02, paid/social 08-03, PMM/sales/GTM 08-04), and its queue entered this run empty (every email/analytics/ops curation item is closed: opt-down ladder 07-30, field layer 07-30, consent audit 08-01, container-hygiene scope decision 08-02, consent-registry scope decision 08-04).
+
+**Scouted:** 14 sources → 1 enhance, 2 watch, 11 dismissed. Full rows in [scout-ledger.md](scout-ledger.md).
+
+**Shipped:** a new **"Reading a Change Before Explaining It"** section plus **Critical Rule 9**, an **Anomaly Investigation Record** deliverable, a rewritten **Anomaly Detection Timeliness** metric, a new **Verdict Quality** metric, and a rewritten **Segmentation Depth** metric — in both dual-located copies of `analytics-performance-analyst.md`. This is the first enhancement this agent has ever received; it stood at 69 lines, untouched since the repo's first pass.
+
+Rule 7 sent the analyst to investigate when a metric "significantly diverges" and offered four candidate causes — campaign change, external event, technical issue, market shift — three of which answer *why the world moved*, before anything settles whether it moved at all. It also never defined *significantly*. Grep-verified the gap first: **`measurement issue`, `expected variation`, `series break`, `like-for-like`, `multiple comparison`, `immature`, `outcome window`, and `restate` returned zero hits repo-wide**; `root cause` and `confounding` hit this agent only at Rule 7 and Rule 5 (experiments), and `maturity` appeared in eight files, none of them analytics.
+
+**Two internal contradictions fixed in passing** (the same call made for `paid-media-creative-strategist` on 07-30): the success metric demanded "95%+ of significant metric anomalies identified within 48 hours" — structurally impossible for a metric whose outcome window is measured in weeks, and an invitation to fabricate a cause on deadline — now set per metric against its own maturity. And "Segment analysis reveals 15-25% performance variation" made finding variation a *quota* while Rule 3 mandates 5-7 segments, which together is a fishing licence; now variation is a finding to qualify, with post-hoc splits labeled exploratory.
+
+**Source verified:** `growth-anomaly-investigation` in [krillinai/growth-skills](https://github.com/krillinai/growth-skills) (30★, 86 skills, pushed 2026-07-28), **MIT confirmed via the GitHub license API**. Ideas-only, written from scratch: the five-verdict resolution set with `unresolved` permitted as terminal, the comparability freeze, parent-total reconciliation, and the anti-fishing rule are credited. **Ours:** the series-break register and its eight-row routing table (which only this repo can write, because it enumerates the instrument changes our *own* shipped sections govern — consent posture, GA4 config, the two-axis scoring model, the field layer, attribution windows, LinkedIn delivery settings), the B2B maturity argument and its consequence for detection SLAs, the absolute-floor rule for small denominators, and the misdiagnosis-asymmetry framing.
+
+**No figures asserted.** Expected ranges are stated in-file as properties of a specific account's own history that must be measured, not imported — so this section adds no benchmark, threshold, or statistic to the repo.
+
+**Verified:** `bash scripts/lint-agents.sh` on both copies → **2/2 pass**; `diff` → copies identical; all six cross-referenced agent filenames confirmed to exist on disk.
+
+**Deferred:** two `watch` rows filed to the backlog (a tracking-plan/instrumentation-contract owner question; `growth-accounting`'s new/resurrected/churned decomposition). Also noted: `krillinai` carries `pricing-and-packaging-strategy`, the **fifth** independent sighting of the pricing seam — the open scope question still awaits a maintainer decision, not more evidence.
+
 ### 2026-08-05 — Messaging Architect gets a *method* for Rule 5's validation (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
