@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-05 — Messaging Architect gets a *method* for Rule 5's validation (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** 236 internal `.md` links checked across 174 files — 0 broken; `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28 = 8 days; `integrations/README.md` 2026-07-23 = 13 days). No P0.
+
+**Item pulled:** with all P1 items blocked (native subagents on in-thread decisions [#1]; distribution items are outward third-party submissions gated on "human-written" / in-app-form / star-threshold rules, not fired autonomously; the two proposals [#2, `ops-legal-compliance`] on decisions) and the "P2 — later" items too large for one small run, pulled the top *unblocked* backlog item — the P2 skill-curation entry "give `pmm-messaging-architect` a method for Rule 5's messaging validation" (surfaced 2026-08-04).
+
+**Shipped:** a new **"Validating the Message: Diagnose, Gate, Then Judge on a Composite"** section, a **Message Validation Plan & Scorecard** deliverable, a **Message Validation Integrity** success metric, and a pointer added to Rule 5 — in both dual-located copies of `pmm-messaging-architect.md`.
+
+Rule 5 named the validation audiences (sales, advisory boards, prospects) and stopped — no signal definition, no test-feasibility check, no verdict for the underpowered case. Grep-verified the gap first: `underpowered`, `minimum detectable`, `stopping rule`, `pre-register`, `feasibility`, `composite signal`, `echo moment`, and `winner` returned **zero** hits in the agent. The section fills the three holes in order: a **five-pillar pre-test diagnosis** (ICP alignment / differentiation / clarity / emotion-as-consequence / cross-channel consistency, each weak/adequate/strong, failing pillar routed to rewrite / positioning / test); a **feasibility gate** asked before the test is designed (targetability, qualified-volume, measurement reach); and a **composite verdict** — validated / not validated / not yet on a *majority* of mixed quantitative + qualitative signals, the qualitative signal treated as the instrument rather than a consolation prize.
+
+**Seam resolved before writing:** the backlog explicitly required that this not contradict `paid-media-creative-strategist` on what "a winner" is. Read its "Power Before Verdict" section — it governs whether a *powered paid A/B test* may declare a statistically-significant winner and refuses to round underpowered noise to one, with a final rung *"decide by structured judgment and label it as judgment."* Resolution written into the section: a *validated message* and a *statistically-significant winner* are different verdicts; the Creative Strategist's verdict is deferred to for any powered paid test; and this scorecard is that "structured judgment" rung made into a method for the (normal) underpowered case — no contradiction, and the volume arithmetic is inherited rather than re-derived.
+
+**Source verified:** `message-market-fit` in [Fearofsnakes/pmm-skillset](https://github.com/Fearofsnakes/pmm-skillset) confirmed live and MIT (WebFetch 2026-08-05), skill covers the 5-pillar scoring + parallel qualitative/quantitative signals credited. Ideas-only, written from scratch; the seam resolution, grading scheme, gate checks, and guardrails are ours. No fabricated figures.
+
+**Verified:** `bash scripts/lint-agents.sh` on both copies → **2/2 pass**; `diff -q` → copies diff-identical.
+
+**Deferred:** the same-backlog-section open items (`pmm-messaging-architect` Rule 5 was this one; pricing-owner scope question still awaiting a maintainer decision; ad-mastermind re-check is conditional on an external repo maturing). All P1-curation done; P1 remainder blocked as above.
+
 ### 2026-08-04 — Messaging Architect gains the third variation axis: segment (automated **skill-scout** run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: PMM / sales / GTM**, chosen by rotation — it was last the focus on 2026-07-31, the oldest of the four (email/analytics/ops 08-01, content/SEO-AEO-GEO 08-02, paid/social 08-03), and its queue entered this run empty (the `pmalliance` mine was fully worked on 07-31).
