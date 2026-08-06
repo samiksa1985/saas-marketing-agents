@@ -4,6 +4,22 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-06 — Performance Analyst learns to report a stock metric's change as flows, not a net (automated **maintenance** run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check first:** the working copy opened with an **uncommitted, incomplete change** from the prior run — Critical **Rule 10**, a Deliverables line, and a **Movement Reconciliation** metric had been added to `analytics/analytics-performance-analyst.md`, and all three pointed at a section **"Movement Accounting: A Flat Number Is Two Flows"** that was **never written**. Committing as-is would have shipped three dangling internal references (a P0-class coherence defect), and the plugins twin had none of it. This was backlog item "Evaluate `growth-accounting`'s movement identity" (the `growth-accounting` find from `krillinai/growth-skills`, filed to backlog on 2026-08-05) caught mid-implementation. The responsible close is to finish it, not discard tracked, sound work — so this run **completed** it.
+
+**Shipped:** the missing **"Movement Accounting: A Flat Number Is Two Flows"** section, written in the house style of its sibling "Reading a Change Before Explaining It," in **both dual-located copies** of `analytics-performance-analyst.md`. All three pre-existing references now resolve to a real heading.
+
+The section carries the additive movement identity — Closing = Opening + New + Resurrected + Expansion − Contraction − Churned, reconciling exactly to the observed net with any residual left visible — and **four layers the source does not have, which are ours**: (a) the **count-vs-value distinction** (expansion and contraction exist only on value metrics; a logo is one logo whether it upgrades or not, so a count moves only on new/resurrected/churned); (b) the **five boundary decisions** — entity, identity, reactivation window, maturity, value — each framed as an *instrument change that reclassifies flows with no customer behavior*, cross-linked to the series-break discipline shipped 08-05; (c) the **maturity bias on fresh-period outflow** (cancellations at term end, involuntary/dunning churn, late-booked downgrades make the newest period understate outflow by construction — the movement-metric twin of the cohort-maturity argument); (d) the **voluntary-vs-involuntary churn split** and **contraction-as-leading-indicator** reads the net conceals. Adds a **Period Movement Waterfall** deliverable paired with the Cohort Analysis Report (whole-base opening→closing loop for one period, vs. one vintage forward through many). The SaaS quick ratio is named but presented as a derived read, **not a target** — no ratio thresholds or churn benchmarks asserted.
+
+**Checked:** `bash scripts/lint-agents.sh` on both copies → **2/2 pass**; the two copies are **diff-identical**; both `.claude-plugin` manifests still parse with required fields (jq); both `See "…"` references in the file resolve to real headings; the `krillinai/growth-skills` URL is already established in the repo (not a new domain). No fabricated figures; MIT source credited in-file.
+
+**Deferred:** the same backlog item's two smaller notes (`growth-data-quality-audit`, `growth-decision-record`) stay unactioned — both remain covered/adjacent as previously recorded. The open **instrumentation-contract** item (who authors the series-break register) is untouched and still awaits a maintainer scope call.
+
+---
+
 ### 2026-08-05 — Performance Analyst learns to rule out the instrument before naming a cause (automated **skill-scout** run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: email / analytics / marketing-ops**, chosen by rotation — it was last the focus on 2026-08-01, the oldest of the four (content/SEO-AEO-GEO 08-02, paid/social 08-03, PMM/sales/GTM 08-04), and its queue entered this run empty (every email/analytics/ops curation item is closed: opt-down ladder 07-30, field layer 07-30, consent audit 08-01, container-hygiene scope decision 08-02, consent-registry scope decision 08-04).
