@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-06 — Quality Assurance Manager learns to prove its scorer actually discriminated (automated **maintenance** run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check:** clean. `.claude-plugin/marketplace.json` + the one `plugin.json` parse with required fields; all 13 `SKILL.md` files carry `name`+`description`; **256 internal `.md` links scanned across the repo, zero broken**; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28 = 9 days; `integrations/README.md` 2026-07-23 = 14 days). The `2026-04-03` CATALYST stamps are v1.0 version footers, not freshness commitments. **No P0.**
+
+**Backlog pick:** the top genuinely-**unblocked** item. P1 high-leverage (native subagents) is blocked on maintainer decisions [#1]; the P1 distribution items are each gated (awesome-claude-code on subjective "README polished" judgment; VoltAgent on the no-fabricated-usage guardrail; the Anthropic marketplace on an in-app form I can't drive headlessly; the rest on a star threshold); both PROPOSAL items [#2, `ops-legal-compliance`] and the two SCOPE-QUESTION items (pricing owner, instrumentation contract) await maintainer decisions, not more work. That left the P2 skill-curation entry with a real, pre-decided owner: the **`olson-adam/ad-mastermind` discrimination control** → `client-ops/ops-quality-assurance`, explicitly gated on "if it has held up."
+
+**Gate checked first:** re-fetched the source. Still live + MIT; still 0★, but now carrying **documented field-scan runs (170 Meta ads) and completed gauntlet runs that log where their own blinding failed** (`blinding_failed` in their scorecard) instead of hiding it — the "seen to survive contact" bar the 2026-08-03 note set, met by honest limitation-reporting rather than by stars (which this repo's philosophy has never treated as evidence). Gate passes → adopt.
+
+**Shipped:** a new **"The Discrimination Control: Proving the Scorer Actually Discriminated"** section in both dual-located copies of `ops-quality-assurance.md`. The Reference Class section (2026-07-31) names "**a generous scorer is useless**" as its operative discipline but has no way to *detect* one — a reviewer, or an AI-assisted scoring pass, can grade a whole set of variants uniformly **strong** and the copy-scoring pass had no catch. Gap grep-verified before writing: `decoy` / `negative anchor` / `discrimination control` / `blind judg*` all **zero** repo-wide. The section: when scoring a *set* judged together, seed one deliberately weak **negative-anchor decoy**, judge blind with it unmarked, and **read the decoy's placement first** — if it isn't at/near the bottom the **round is invalid** and its scores are discarded, not salvaged; + an honest-decoy construction rule (not a joke line, not a strong line in disguise; a documented past under-performer when scoring against Tier-1 data), a log-pass-or-fail discipline mirroring the source's transparency, and a **decoy proves discrimination, not quality** guardrail (ratifies the ranking, never the winner; set-scoring only — a lone deliverable has no ranking to invalidate).
+
+**Seam:** none needed — `ops-quality-assurance` owns copy scoring outright, so this sits beside its own Reference Class and Four U's sections on the same agent.
+
+**Verified:** lint **2/2**; both copies **diff-identical**; 256-file internal-link scan re-run after the edit — still **zero broken** (the one link added is external).
+
+**Ideas-only; no fabricated metrics.** The seed-a-decoy-and-void-the-round mechanic is credited in-file to [olson-adam/ad-mastermind](https://github.com/olson-adam/ad-mastermind) (MIT, re-verified 2026-08-06), which applies it to scoring ad concepts against real market campaigns; the set-size boundary, the honest-decoy construction rule, and the proves-discrimination-not-quality guardrail are ours. No detection-accuracy or scoring figures asserted.
+
+**Deferred:** the item's **second idea** — live competitor-ad field scans against the public Meta/LinkedIn ad libraries, scoped against `pmm-competitive-intelligence` — is left open (public-source competitive creative intel with no current owner; a scope call, not this run's work). The blocked PROPOSAL/SCOPE-QUESTION items remain blocked on maintainer decisions as recorded.
+
 ### 2026-08-06 — AI Search Optimizer learns to measure the traffic AI answers actually send (automated **maintenance** run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
