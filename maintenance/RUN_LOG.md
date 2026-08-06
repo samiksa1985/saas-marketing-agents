@@ -4,6 +4,34 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-06 — AI Search Optimizer learns that recognition is settled off your own site (automated **skill-scout** run)
+
+**Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: content / SEO-AEO-GEO**, chosen by rotation — it was last the focus on 2026-08-02, the oldest of the four (paid/social 08-03, PMM/sales/GTM 08-04, email/analytics/ops 08-05), and its queue entered this run empty (decay triage 08-02, cannibalization audit 08-02, crawler access 07-30, AEO↔Reddit seam 08-02 all closed).
+
+**Scouted:** 17 sources → 1 enhance (+1 co-credit), 2 watch, 13 dismissed. Full rows in [scout-ledger.md](scout-ledger.md).
+
+**Shipped:** a new **"Recognition Before Citation: The Entity Lives Off Your Site"** section, **Critical Rule 10**, and an **Entity Recognition Audit & Reconciliation Plan** deliverable, in both dual-located copies of `seo-ai-search-optimizer.md`.
+
+Critical Rule 2 asserts that "AI systems heavily weight entity signals for citation decisions" — and then sends the reader entirely to their own JSON-LD; the Entity Markup Implementation Plan deliverable is on-site only. Markup is a *claim you make about yourself*; recognition is a *conclusion the engine reaches* from how consistently the rest of the web describes the same company. The agent owned only the half of the entity a company can write itself. Grep-verified the gap first: **`sameAs`, `knowledge graph`, `Wikidata`, `disambiguat`, `entity home`, `Person schema`, `notability`, `unlinked mention`, and `About page` returned zero hits repo-wide**, and `Organization schema` appeared in exactly two agents, both times as a markup-checklist line.
+
+The section supplies `sameAs` as a one-place identity join rather than a link tactic (with the point that a set pointing at three disagreeing profiles has only made the inconsistency machine-readable); a B2B SaaS corroboration set diffed row by row against one canonical fact record; **fact drift as a dated-event problem** — the wrong description of a company is almost never invented, it is *the last true thing still being repeated* — so the sweep attaches to the raise / rename / acquisition / leadership announcement (handed to `pmm-launch-manager`) rather than to a hygiene calendar; disambiguation for name collisions and the two-entities-in-the-wild period after a rebrand; **Wikidata and Wikipedia separated as different bars with different risks**; the knowledge panel read as an instrument you can claim and suggest edits to, never author; and a recognition test built on **brand questions graded on the description**, distinct from the topic-question citability heatmap shipped 07-26.
+
+**The seam was drawn explicitly:** `pmm-customer-advocacy` owns whether the reviews are good and plentiful; this owns whether the profile describes the same company the homepage does.
+
+**A hard guardrail that neither source has:** the Wikimedia Terms of Use require paid contributors to disclose employer, client, and affiliation, and the COI guideline directs them to talk pages or Articles for Creation — so "get a Wikipedia page" is not a marketing task to assign, and an undisclosed agency-written article is a Terms-of-Use violation whose public record is itself citable, a materially worse outcome than no article. The agent is now instructed never to recommend it.
+
+**Two unmeasurable success metrics fixed in passing** (the same call made for `paid-media-creative-strategist` 07-30 and `analytics-performance-analyst` 08-05): "Improve **Entity Authority scores** (measured through entity extract APIs) by 30-40%" names a score no entity-extraction API publishes, and "achieve **top 3 entity rankings** across 5-10 core topics" names a ranking that does not exist. Both were replaced with measurable statements — fact consistency against the canonical record, re-verified on announcement events rather than on a calendar; topic coverage read off the share-of-voice heatmap *with its sample size* — and a brand-question recognition metric added, in which *recognized-and-wrong* reaches zero before *unknown* is worked.
+
+**Sources verified:** `entity-optimization` in [jstanx/aeo-toolkit](https://github.com/jstanx/aeo-toolkit) (1★, pushed 2026-06-14), **MIT confirmed via the GitHub license API**, co-credited with an independent second sighting in [Thibaultbm/claude-seo-geo](https://github.com/Thibaultbm/claude-seo-geo) (13★, MIT, pushed 2026-08-03), whose `geo-visibility` skill defines an entity as brand identity models learn "from co-occurrence across the web." Ideas only, written from scratch. **Ours:** the dated-event drift model, the recognized-and-wrong triage order, the brand-question-vs-topic-question split, the Wikipedia paid-editing guardrail, the advocacy seam, and the explicit no-transfer-function note (no engine documents how it resolves contradictory entity facts, so consistency is risk reduction under uncertainty, never a promised lift).
+
+**No citation or ranking effect asserted.** Every fact is cited to a primary source read 2026-08-06: [schema.org/sameAs](https://schema.org/sameAs), [Google Organization structured data](https://developers.google.com/search/docs/appearance/structured-data/organization), [Google knowledge panel help](https://support.google.com/knowledgepanel/answer/9163198), [Wikidata:Notability](https://www.wikidata.org/wiki/Wikidata:Notability), [Wikipedia:Paid-contribution disclosure](https://en.wikipedia.org/wiki/Wikipedia:Paid-contribution_disclosure).
+
+**Verified:** `bash scripts/lint-agents.sh` on both copies → **2/2 pass**; `diff` → copies identical; both cross-referenced agent files (`pmm-customer-advocacy`, `pmm-launch-manager`) exist on disk; all 7 new external URLs return HTTP 200.
+
+**Deferred:** the same repo's `ai-referral-analytics` — a real gap (nothing in the repo measures the traffic answer engines actually send, and much of it lands in Direct because no referrer is passed) — filed to backlog with the Ops-Architect-vs-AEO seam to decide first. Index-bloat scoring and a page-type taxonomy were recorded against the open `seo-programmatic-strategist` proposal rather than actioned.
+
+---
+
 ### 2026-08-06 — Performance Analyst learns to report a stock metric's change as flows, not a net (automated **maintenance** run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
