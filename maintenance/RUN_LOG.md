@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-06 — AI Search Optimizer learns to measure the traffic AI answers actually send (automated **maintenance** run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check:** clean. `marketplace.json` + the one `plugin.json` parse with required fields; all 13 `SKILL.md` files carry `name`+`description`; 174 markdown files scanned, **zero broken internal links**; no "Last reviewed" date older than 90 days (oldest live guide 2026-07-23). No P0.
+
+**Backlog pick:** the highest-priority genuinely-unblocked item — the newest skill-curation entry, **AI-referral traffic measurement** (surfaced 2026-08-06 from [jstanx/aeo-toolkit](https://github.com/jstanx/aeo-toolkit), MIT). The one open P1 high-leverage item (native subagents) is explicitly blocked on maintainer decisions; the P1 distribution items are each gated (awesome-claude-code on subjective "README polished" judgment; VoltAgent on the no-fabricated-usage guardrail since there is no genuine usage to lead with yet; the Anthropic marketplace needs an in-app form I can't drive headlessly; the rest on a star threshold).
+
+**Shipped:** a new **"Measuring Arrival: The Traffic AI Answers Actually Send"** section in both dual-located copies of `seo-ai-search-optimizer.md`, plus a one-sentence reciprocal cross-reference in both copies of `analytics-marketing-ops-architect.md` (GA4 audit, check 6).
+
+The agent's own funnel is stated as `reachable → recognized → quotable` and its Success Metrics already promise to "attribute 5-10% of monthly qualified traffic to AI answer engine referrals" — a fourth stage (**arrival**) the agent committed to a number for but had no method for. Gap grep-verified before writing: **`chatgpt.com`, `utm_source=chatgpt`, and `AI referral` returned zero hits** in agent content (only the ledger/backlog); the `referrer` hits are newsletter mechanics and the `referral traffic` hits are all `seo-link-building-strategist` on link quality. The section's spine: a near-zero AI-referral number is usually a **measurement artifact, not a finding** — native assistant apps, copy-pasted links, and in-assistant browsers arrive with no document referrer and fall into GA4 **Direct** (definition quoted from Google, read 2026-08-06), so the observed number is a **floor, not a total**; UTM tagging works only on links you actually control; and because volume is understated you judge the segment by conversion/pipeline, never by raw session count.
+
+**Seam decided in-file:** the section lives on the **AEO agent** (it completes that agent's own funnel and backs its own unbacked *Citation traffic attribution* metric), while the GA4 **construction** — the custom channel group, the referrer-domain match list, and the observed/modeled/missing decomposition — is handed to `analytics-marketing-ops-architect`, whose established measurement-layer craft it is; the Ops Architect gets a one-line pointer back. Interpretation on one agent, construction on the other, navigable from both sides — the same certify-vs-verdict shape used for the 2026-08-03 CPL reconciliation.
+
+**Verified:** lint 4/4; both agent copies diff-identical; 174-file link scan still zero broken; both cross-reference section titles resolve in both directions.
+
+**Ideas-only; no fabricated metrics.** The idea is credited to `jstanx/aeo-toolkit` (MIT); the floor-not-total framing, the controlled-links-only UTM rule, the judge-the-segment discipline, and the construction/interpretation seam are ours. **No figure is asserted for the share of AI traffic that arrives without a referrer** — it is unmeasured by nature, which is the section's whole point.
+
+**Deferred:** nothing new surfaced this run (a maintenance run, not a scout run); the open PROPOSAL/SCOPE-QUESTION backlog items remain blocked on maintainer decisions as recorded.
+
 ### 2026-08-06 — AI Search Optimizer learns that recognition is settled off your own site (automated **skill-scout** run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: content / SEO-AEO-GEO**, chosen by rotation — it was last the focus on 2026-08-02, the oldest of the four (paid/social 08-03, PMM/sales/GTM 08-04, email/analytics/ops 08-05), and its queue entered this run empty (decay triage 08-02, cannibalization audit 08-02, crawler access 07-30, AEO↔Reddit seam 08-02 all closed).

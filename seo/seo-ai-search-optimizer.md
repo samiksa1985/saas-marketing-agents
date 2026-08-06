@@ -258,3 +258,31 @@ Because ChatGPT and Perplexity overlap on only ~11% of cited domains, a single b
 **Honest-measurement note:** AI answers vary run to run, personalize, and shift with model updates — sample each query **N times** (e.g., 3–5, fresh sessions, logged out) and record citation *frequency*, not a single pull. Report the sample size and date alongside the map; a cell is only "cited" if you observed it, and contested or intermittent cells should be flagged as such rather than rounded up.
 
 _Passage-citability rubric, citation-regression testing, and AI share-of-voice heatmap concepts informed by the open-source [Auriti-Labs/geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill), [AgricIDaniel/claude-seo](https://github.com/AgricIDaniel/claude-seo), and [seranking/seo-skills](https://github.com/seranking/seo-skills) (MIT) — ideas only, written from scratch. Per-lever effect sizes from Aggarwal et al., "GEO: Generative Engine Optimization" (KDD 2024); full detail and citations in the [AEO/GEO Playbook](https://github.com/shalintripathi/saas-marketing-agents/blob/main/guides/aeo-geo-playbook.md)._
+
+## Measuring Arrival: The Traffic AI Answers Actually Send
+
+Access, recognition, and citability are all inputs; the output is traffic — the stage that `reachable → recognized → quotable` stops one short of. The Success Metrics already commit to it: *Citation traffic attribution* promises to "attribute 5-10% of monthly qualified traffic to AI answer engine referrals," so the number is owed. What has been missing is the method, and the method has to open by warning you about its own instrument. **The AI-referred number you first pull is a floor, not a total — and read naively it will tell you the channel does nothing.**
+
+### 1. Why "we get almost no ChatGPT traffic" is usually a measurement artifact
+
+GA4 classifies a session as **Direct** when "Source exactly matches `(direct)` AND Medium is one of `(not set)`, `(none)`" — a visit carrying no campaign parameters and no referrer (Google, read 2026-08-06). A large share of answer-engine traffic arrives exactly that way, for reasons that have nothing to do with how much of it there is:
+
+- **Native assistant apps** — a tap-through from the ChatGPT, Perplexity, or Claude mobile app frequently passes no document referrer at all.
+- **Copy-pasted links** — a user who copies a URL out of an answer and pastes it into a fresh tab has erased the referrer by construction.
+- **In-assistant browsers** — some assistants open links in an embedded webview that forwards no referring URL.
+
+So the fraction that *does* carry a visible referrer (`chatgpt.com`, `perplexity.ai`, `gemini.google.com`, `copilot.microsoft.com`, `claude.ai`, and their kin — the live list moves, verify it) is the tip; the rest sits in Direct, indistinguishable from someone typing your URL. This repo's standing discipline — *unknown never rounds to observed* — lands here as its sharpest case: a near-zero AI-referral number is far more often a referrer that was never sent than a channel that sent no one. Call it a finding only after you have ruled out the instrument.
+
+### 2. Build the channel you *can* see — but its construction is the Ops Architect's
+
+The measurable slice is worth measuring. Fold the assistant referrer domains you can see into a single **AI channel group**, so the referred fraction stops hiding inside Referral and Unassigned and its trend is legible run over run. But a GA4 custom channel group is a configuration artifact, and the observed/modeled/missing decomposition that belongs beside it is `analytics-marketing-ops-architect`'s established craft — the group definition, the referrer-domain match list, and the reporting-identity handling live in that agent's *Auditing the Web-Analytics Measurement Layer* audit, not here. This agent owns the *interpretation* of what the AI channel means for AEO; that one owns its *construction*. Don't rebuild GA4 mechanics in this seat.
+
+### 3. UTM only on links you actually control
+
+You cannot tag a link an assistant composes on the fly — which is exactly the traffic you most want to see. What you *can* tag is every link you place yourself: URLs in content you syndicate, in your `llms.txt`, on the profile and review surfaces the entity work above reconciles, in your docs. A `utm_source=chatgpt` you bolt onto an untagged assistant link measures nothing; a UTM on a link *you* published measures that link. Tag what you own — and say plainly that it covers a slice, not the channel. A controlled-link UTM is a floor inside the floor.
+
+### 4. Judge the segment, not the session count
+
+Because the volume is understated by an unknown amount, the raw session count is the least trustworthy thing about this channel — never lead with it and never defund on it. Read the AI-referred segment by what it *does*: its conversion rate, the quality of the pipeline it opens, its assisted role in multi-touch paths. A small, high-intent segment whose session count looks trivial can still be doing real work. The honest report states the referred share as a floor with an explicit *the true share is higher by an amount we cannot see* — never as "this is how much traffic AI answers send us." The *Citation traffic attribution* target is measured against this floor and labeled as such.
+
+_The gap — that answer-engine referrals arrive largely without a referrer, land in Direct, and make a working channel read as empty — was surfaced by the `ai-referral-analytics` skill in the open-source [jstanx/aeo-toolkit](https://github.com/jstanx/aeo-toolkit) (MIT) — ideas only, written from scratch. The floor-not-total framing, the controlled-links-only UTM rule, the judge-the-segment discipline, and the seam handing GA4 construction to `analytics-marketing-ops-architect` are ours. GA4's Direct definition is quoted from [Google's channel definitions](https://support.google.com/analytics/answer/9756891), read 2026-08-06; no figure is asserted for the share of AI traffic that arrives without a referrer — it is unmeasured by nature, which is the whole point._
