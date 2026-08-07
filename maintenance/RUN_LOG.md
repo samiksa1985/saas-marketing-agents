@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-07 — Competitive Intelligence Specialist learns to read competitors' live advertising (automated **maintenance** run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` + the one `plugin.json` parse with required fields intact; all 13 `SKILL.md` files carry `name`+`description`; **0 broken internal `.md` links** repo-wide; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28 = 10 days; `integrations/README.md` 2026-07-23 = 15 days). The `2026-04-03` CATALYST stamps are v1.0 version footers, not freshness commitments. No P0.
+
+**Backlog pick:** the top genuinely-**unblocked** item. P1 high-leverage (native subagents) stays blocked on maintainer decisions [#1]; the P1 distribution items are each gated (awesome-claude-code on subjective README-polish judgment; VoltAgent on the no-fabricated-usage guardrail; the Anthropic marketplace on an in-app form I can't drive headlessly; the rest on a star threshold); both PROPOSAL items [#2, `ops-legal-compliance`] and the two SCOPE-QUESTION items (pricing owner, instrumentation contract) await maintainer decisions, not more work. That left the concrete, pre-scoped curation thread the 2026-08-06 run explicitly left open: the **second idea from `olson-adam/ad-mastermind`** — live competitor-ad field scans against public ad libraries — with the standing instruction to *scope it against `pmm-competitive-intelligence` before treating it as an action*. Discipline is paid/social-adjacent (CI on ad activity), which is also the rotation-due discipline (last focus 2026-08-03).
+
+**Scope + gap:** `pmm-competitive-intelligence` Rule 1 lists every independent CI source it trusts and **omits advertising**; the dashboard tracks announcements/funding/hiring/launches but not ad activity. Grep-verified before writing — `ad library`, `ad-transparency`, `transparency center`, `creative velocity`, `working material`, `phrase-frequency` = **zero** hits across `product-marketing/`, `paid-media/`, `plugins/`; `paid-media-creative-strategist` has no competitor-ad / inspiration / swipe coverage → no seam conflict. Owner decided: the CI Specialist (a new independent *source* feeding its existing profiles/battle-cards/dashboard), with a one-line hand-off note to the Creative Strategist.
+
+**Shipped:** **Critical Rule 9** + a **"Reading Competitors' Live Advertising"** section + a **Competitor Ad-Activity Scan** deliverable + an **Advertising Signal Coverage** success metric, in both dual-located copies. Points at the three official, free, public libraries (LinkedIn Ad Library, Google Ads Transparency Center, Meta Ad Library) rather than the source's paid Apify scraper; carries the working-material/never-redistribute copyright boundary, the presence-is-a-claim-not-a-result rule, the absence-is-unknown rule, the creative-volume-as-a-state read, and an appeared-vs-announced lead-time metric.
+
+**Source + citations:** ideas-only; the public-libraries-as-CI-source method and working-material discipline credited to [olson-adam/ad-mastermind](https://github.com/olson-adam/ad-mastermind) (MIT, re-verified 2026-08-07); the three-library framing, the two non-inference rules, the volume-as-state read, the lead-time metric, and the Creative-Strategist seam are ours. All platform facts cited to primary sources (LinkedIn Ad Library Help, Google Ads Transparency Center Help, Meta Ad Library) read 2026-08-07. **No competitor spend/impression/effectiveness figure asserted.**
+
+**Verify:** `scripts/lint-agents.sh` on both edited copies — **2/2 pass**; copies diff-identical; the three new links are external `https` (no internal-link impact). Backlog item marked done; CHANGELOG `[Unreleased]` bullet added; scout-ledger appended.
+
+**Deferred:** the still-separate competitor-ad *creative-inspiration* use is now handed to the Creative Strategist by cross-reference, not built — reading competitors' ads to seed your own creative hypotheses is a Creative Strategist task and was deliberately not duplicated here. The `olson-adam/ad-mastermind` item is now **fully worked** (discrimination control shipped 2026-08-06, field-scan method shipped today).
+
+---
+
 ### 2026-08-06 — Quality Assurance Manager learns to prove its scorer actually discriminated (automated **maintenance** run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration.
