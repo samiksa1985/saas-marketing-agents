@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-07 — LinkedIn Organic Strategist learns to design a post's first hour (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.**
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (174 files scanned, re-run after the edit); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28 = 10 days; `integrations/README.md` 2026-07-23 = 15 days). No P0.
+
+**Item pulled:** every P1 item is blocked — native subagents (#1, two in-thread decisions), the two proposals (#2 `seo-programmatic-strategist` on a scope decision; `ops-legal-compliance` on legal validation), and the distribution submissions (human-written / in-app-form / ≥40-star gates, not fired on an unattended run). The P2 "later" items are all large multi-file/architectural changes the routine says to propose as issues, not commit. So pulled the top unblocked P2 skill-curation item: **read the B2B slice of [social-media-skills/skills](https://github.com/social-media-skills/skills) (MIT) on a social run**, which explicitly flagged `social-linkedin-strategist` as **85 lines and never enhanced**.
+
+**Shipped:** **Critical Rule 9** ("Distribution Is Designed, Not Hoped"), a new **"The First Hour: Designing a Post's Distribution"** section, and two paired success metrics in both dual-located copies of `social-linkedin-strategist.md` — **the first enhancement this agent has ever received** (85 → 106 lines).
+
+**The gap is dead-center in the agent's own thesis.** It bills itself on "algorithm-native organic strategies" (Rule 1 Algorithm Compliance First, Rule 4 Engagement Reciprocity) yet governed engagement only as an outbound *reciprocity budget* — commenting on **other people's** posts — and owned no distribution mechanics for **its own** posts in the window that decides their reach. Grep-verified before writing: `Notify Employees`, `notify employee`, `first-hour`, `golden hour`, `link in comment`/`links in comments`, `dark post`, `Thought Leader Ad`, and `creator mode` all returned **zero** hits repo-wide; the two `first hour` hits are unrelated launch-checklist bullets in `phase-4-launch`.
+
+The section supplies: the **early-engagement window** as a testable own-account pattern rather than a law (confirm it predicts reach *for you* before building rituals); the native **Notify Employees** tool as the most legitimate first-hour lever a page owns, with its three governing constraints each written as a discipline — LinkedIn's documented **once-per-24-hours** cap, the **opt-out cost** (a non-renewable resource; over-notifying permanently shrinks the reachable pool and shows as declining Page analytics), and the **relevance-model / delivery-lag** caveat (not every employee is notified, delivery takes hours, so it is not a broadcast you control); **link placement** as a *contested* belief (LinkedIn has publicly stated it does not penalize outbound links) resolved by A/B testing rather than folklore; and a **paid line** handing *Thought Leader Ads* and dark/unpublished posts across the seam to `paid-media-social-ads-specialist`. New metrics: **First-Hour Signal (proven, not assumed)** and **Employee-Notification Restraint** (opt-out rate as the guardrail).
+
+**Sources & honesty:** ideas-only, written from scratch; surfaced by the `linkedin-company-pages` skill in `social-media-skills/skills` (MIT). The Notify Employees cadence/opt-out/relevance-model/delivery-timing facts cited to [LinkedIn Pages — Use Employee Notifications](https://www.linkedin.com/help/linkedin/answer/a549372) (read 2026-08-07). The first-hour and link-in-comments effects are flagged **contested/practitioner-reported**; the source's multiplier figures (4×/7×/−60× and similar) were **not adopted** — they trace to vendor blogs, not primary sources.
+
+**Verify before claiming done:** lint run on both edited copies — **2/2 pass**; the two copies are **diff-identical**; broken-link check re-run after the edit — **0 broken** across 174 files; new content preserves all lint-required structure (frontmatter name/description/color, Identity/Core Mission/Critical Rules sections).
+
+**Deferred / not done:** the source's other three flagged skills (`crisis-and-moderation`, `experimentation-and-ab-testing`, `analytics-and-reporting`) and its `<topic>-2026-reality.md` freshness-convention question remain on the backlog `watch` item for future social runs — this run kept to one small change. The paid seam (`dark post` / Thought Leader Ads) was deliberately *named and handed off*, not absorbed, since it is a paid-agent scope.
+
+---
+
 ### 2026-08-07 — Programmatic Media Buyer learns that the impression log, not the buy, is what it purchased (automated **skill-scout** run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **Focus discipline: paid media / social**, chosen by rotation — it was last the focus on 2026-08-03, the oldest of the four (PMM/sales/GTM 08-04, email/analytics/ops 08-05, content/SEO-AEO-GEO 08-06), and its queue entered this run empty (CPL-vs-CRM reconciliation closed, the stale Meta Audience Network line in `phase-4-launch` fixed, both halves of the `ad-mastermind` mine shipped 08-06 and 08-07).
