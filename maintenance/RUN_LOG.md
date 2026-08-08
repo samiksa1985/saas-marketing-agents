@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-08 — Twitter/X Strategist learns to read a winner off organic social (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.**
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (262 checked repo-wide, re-run after the edit); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-07-28 = 11 days; `integrations/README.md` 2026-07-23 = 16 days). No P0.
+
+**Item pulled:** every P1 item stays blocked — native subagents (#1, two in-thread decisions), the two proposals (#2 `seo-programmatic-strategist`; `ops-legal-compliance` on legal validation), the distribution submissions (human-written / in-app-form / ≥40-star gates, not fired on an unattended run), and both SCOPE-QUESTION items (pricing owner, instrumentation contract) await maintainer decisions. The P2 "later" items are large multi-file/architectural changes the routine says to propose as issues, not commit. So pulled the top unblocked P2 skill-curation item: the still-open slice of the `social-media-skills/skills` (MIT) read — its `experimentation-and-ab-testing` skill, one of three left on `watch` after the 2026-08-07 `linkedin-company-pages` slice.
+
+**Shipped:** **Critical Rule 9** ("A Winner Needs a Rule and a Repeat"), a new **"Reading a Winner Off Organic Social: Testing Without Significance"** section, and a **Test Discipline (proven, not lucky)** success metric, in both dual-located copies of `social-twitter-strategist.md`.
+
+**The gap is dead-center in a discipline the agent already claims.** Rule 2 commits it to "test 3–5 thread variations monthly to identify highest-engagement formats," and its deliverables promise "thread templates with actual engagement data showing which variations perform best" — but the file supplied **no method**: no single-variable isolation, no decision rule, no acknowledgement that organic social can't reach statistical significance, and Success Metrics ("20-30% of weekly tweets generate 3x+ average engagement") that read a winner straight off single-post performance. Grep-verified before writing: `paired repetition`, `decision rule`, `holdout`, `underpowered`, and `minimum detectable` returned **zero** hits across `social/` and the plugin social dir.
+
+**Owner + seam decided in-file.** Owner is `social-twitter-strategist` — the only B2B organic surface with the post frequency to actually run 3–5 paired repetitions inside a 2–4-week window, which is the method's operability precondition; it also already claims the discipline in Rule 2 with nothing behind it. The seam is the same certify-vs-verdict shape used for the 2026-08-05 message-validation and 2026-08-03 CPL reconciliations: `paid-media-creative-strategist` owns the *powered* paid test (a budget lever buys sample → compute an MDE, four-outcome verdict, "when you cannot power it, do not fake it"); this owns the *structurally-unpowerable* organic case (no budget lever, small samples, opaque algorithmic delivery), where rigor is **one variable + a decision rule fixed before publishing + matched controls over 1–4 weeks + 3–5 paired repetitions + ties logged as ties**. The two agree on what a winner is — neither promotes a single favourable read — and a format proven organically is re-tested under the paid discipline if budget is later put behind it. Where a real concurrent control exists (YouTube Test & Compare) the section says to use it instead of sequential guessing.
+
+**Sources & honesty:** ideas-only, written from scratch; the "controls-and-repetition instead of p-values" spine adapted from the `experimentation-and-ab-testing` skill in [social-media-skills/skills](https://github.com/social-media-skills/skills) (MIT, Copyright 2026 Frank Heijdenrijk, verified this run). The ~20% materiality threshold is flagged **directional** and explicitly self-calibrated to an account's own week-to-week variance, **not** a benchmark; **no engagement or lift figure is asserted**; the organic-vs-powered seam, the calibrate-to-your-own-variance rule, and the metric are ours.
+
+**Verify before claiming done:** `scripts/lint-agents.sh` on both edited copies — **2/2 pass**; the two copies are **diff-identical** (synced by copy); repo-wide broken-link check re-run after the edit — **0 broken across 262 internal `.md` links**; the in-file `See *Reading a Winner Off Organic Social*` pointer resolves to the new heading; the one new link is external (`social-media-skills/skills`, fetched live this run). The `paid-media-creative-strategist` reference is a plain-text agent name, not a link.
+
+**Deferred / not done:** the source's other two flagged skills — `crisis-and-moderation` (noted in the backlog: `social-community-builder` already covers *owned-community* moderation/escalation/crisis-comms well, so the only real remaining gap is *public-platform* pile-on / negative-virality response, thinly held in `social-twitter-strategist`) and `analytics-and-reporting` — plus the `<topic>-2026-reality.md` freshness-convention question, remain on the backlog `watch` item for future social runs. One small change this run.
+
+---
+
 ### 2026-08-07 — LinkedIn Organic Strategist learns to design a post's first hour (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.**
