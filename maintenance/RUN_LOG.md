@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-08 — Launch Manager learns to run the retrospective it was told to run (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.**
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (268 checked repo-wide with a corrected checker — BSD `realpath` lacks `-m`, so an initial pass false-flagged every link; re-run in Python, and again after the edit); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` `Last reviewed` 2026-07-28 (11 days) inside the 90-day window. The `2026-04-03` stamps in the strategy playbooks are "Last Updated" edit stamps, not review-cadence dates — bumping them without a real content review would be padding, so left alone. No P0.
+
+**Item pulled:** every P1 item stays blocked (native subagents #1; proposals #2 and `ops-legal-compliance`; distribution submissions behind human-written / in-app-form / ≥40-star gates not fired on an unattended run; the two SCOPE-QUESTION items await maintainer decisions). Pulled the top unblocked P2 skill-curation item — give `pmm-launch-manager` a **method for Rule 8's post-launch retrospective** — which the pre-mortem run earlier today explicitly deferred and, in shipping, made sharper by handing the retrospective a specific job (re-open the register).
+
+**Shipped:** an updated **Rule 8** (now points to the method and splits the two-week vs. sales-cycle horizon), a new **"After It Ships: The Launch Retrospective"** section, a **Post-Launch Retrospective & Decision Log** deliverable, and a **Retrospective Decision Yield** success metric, in both dual-located copies of `pmm-launch-manager.md`.
+
+**The gap, grep-verified.** Rule 8 ended "conduct post-launch retrospective within 2 weeks" and supplied no method; `retrospective` appeared repo-wide only as a *scheduling* bullet across the project-management agents (`pm-marketing-ops-scrum-master` sprint retros, `pm-campaign-coordinator` post-campaign retros) and the phase playbooks — never as a technique on the launch owner. The pre-mortem shipped earlier today had already drawn the seam: its Risk Register is "re-opened at the post-launch retrospective," a promise nothing yet discharged.
+
+**Sources & what is ours.** Ideas-only, written from scratch. Two transferable ideas taken from `retro` in [stefanoskarakasis/Product-Marketing-Skills](https://github.com/stefanoskarakasis/Product-Marketing-Skills) (MIT, fetched and verified live this run): the two-ledger split (*what happened* vs. *what we would decide differently*) and the rule that a retrospective without a written decision change is a debrief, not a retrospective. **Ours:** the two-pass structure (execution pass within 2 weeks, market-outcome pass deferred to the pre-mortem's one-sales-cycle horizon) that resolves the 2-week-vs-deal-clock tension; the register-as-spine discharge of Rule 9's promised re-open (blocking risks, expiring accepted trade-offs, and the unnamed-failures column); the judge-the-decision-not-the-outcome / survivorship / outcome-bias discipline; and the explicit seam placing this as launch-specific *method* on the launch owner, layered on top of the PM agents that own retrospective *cadence*, not a second scheduler.
+
+**No fabricated figures.** No launch-outcome, decision-yield, or calibration rate is asserted; the new metric explicitly says not to set a target rate and not to manufacture a decision change to clear the gate.
+
+**Verify before claiming done:** `scripts/lint-agents.sh` on both edited copies — **2/2 pass** (4130 words each); the two copies are **diff-identical** (`diff -q` clean, synced by copy since the plugin twin was byte-identical to the pre-edit standalone); repo-wide internal link check re-run after the edit — **0 broken**. The new section references sibling agents by backtick name, not `.md` links, so no new link targets were introduced.
+
+**Deferred:** `stakeholder-maps` (internal launch approvers/blockers; check overlap with `pm-campaign-coordinator` first), the `msdanyg/pmm-impact-audit-skill` function-assessment scope question, `cagatayuncu/marketing-machine`'s claim-provenance primitive, and the remaining `social-media-skills/skills` watch slices — all still open in the backlog. One change this run.
+
+---
+
 ### 2026-08-08 — Launch Manager learns to assume the launch already failed (automated skill-scout run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. Market intelligence + adoption, distinct from the [ROUTINE.md](ROUTINE.md) maintenance run that also ran today.
