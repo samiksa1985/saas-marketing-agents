@@ -4,6 +4,30 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-08 — Launch Manager learns to assume the launch already failed (automated skill-scout run)
+
+**Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. Market intelligence + adoption, distinct from the [ROUTINE.md](ROUTINE.md) maintenance run that also ran today.
+
+**Focus discipline (by rotation):** PMM / sales / GTM — last the focus discipline 2026-08-04, the oldest of the four (email/analytics/ops 08-05, content/SEO-AEO-GEO 08-06, paid/social 08-07). Its curation queue entered the run empty; the only open PMM item is the pricing-owner SCOPE QUESTION, which needs a maintainer decision rather than more evidence.
+
+**Surveyed:** 16 sources, all recorded in [scout-ledger.md](scout-ledger.md) with verdicts — 1 enhance (+1 co-credit), 2 watch, 12 dismissed.
+
+**Shipped:** **Critical Rule 9**, a new **"Assume It Already Failed: The Launch Pre-Mortem"** section, a **Launch Pre-Mortem & Risk Register** deliverable, and two success metrics, in both dual-located copies of `pmm-launch-manager.md` — **the first enhancement this agent has ever received** (67 → 103 lines).
+
+**The gap sat inside the agent's own risk apparatus.** Rules 2, 3, and 4 are a complete system for *schedule and completion* risk — a 30% timeline buffer, a signed readiness checklist, weekly dependency reviews. All three ask whether the work is done and on time; **none asks whether the launch will work**, and the file's single postponement trigger (Rule 3) fires on an unchecked box. Grep-verified before writing: `pre-mortem`, `premortem`, `prospective hindsight`, `red team`, `falsif`, and `tripwire` returned **zero** hits repo-wide; `risk register` existed only in `pm-client-success-manager` (agency delivery risk) and `ops-legal-compliance` (compliance risk); `kill criteri` only in `paid-media-budget-optimizer` (spend); `postpone` **only** in this agent's own Rule 3.
+
+**Sources & what is ours.** Ideas-only, written from scratch. The technique is Gary Klein's ([Performing a Project Premortem](https://hbr.org/2007/09/performing-a-project-premortem), HBR September 2007, fetched and verified this run); its structuring as a marketing deliverable — three-way disposition, owner-plus-observable per blocking risk, go/conditional/hold verdict — was learned from `pre-mortem` in [stefanoskarakasis/Product-Marketing-Skills](https://github.com/stefanoskarakasis/Product-Marketing-Skills) (MIT, verified live) and independently corroborated by `meta/orchestration/premortem` in [matteotitta/genesys-skills](https://github.com/matteotitta/genesys-skills) (MIT, co-credited). **Six layers are ours:** the before-or-after-launch split on every observable (pre-launch-testable risks are unfinished *tasks*, post-launch-only ones are *tripwires* with responses written in advance, and the two counts are reported separately); the run-before-sign-off ordering rule and the don't-facilitate-your-own-date rule; the one-sales-cycle horizon in place of a generic three months; expiring acceptance (every accepted trade-off records the condition it was accepted under, re-read at the next launch); the instrument routing table pointing six standard failure narratives at the agents that already own the test (messaging 08-05, ad-library scan 08-07, proof points, advocacy, the two analytics agents); and the zero-blocking-risks-is-a-failed-exercise rule with a calibration log that records **which real failures nobody named**.
+
+**Honesty note.** The widely-repeated "prospective hindsight improves identification of future-outcome causes by ~30%" figure is **deliberately not asserted** — Mitchell, Russo & Pennington (1989) report that outcome *uncertainty* strongly shaped explanations while temporal perspective did little, so the popular number is contested against its own source. The file says so in the open and rests the technique on what is defensible. No launch-outcome or risk-detection figure is asserted anywhere in the section.
+
+**One metric fixed in passing** (same call as 07-30, 08-05, 08-06, 08-07): "Launch Readiness Score — 100% of function teams sign off … zero 'not ready' items" is precisely the metric the new section says cannot bear the weight put on it, and is now labeled a *completion* measure to be paired with the two new pre-mortem metrics rather than read as confidence.
+
+**Verify before claiming done:** `scripts/lint-agents.sh` on both edited copies — **2/2 pass**; the two copies are **diff-identical**; repo-wide internal link check re-run after the edit — **268 checked, 0 broken**; of the four new external URLs, three return HTTP 200 and the fourth (the DOI) was confirmed resolving 302 → Wiley Online Library, whose 403 to bots is not a broken link.
+
+**Deferred:** `retro` from the same source (Rule 8 ends with "conduct post-launch retrospective within 2 weeks" and supplies no method — and today's section just handed that retrospective a specific job), `stakeholder-maps` (internal approvers/blockers; check overlap with `pm-campaign-coordinator`), the `msdanyg/pmm-impact-audit-skill` function-assessment scope question, and `cagatayuncu/marketing-machine`'s claim-provenance primitive — all filed to the backlog. One change this run.
+
+---
+
 ### 2026-08-08 — Twitter/X Strategist learns to read a winner off organic social (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.**
