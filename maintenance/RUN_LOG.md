@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-09 — Twitter Strategist learns a pile-on is not steady-state moderation (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.** Distinct from the skill-scout run earlier today (launch-manager internal-alignment).
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (Python checker, re-run after the edit); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; `guides/aeo-geo-playbook.md` `Last reviewed` 2026-07-28 (12 days) inside the 90-day window. README badge counts re-verified against the tree: **59 agents** (66 files under `skills/*/agents/` = 59 personas + `catalyst-strategy` orchestrator + 6 phase playbooks) and **13 skills** — both accurate. No agent files needed a lint pass beyond the one edited this run. No P0.
+
+**Item pulled:** every P1 item stays blocked (native subagents #1; proposals #2 and `ops-legal-compliance`; distribution submissions behind human-written / in-app-form / ≥40-star gates that don't fire on an unattended run; the SCOPE-QUESTION items — pricing owner, instrumentation contract, function-assessment persona — await maintainer decisions, not more evidence). Pulled the top unblocked P2 skill-curation slice: the `crisis-and-moderation` watch item under the `social-media-skills/skills` line, flagged for a social run as "the real remaining gap, if any, is public-platform pile-on / negative-virality response, thinly held in `social-twitter-strategist`." Verified it is genuine before writing.
+
+**Shipped:** **Critical Rule 10**, a new **"When Criticism Becomes a Pile-On: Managing a Public Ratio"** section, an upgraded crisis deliverable, and a **Crisis Response Discipline** success metric, in both dual-located copies of `social-twitter-strategist.md` (2086 → 3024 words).
+
+**The gap, grep-verified.** The agent *named* crisis comms twice as a deliverable (lines 79, 96) with no method behind it, and its only acute-event rule, Rule 8, is *steady-state* moderation. Across the four `social-*` agents: `pile-on`, `backlash`, `negative virality`, `dogpile`, `controvers*`, `detractor` returned **zero** hits; `crisis` appeared as an owned-community protocol in `social-community-builder` (breaches/outages/product issues — a room you control) and as topic-naming bullets in the Twitter agent. So the *public-platform* ratio — where you don't control the room and the audience watches live — was owned by nobody. Seam confirmed against `social-community-builder` line 79 before writing.
+
+**Sources & what is ours.** Ideas-only, written from scratch. Source read in full this run: the `crisis-and-moderation` skill in [social-media-skills/skills](https://github.com/social-media-skills/skills) (MIT — the same repo already credited in this file's 08-08 "Reading a Winner" work, so no new external link surface was introduced). Transferable spine taken: triage-before-treating-criticism-as-a-crisis, event-type→response mapping (the sharp one — *correct misinformation with evidence, do not apologize for what didn't happen*), acknowledge-fast-and-centralize, don't-scrub-legitimate-criticism (Streisand), and pause the scheduled queue during a crisis. **Ours:** the public-platform-vs-owned-community seam with `social-community-builder`, the acute-vs-steady-state split from Rule 8, the B2B framing, the "the agent drafts, a human approves and posts" alignment with the repo's standing human-in-the-loop guardrail, and the placement + metric.
+
+**No fabricated figures.** No response-time, resolution, or sentiment benchmark is asserted; the "within the first hour" acknowledgment window deliberately reuses Rule 3's existing number rather than introducing a new one, and the Streisand effect is a named, well-known concept, not a claimed statistic.
+
+**Verify before claiming done:** `scripts/lint-agents.sh` on both edited copies — **2/2 pass**; the two copies are **diff-identical** (synced by copy); repo-wide internal `.md` link check re-run after the edit — **0 broken**; the new section references sibling agents and rules by name/backtick, not `.md` links, so no new internal link target was created.
+
+**Deferred:** the remaining `social-media-skills/skills` watch slices (`analytics-and-reporting`; the `<topic>-2026-reality.md` freshness-convention question) and the standing SCOPE-QUESTION / proposal items — all still open in the backlog. One change this run.
+
+---
+
 ### 2026-08-09 — Launch Manager learns to read the room it is launching from (automated skill-scout run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration.
