@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-09 — Freshness pass: the AEO/GEO playbook learns how Google now *shows* a citation (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. Health check first; backlog effectively quiet → step-3 freshness pass. Third automated run today (after the pile-on and launch-manager runs above).
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (277 checked repo-wide, Python checker, re-run after the edits); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; before this run both `Last reviewed` dates (`guides/aeo-geo-playbook.md` 2026-07-28 = 12 days; `integrations/README.md` 2026-07-23 = 17 days) were inside the 90-day window. No P0.
+
+**Backlog assessed, none pulled — with one item resolved to a non-gap.** Every P1 item stays blocked (native subagents #1; proposals #2 and `ops-legal-compliance`; distribution submissions behind human-written / in-app-form / ≥40-star gates that don't fire unattended; the SCOPE-QUESTION items await maintainer decisions, not evidence). The one remaining unblocked P2 curation slice — `analytics-and-reporting`, the last of the four `social-media-skills/skills` slices — was **investigated and declined as a non-gap**: the vanity-vs-actionable-metric discipline is already repo-wide (present in *every* `social-*` agent), and the goal→metric→report-structure discipline is squarely owned by `analytics-performance-analyst` and `ops-reporting-specialist` (both carry the "report for decisions, not data exhaustiveness" thesis); the source is creator/DTC-shaped. A social-specific reporting section would duplicate two existing owners. So the backlog was quiet → freshness pass (ROUTINE step 3).
+
+**Shipped:** `guides/aeo-geo-playbook.md` §1 (Google bullet) + Sources + `Last reviewed` → 2026-08-09, and the same engine-behavior fact appended to the "Engine-specific reality (2026)" Google bullet in **both dual-located copies** of `seo-ai-search-optimizer.md`.
+
+**What genuinely changed.** Google shipped attribution changes to AI Overviews / AI Mode on **2026-05-06** ([blog.google, "How AI Mode and AI Overviews help you explore the web"](https://blog.google/products-and-platforms/products/search/explore-web-generative-ai-search/), read 2026-08-09, verified against [Search Engine Land 476571](https://searchengineland.com/google-updates-links-within-ai-overviews-ai-mode-476571)) that the 2026-07-28 review missed. Two are directly material and were absent repo-wide: (1) **inline citations now sit right next to the specific sentence they support** — "you'll now also see more links directly within AI responses — right next to the relevant text" — which raises the payoff of a clean, self-contained, extractable passage (reinforces §3); and (2) **when the cited source is a discussion/social post, the link shows the creator's name/handle and the community name, not just the domain** — "adding more context to these links, like a creator's name, handle, or community name." That gives the existing **Reddit ≈ 6× G2** signal (§2/§4/checklist #12) a concrete mechanism: the account you post under and the subreddit are surfaced to the buyer, so authentic participation under a real identity beats an anonymous brand drop. The three weaker UX features in the same announcement (hover previews, next-step suggestions, subscription highlighting) were deliberately **not** added — low actionability for a citation playbook.
+
+**Not a GEO effect-size change.** Cross-checked the KDD 2024 GEO paper: the "+27.8% quotes / +25.9% stats / +24.9% cite-sources" figures circulating are the paper's *average* metric, not a new study — our playbook already cites the same paper's Position-Adjusted-Word-Count headline numbers (+40 / +33 / +28). No effect size touched.
+
+**Verify before claiming done:** `scripts/lint-agents.sh` on both edited agent copies — **2/2 pass**; the two copies are **diff-identical**; repo-wide internal `.md` link check re-run — **277 checked, 0 broken**; both manifests re-validated with `jq`. The one new Sources link is an external `https://` URL (not an internal target).
+
+**Deferred:** the remaining `social-media-skills/skills` watch item (the `<topic>-2026-reality.md` freshness-convention question) and the standing SCOPE-QUESTION / proposal items — all still open in the backlog. One change this run.
+
+---
+
 ### 2026-08-09 — Twitter Strategist learns a pile-on is not steady-state moderation (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.** Distinct from the skill-scout run earlier today (launch-manager internal-alignment).

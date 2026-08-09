@@ -81,7 +81,7 @@ _Concrete, sourced tactics. Full detail and citations in the [AEO/GEO Playbook](
 - Refresh key pages every **~90 days** (roughly half of AI citations are under 13 weeks old).
 
 **Engine-specific reality (2026):**
-- **Google** AI Overviews/AI Mode use the *same* ranking systems; it **ignores `llms.txt`**; trust is the top E-E-A-T factor; FAQ *rich results* were removed in 2026 (API support ends Aug 2026) — keep FAQ *structure*, still read for understanding.
+- **Google** AI Overviews/AI Mode use the *same* ranking systems; it **ignores `llms.txt`**; trust is the top E-E-A-T factor; FAQ *rich results* were removed in 2026 (API support ends Aug 2026) — keep FAQ *structure*, still read for understanding. Since May 2026 its citations surface **inline, next to the sentence** they support (passage-level cleanliness earns the link) and show the **creator handle + community name** for discussion/social sources, not just the domain.
 - **Bing/Copilot:** use the **AI Performance report** in Bing Webmaster Tools (Total Citations, Grounding Queries, page-level Citation Activity); push updates via **IndexNow**; align text/image/video around the same entities.
 - **Per-engine:** ChatGPT and Perplexity share only ~11% of cited domains — track and optimize each engine separately.
 
