@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-09 — Launch Manager learns to read the room it is launching from (automated skill-scout run)
+
+**Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration.
+
+**Run shape — recovery, not a fresh scan.** This run opened on a **dirty working tree**: an earlier skill-scout run today had written a complete, coherent enhancement to both dual-located copies of `pmm-launch-manager.md` and was interrupted before committing or recording anything (no 08-09 entry in this log, no ledger row, `git log` still at 08-08). Rather than discard finished work or stack a second change on top of it, this run **verified, completed, and recorded that change** — which is also why the survey below is deliberately narrow. One change per run still holds.
+
+**Verified before trusting the inherited work** (none of it taken on faith from the interrupted run): the source repo is live and **MIT** (confirmed via the GitHub license API, not just its LICENSE text); `pmm-execution/skills/stakeholder-maps/SKILL.md` exists and was read in full — it does build political maps of "who can kill your launch," with champion/blocker roles and an explicit *silent blocker scan*, so the attribution's characterization is accurate rather than assumed; and both seam claims in the new prose check out against our own files — `sales-deal-strategist` maps the **customer's** committee (economic buyer, blocker, champion) and `pm-campaign-coordinator`'s stakeholder map is a *communications* plan (role, frequency, method, escalation path), neither of which reads an internal stakeholder's stance toward the launch.
+
+**Shipped:** a new failure-family row in the pre-mortem's instrument routing table, the **"The one narrative with no instrument to route to: your own company"** passage, an extension to the **Launch Pre-Mortem & Risk Register** deliverable, and — added this run to finish the change — an **Internal Alignment Read** success metric, in both dual-located copies.
+
+**What this run added to the inherited diff.** The interrupted run had updated the rule and the deliverable but left the new requirement **unmeasured**, which is out of step with how every other rule in this file lands. The new metric records a stance per decision-critical internal stakeholder (supporter / neutral / blocker / silent doubter) reached by the **fund-it / staff-it / defend-it** test rather than by a checklist signature, treats an all-supporters map as the same failed exercise as a pre-mortem with zero blocking risks, and **deliberately refuses to report a percent-aligned figure** — a self-reported alignment rate is exactly what the Rule 3 sign-off already produces and exactly what this read exists to go behind. (Noted in passing: `pm-campaign-coordinator` already carries a "90%+ of stakeholders report being aligned" metric — the two do not collide, they are the before and after of the same blind spot.)
+
+**Sources & what is ours.** Ideas-only, written from scratch in our voice. The internal-political-map framing is adapted from `stakeholder-maps` in [stefanoskarakasis/Product-Marketing-Skills](https://github.com/stefanoskarakasis/Product-Marketing-Skills) (MIT, verified live this run) — the third distinct idea mined from that repo, after `pre-mortem` and `retro`. **Ours:** the fund-staff-defend test, the sign-off-versus-alignment distinction, the silent-doubter stance taxonomy as a pre-mortem output rather than a standalone exercise, the seams with `sales-deal-strategist` and `pm-campaign-coordinator`, and the refusal to express the read as a percentage.
+
+**Overlap check the backlog item demanded, now closed.** It asked to clear `pm-campaign-coordinator` **and** `pm-client-success-manager` before acting. The former is a comms plan (above); the latter's Risk Register tracks **agency↔client relationship** risk, not the launching company's internal politics. No overlap — item marked done.
+
+**Verify before claiming done:** `scripts/lint-agents.sh` on both edited copies — **2/2 pass**; the two copies are **diff-identical**; the change introduced **no new external URLs** (it reuses the source link already committed 08-08), so no new link surface. No fabricated metrics: nothing in the addition asserts a rate, a frequency, or an outcome figure.
+
+**Deferred:** unchanged from 08-08 — `msdanyg/pmm-impact-audit-skill`'s function-assessment scope question, `cagatayuncu/marketing-machine`'s claim-provenance primitive, the pricing/packaging owner SCOPE QUESTION, and the instrumentation-contract owner. The next scout run should return to the normal rotation and take **content/SEO-AEO-GEO** (last covered 08-06, now the oldest), starting from a clean tree.
+
+---
+
 ### 2026-08-08 — Launch Manager learns to run the retrospective it was told to run (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first, then the top unblocked backlog item.**
