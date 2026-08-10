@@ -4,6 +4,28 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-10 — Skill Scout (email/analytics/ops rotation): the Conversion Rate Optimizer learns the trust half of experiment discipline (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. Health check first; backlog's ready curation queue exhausted → ran one [SKILL_SCOUT.md](SKILL_SCOUT.md) iteration on today's rotation discipline.
+
+**Health check (all clean, no P0):** 0 broken internal `.md` links (274 checked repo-wide, Python checker, re-run after the edits); `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; both live `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-09 = 1 day, refreshed yesterday; `integrations/README.md` 2026-07-23 = 18 days). No P0.
+
+**Rotation:** the four-discipline scout cycle ran content/SEO 08-06 → paid/social 08-07 → PMM/sales/GTM 08-08 → (08-09 was a recovery + freshness run, not a survey), so **email/analytics/marketing-ops** is due (last surveyed 08-05). Its queue entered this run effectively empty: `growth-accounting` shipped 08-06, the `tracking-plan` instrumentation contract and `pricing-and-packaging` are open SCOPE-QUESTIONs awaiting a maintainer decision, and `growth-decision-record`/`growth-data-quality-audit` were recorded as covered/adjacent. Backlog otherwise blocked as before (native subagents #1; proposals #2, `ops-legal-compliance`; distribution behind human-written/in-app-form/star gates). So: one scout iteration.
+
+**Scouted** (email/analytics/ops focus): re-checked the tracked collections for movement (OpenClaudia, aaron-he-zhu, thatrebeccarae, coreyhaines31, CosmoBlk — no new email/analytics substance) and searched GitHub/web for fresh experimentation/CRO/analytics skills. The find is [phuryn/pm-skills](https://github.com/phuryn/pm-skills) (**MIT**, 25,028★, pushed 2026-07-03; verified via GitHub license API), a product-management collection whose `pm-data-analytics/ab-test-analysis` skill runs an A/B result through **validity checks our marketing CRO agent never had** — sample ratio mismatch, novelty/primacy, guardrail metrics, and a ship/investigate/extend/stop decision matrix. Read the actual SKILL.md via `gh api` to confirm coverage before crediting. This is the recurring pattern the ledger keeps finding: the discipline is owned in an *adjacent* (here, PM) collection and absent from our *marketing* persona.
+
+**Gap grep-verified before writing:** `sample ratio mismatch`, `SRM`, `optional stopping`, `novelty effect`, `primacy effect` = **0** hits repo-wide; `guardrail metric` only on `social-twitter-strategist`; `peeking` only on `paid-media-creative-strategist` + one line in `marketing-analytics/SKILL.md`. The CRO agent (`analytics-conversion-rate-optimizer`, 72 lines, never enhanced since the first pass) had the *power* half of experiment discipline in Rule 2 (sample size, 95%) and **nothing on trust** — and its "reach 95% before declaring a winner" actively invites peeking.
+
+**Shipped** (both dual-located copies — `analytics/` and `plugins/saas-marketing/skills/marketing-analytics/agents/`): **Critical Rule 9**, a **"Trust the Split Before the Winner: When a Significant Result Is Still an Artifact"** section (SRM as a chi-squared pre-verdict gate flagged at strict `p < 0.001`, discard-not-adjust on unexplained SRM; the B2B small-N inversion — the SRM check is itself underpowered at low volume, so inspect the assignment mechanism directly; optional-stopping/peeking discipline reframing Rule 2; generalized guardrail metrics; the novelty/primacy durability read; and a gated ship/investigate/extend/stop/revert verdict with *invalid, rerun* in front of it), an **Experiment Trust Report** deliverable, a Rule 2 pointer, and a rewritten **Test Velocity and Trustworthy Learning** metric that removes the "60-70% of tests win" quota (the exact anti-pattern peeking exploits) and replaces it with a trust-gate-pass rate.
+
+**Seam drawn in-file:** power for *paid* creative tests stays with `paid-media-creative-strategist` (pre-registered MDE, four outcome states, 07-30) and observational anomaly reads stay with `analytics-performance-analyst` (measurement-issue-first, 08-05); this section owns the layer between them — believing the result of an on-site experiment you *did* randomize.
+
+**Attribution/licensing:** ideas-only, written from scratch; surfacing credited to phuryn/pm-skills (MIT). SRM as chi-squared goodness-of-fit and its cause taxonomy cited to Kohavi, Tang & Xu, *Trustworthy Online Controlled Experiments* (Cambridge University Press, 2020) and Fabijan et al., "Diagnosing Sample Ratio Mismatch in Online Controlled Experiments" (KDD 2019). The B2B small-N inversion, discard-not-adjust rule, guardrail generalization, and the two seams are ours. No conversion-lift or error-rate figures asserted.
+
+**Verified:** lint **2/2** on both copies; copies **diff-identical**; 0 broken internal `.md` links (re-run after edits); `https://github.com/phuryn/pm-skills` → HTTP 200; the seven new concepts present 2/2 across both copies.
+
+**Deferred:** the `tracking-plan` instrumentation-contract and `pricing-and-packaging` scope questions (maintainer decisions, not evidence); all blocked P1 items unchanged.
+
 ### 2026-08-09 — Freshness pass: the AEO/GEO playbook learns how Google now *shows* a citation (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration. Health check first; backlog effectively quiet → step-3 freshness pass. Third automated run today (after the pile-on and launch-manager runs above).
