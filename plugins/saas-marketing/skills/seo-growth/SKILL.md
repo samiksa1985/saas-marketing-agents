@@ -197,7 +197,7 @@ The SEO Growth skill coordinates a team of 6 specialized agents to drive sustain
 
 **Technical Audit**
 - Full crawl report: pages crawled, errors, warnings, redirects
-- Core Web Vitals: Largest Contentful Paint (LCP), First Input Delay (FID), Cumulative Layout Shift (CLS)
+- Core Web Vitals: Largest Contentful Paint (LCP), Interaction to Next Paint (INP), Cumulative Layout Shift (CLS) — INP replaced First Input Delay (FID) as a Core Web Vital on 2024-03-12; FID was retired on 2024-09-09 and is no longer collected
 - Mobile-first indexing audit and mobile responsiveness check
 - XML sitemap validation and Google Search Console integration review
 - Schema markup validation (JSON-LD, Organization, Product, FAQ, etc.)

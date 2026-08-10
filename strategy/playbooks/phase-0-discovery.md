@@ -117,7 +117,7 @@ For each major competitor, document:
 
 **Website Technical Audit**:
 - Crawl website using SEMrush or similar tool
-- Check: Core Web Vitals (LCP, FID, CLS), mobile responsiveness, page load speed
+- Check: Core Web Vitals (LCP, INP, CLS — INP replaced FID in March 2024), mobile responsiveness, page load speed
 - Review: Meta tags, heading structure, internal linking, robots.txt, sitemap.xml
 - Identify: Broken links, duplicate content, non-indexed pages
 - Check: Mobile rendering, structured data implementation, SSL certificate
