@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-12 — the Customer Advocacy Manager learns the review-solicitation practice most likely to break the law by accident (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact; all 13 skills have a `SKILL.md` with `name` + `description`; **0 broken internal `.md` links** repo-wide (Python checker, re-run after the edits); both live `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-09 = 3 days; `integrations/README.md` 2026-07-23 = 20 days). No P0.
+
+**Item pulled:** the top *unblocked* backlog item — P1 is exhausted (native subagents #1 blocked on in-thread decisions; distribution items are gated third-party submissions not fired on an unattended run; the two proposals blocked on decisions), and the P2-"later" items are large infrastructure changes ("propose in an issue" territory under the keep-runs-small rule). So pulled the top actionable P2 skill-curation item: **review-solicitation integrity on `pmm-customer-advocacy`** (surfaced 2026-08-12). Its sibling (scoped/expiring advocacy consent record) was left for a future run — one change per run.
+
+**Gap re-verified before writing** (the backlog claimed zero hits 2026-08-12; confirmed the terms still appear only in backlog/log/scout-ledger text, never in the agent): `16 CFR`, `Part 465`, `fake review`, `review gating`, `review suppression`, `Endorsement Guide`, `selective solicitation` = **zero** in either agent copy. The 2026-08-12 capacity ship had added the *compensation* half of Rule 7 (Rule 3, the G2 paragraph); the *solicitation* half — which customers you ask, and whether the incentive rides on the rating — was genuinely unowned. Seam confirmed: `ops-legal-compliance` Rule 4 owns FTC advertising standards only as truthful-claims + affiliate disclosure, so this is advocacy-specific *method* feeding that owner, not a duplicated legal opinion.
+
+**Shipped** (both dual-located copies): an upgraded **Rule 7** pointing to the method; a new **"Soliciting Reviews Without Gating the Ask"** section; a checked **G2/Capterra Review Strategy** deliverable; and a **Solicitation Integrity** success metric. The section names **review gating** (screening the public-review ask behind an NPS/CSAT score) as the market default and takes the honest posture: the rule does not ban it, the FTC says it "could violate the FTC Act," so it is a *named exposure routed to counsel, not a settled ban*. Three disciplines — **timing vs. screening** (timing to a lifecycle high point is Rule 4, fine; screening *who* by predicted rating is the exposure), the **incentive bright line** (§465.4, a sentiment-conditioned incentive is a plain violation by the rule's text), and **no rating-based suppression** (§465.7(b) display rule + its equally-applied carve-out; §465.7(a) threats bar; contacting an unhappy reviewer is permitted, paying to delete is not).
+
+**Primary-source verification (the backlog demanded it):** eCFR and both Federal Register / FTC HTML+PDF routes were bot-blocked (302→unblock host, or 403), so verified against the **official CFR PDF** on govinfo ([16 CFR §§465.4-465.7, 1-1-25 ed.](https://www.govinfo.gov/content/pkg/CFR-2025-title16-vol1/pdf/CFR-2025-title16-vol1-sec465-6.pdf), read via saved PDF) for the regulatory text, and the **FTC business-guidance Q&A** (fetched with a browser UA; verbatim: *"The rule does not contain a specific prohibition against such conduct. But this practice could violate the FTC Act"*; effective date *"October 21, 2024"*; the contact-to-resolve and pay-to-take-down statements) for the solicitation nuance. The gating-is-unlawful reading is **flagged unsettled, not asserted**; §465.4 and §465.7 are quoted as the bright lines they are. Ideas-only; source `the-nam-shub/e5-real-skills` is **unlicensed — no content reused**; the timing-vs-screening framing, bright-line-vs-gray-area split, and the seam are ours. No enforcement/penalty figure asserted.
+
+**Verified before claiming done:** both copies **diff-identical**; `scripts/lint-agents.sh` on both → **2/2 pass**; repo-wide broken-link check re-run → **0 broken**; both cross-referenced targets (`ops-legal-compliance`) exist.
+
+---
+
 ### 2026-08-12 — the Customer Advocacy Manager learns that its roster is not its capacity (automated skill-scout run)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration — scout the market, compare, act on the single highest-value opportunity.
