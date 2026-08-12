@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-12 (later run) — the Customer Advocacy Manager learns that a customer's yes is scoped and it expires (automated maintenance run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`jq`); all 13 skills have a `SKILL.md` with `name` + `description`; **0 broken internal `.md` links** across 174 markdown files (Python checker, re-run after the edits); both live `Last reviewed` dates well inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-09; `integrations/README.md` 2026-07-23). No P0.
+
+**Item pulled:** the top *unblocked* item. P1 remains exhausted for an unattended run (native subagents #1 blocked on in-thread decisions; distribution items are gated third-party submissions/in-app forms not fired autonomously; the two proposals blocked on decisions; the P2-"later" items are large infra changes = issue territory). So pulled the P2 skill-curation item the 2026-08-12 run explicitly deferred: **a scoped, expiring consent record for advocacy assets on `pmm-customer-advocacy`**. Distinct from yesterday's solicitation ship (how *often* you ask) — this governs *what a customer agreed to and for how long*.
+
+**Gap re-verified before writing:** `logo rights` / `quote approval` / `approval to publish` / `expiring consent` = 0 hits outside bookkeeping; `usage rights` only on `social-influencer-partnerships` (influencer content licensing, a different object); the one adjacent line is `content-case-study-producer`'s per-asset "permission to publish" (one asset, one moment). No agent owned the standing rights record.
+
+**Shipped** (both dual-located copies, lint 2/2, diff-identical): **Critical Rule 10**; a **"Rights Are Scoped and They Expire: The Advocacy Consent Record"** section; an **Advocacy Rights & Consent Record** deliverable; a **Rights Coverage and Freshness** success metric. Consent captured **per element × per surface**; four disciplines ours — the **expiring-metric review date** (a dated claim about the customer's business goes stale while the homepage does not), **re-consent on a change of frame** (a repositioning is a new ask, not an edit), the **stored named-vs-anonymized decision** (regulated/competitor/stealth customers are anonymized references, not lost ones), and the **three-records/three-owners seam** (this agent = standing rights; `content-case-study-producer` = per-asset publication approval; `ops-legal-compliance` = contact-level marketing consent). Record lives in the CRM/advocacy platform, **not** in `templates/brand-context.md` and **not** as a new repo artifact.
+
+**Sources:** ideas-only, written from scratch. "Consent is legal, not optional" thesis surfaced 2026-08-12 by [lpalokan/bmad-marketing-growth](https://github.com/lpalokan/bmad-marketing-growth) (MIT — **re-verified live this run**: states the principle, does not define the mechanics) and the legal/logo approval gate in [LeadMagic/gtm-skills](https://github.com/LeadMagic/gtm-skills) (MIT — **re-verified live this run**). The per-element×per-surface scoping, expiring metric, re-consent-on-reframe, anonymization decision, and seam are ours and are not in the sources. **No legal provision asserted** — every legal call defers to `ops-legal-compliance`; no burnout/decline/dispute figure asserted.
+
+**Deferred:** the remaining `pmm-customer-advocacy` sibling is now closed. Kept the change to the single owning agent — no dangling handoff elsewhere dead-ends (unlike the migration case), so no reciprocal pointer added. Verified: all referenced agents/templates (`ops-legal-compliance`, `content-case-study-producer`, `brand-context.md`) exist; `ops-legal-compliance` does own the cross-channel-suppression consent record cited.
+
+**Result:** one small, high-quality change. Backlog item marked done below; CHANGELOG `[Unreleased] → Changed` bulleted.
+
+---
+
 ### 2026-08-12 — the Customer Advocacy Manager learns the review-solicitation practice most likely to break the law by accident (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
