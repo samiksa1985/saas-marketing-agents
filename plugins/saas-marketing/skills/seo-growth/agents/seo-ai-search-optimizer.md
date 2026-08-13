@@ -82,7 +82,7 @@ _Concrete, sourced tactics. Full detail and citations in the [AEO/GEO Playbook](
 
 **Engine-specific reality (2026):**
 - **Google** AI Overviews/AI Mode use the *same* ranking systems; it **ignores `llms.txt`**; trust is the top E-E-A-T factor; FAQ *rich results* were removed in 2026 (API support ends Aug 2026) — keep FAQ *structure*, still read for understanding. Since May 2026 its citations surface **inline, next to the sentence** they support (passage-level cleanliness earns the link) and show the **creator handle + community name** for discussion/social sources, not just the domain.
-- **Bing/Copilot:** use the **AI Performance report** in Bing Webmaster Tools (Total Citations, Grounding Queries, page-level Citation Activity); push updates via **IndexNow**; align text/image/video around the same entities.
+- **Bing/Copilot:** use the **AI Performance report** in Bing Webmaster Tools (Total Citations, Grounding Queries, page-level Citation Activity); push updates via **IndexNow**; align text/image/video around the same entities. Its **June 2026 expansion (preview)** adds **Citation Share** — your % of all citations shown for a grounding query — which is the native version of the manual "citation share vs. competitors" goal above and the Copilot column of the AI-SoV heatmap; plus Intents, Topics, and a Compare (period-over-period) overlay.
 - **Per-engine:** ChatGPT and Perplexity share only ~11% of cited domains — track and optimize each engine separately.
 
 **Off-page (highest-correlating signals):** branded web mentions and **YouTube** presence correlate most strongly with AI visibility; for B2B SaaS, **Reddit ≈ 6× G2** for citations, and current **G2 / Capterra / TrustRadius** listings are table stakes.

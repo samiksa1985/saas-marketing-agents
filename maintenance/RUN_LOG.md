@@ -4,6 +4,30 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-13 — the AEO/GEO playbook learns Bing now reports a native competitive share-of-voice number (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item, else a freshness pass.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`jq`); all 13 skills have a `SKILL.md` with `name` + `description`; **0 broken internal `.md` links** across 305 links / 174 markdown files (Python checker, re-run after the edits); both live `Last reviewed` dates were inside the 90-day window before this run (`guides/aeo-geo-playbook.md` 2026-08-09 = 4 days; `integrations/README.md` 2026-07-23 = 21 days). No P0.
+
+**Backlog quiet → freshness pass (ROUTINE step 3).** P1 remains exhausted for an unattended run (native subagents #1 blocked on in-thread decisions; distribution items are gated third-party submissions/in-app forms not fired autonomously; the two proposals blocked on maintainer decisions; the P2-"later" items are large infra = issue territory). The open P2 skill-curation items are all either awaiting a maintainer *decision* (pricing ownership; instrumentation contract; the grade-the-function persona) or web-scout re-reads tagged for the *scout* track, not maintenance. So ran the step-3 freshness pass — and it found a real, primary-source-citable change, not a no-op.
+
+**What changed in the world (verified against the primary source):** Microsoft expanded the Bing Webmaster Tools **AI Performance report on 2026-06-16 (preview)** — [blogs.bing.com, "New AI Visibility Insights in Bing Webmaster Tools: Intents, Topics, Citation Share, Compare"](https://blogs.bing.com/search/June-2026/New-AI-Visibility-Insights-in-Bing-Webmaster-Tools-Intents-Topics-Citation-Share-Compare) (read 2026-08-13). The playbook described only the four **original Feb-2026** metrics (Total Citations, Average Cited Pages, Grounding Queries, page-level Citation Activity) and cited only the Feb preview — so it taught a superseded feature set of a tool it actively recommends. The material addition is **Citation Share**, quoted verbatim from the source: *"the percentage of citations attributed to your site out of all citations shown across all sites for that same grounding query"* — a **native competitive share-of-voice** metric. That is exactly what `seo-ai-search-optimizer`'s own success goal ("Increase citation share vs. 3–5 competing companies") and its AI-Share-of-Voice heatmap (the Copilot column) had the user computing by hand.
+
+**Shipped:**
+- `guides/aeo-geo-playbook.md` — §1 Copilot/Bing bullet gains the June-2026 expansion (Citation Share defined + Intents / Topics / Compare, all flagged preview, Citation Share called out as the B2B one to watch); checklist #15 notes Citation Share as the closest thing any engine ships to a native competitive AI-SoV number; Sources gains the June-2026 Bing post; `Last reviewed` → 2026-08-13.
+- Both dual-located copies of `seo/seo-ai-search-optimizer.md` — the "Engine-specific reality (2026)" Bing/Copilot bullet gains the same fact, tied explicitly to the manual share goal and the heatmap's Copilot column.
+
+**Sources & honesty.** Citation Share definition quoted verbatim from the Bing primary source; all four capabilities flagged **preview** (not GA). No effect sizes, GEO study figures, or Google-side facts touched — none changed since the 2026-08-09 review (which had covered Google's May-6 attribution changes). The three non-Citation-Share views (Intents/Topics/Compare) named but not over-weighted. No fabricated metrics.
+
+**Verified before claiming done:** agent copies **diff-identical**; `scripts/lint-agents.sh` on both → **2/2 pass**; repo-wide broken-link check re-run → **0 broken** (305 links / 174 files); the two new external Bing/Google URLs are the official `blogs.bing.com` / `developers.google.com` hosts.
+
+**Deferred:** the "subscribed-publications highlight" from Google's May-6 change stays **out** (assessed and declined 2026-08-09 as low-actionability for a citation playbook — unchanged judgement). The Bing `<topic>-2026-reality.md` freshness-convention question and the maintainer-decision P2 items remain queued.
+
+**Result:** one small, high-quality change — a genuine freshness fix, not padding. CHANGELOG `[Unreleased] → Changed` bulleted.
+
+---
+
 ### 2026-08-12 (later run) — the Customer Advocacy Manager learns that a customer's yes is scoped and it expires (automated maintenance run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
