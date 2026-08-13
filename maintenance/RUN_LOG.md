@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-13 — the Copywriter stops crowning a subject line on a number machines inflate, with a significance rule that isn't one (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`jq`); all 13 skills carry a `SKILL.md` with `name` + `description`; **0 broken internal `.md` links** repo-wide (Python checker — the initial `realpath -m` sweep was a BSD/macOS false-positive storm and was discarded for an accurate resolver; re-run after edits = 0); both live `Last reviewed` dates inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-13; `integrations/README.md` 2026-07-23 = 21 days). No P0.
+
+**Backlog item pulled:** the top unblocked item was the ongoing **downstream-consumers re-base** of the machine-contaminated engagement signal (already PARTLY WORKED across `email-automation-engineer` and `email-newsletter-growth-strategist` earlier today). Its named "Still open" head was **`email-copywriter` subject-line A/B under-powering** — and the deliverability agent's Rule 9 (line 79) *explicitly* delegates the subject-line copy decision to this agent. So it was the correct next single item, and it stays inside the same email thread. One file, its two dual-located copies.
+
+**The gap, verified in-file:** `email-copywriter` decides subject-line A/B tests on **open rate** and twice declares a winner on a **fixed percentage gap** — "requires ≥10% difference to be significant" (A/B protocol) and "requiring 10%+ performance difference for significance" (copy-testing protocol). Two independent errors stack: (1) the subject line's whole job is to move opens, which is the *most* machine-contaminated signal (privacy proxies + security scanners fetch the pixel with no human), so of every consumer this agent optimizes the number machines generate most; (2) a percentage gap is not a significance criterion at all — significance is a function of sample size and variance, so a fixed-gap rule crowns noise on small sends and misses real effects on large ones. A test sized against a contaminated open rate is additionally under-powered, so "no winner" is the *expected* outcome even when a real one exists. Grep confirmed the file had **zero** prior mention of proxy/MPP/bot/contamination.
+
+**Shipped (both dual-located copies, diff-identical):** a new **Critical Rule 9** ("A Subject-Line Winner Is Not a Percent Gap in Opens"), a themed section **"Testing Subject Lines on a Signal Machines Fake,"** three re-based decision points (the A/B protocol → decide on the least-fakeable signal the send can power and route the verdict through the trust discipline; the copy-testing protocol → drop the fixed-gap rule; the sample-size calculator → size against the minimum detectable effect and the metric actually decided on), and two metric caveats (Subject Line Performance → name the instrument, a winner clears the trust gate; Copy Testing Wins → a logged no-difference is learning, most B2B subject-line tests won't resolve a winner).
+
+**What is ours vs. borrowed.** A *consuming* agent again: the contamination mechanism and the four evidence tiers live in `email-deliverability-specialist` Rule 9, and the general experiment-trust discipline (peeking/optional-stopping, sample-ratio mismatch, the ship/no-difference/extend verdict) lives in `analytics-conversion-rate-optimizer`'s *Trust the Split Before the Winner* — both **referenced, not re-derived**, so this run asserts **no new external claims and no new figures**. The distinct contribution is this agent's and specific to it: it is the only consumer running a *formal significance test*, so its failure is a **test-validity** one (wrong metric × invalid significance rule), where the two prior consumers' were an *action* (automation routing) and a *billing* (newsletter sponsor) failure. Correcting the fixed-percent-gap statistics is the piece owned by no other agent.
+
+**Verified before claiming done:** `scripts/lint-agents.sh` on both copies → **2/2 pass**; the two copies are **diff-identical** (`cp` then `diff`); repo-wide broken-link check re-run → **0 broken**; both referenced agents (`email-deliverability-specialist`, `analytics-conversion-rate-optimizer`) confirmed to exist; grep confirmed the edit added **no new external URLs** and **no new asserted figures**.
+
+**Deferred (one change per run):** the last two consumers on this item — the send-time reads in `content/content-newsletter-curator` ("5-15% higher open rate") and `sales/sales-outbound-strategist` ("Tuesday-Thursday 9am-11am for best open rates"), both keying timing off proxy-fetch timestamps. Item updated to **PARTLY WORKED 2026-08-13** with those two as the remaining head.
+
+---
+
 ### 2026-08-13 — the Automation Engineer stops letting a machine trip the MQL threshold (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
