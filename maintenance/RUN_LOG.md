@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-13 — the Automation Engineer stops letting a machine trip the MQL threshold (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`jq`); all `SKILL.md` files carry `name` + `description`; **0 broken internal `.md` links** repo-wide (re-run after edits); the only live `Last reviewed` dates were inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-13, reviewed earlier today; `integrations/README.md` 2026-07-23 = 21 days). No P0.
+
+**Backlog item pulled:** the top unblocked item was the **downstream-consumers re-base** filed by *this morning's* deliverability ship (its Rule 9 established that opens and clicks are machine-contaminated, and explicitly handed the *routing* consequence — a machine click that fires nurture branches and trips MQL thresholds — to `email-automation-engineer`). That agent was the highest-consequence of the five listed consumers and the one the source named, so it was the correct first re-base. Under one-change-per-run, took only that one file (its two dual-located copies).
+
+**The gap, verified in-file:** `email-automation-engineer` scored `email open = 1 point, click = 3 points`, branched "opened 5 emails in 7 days → higher engagement path" and "opened 4+ of first 6 emails → deeper nurture," and keyed re-engagement off "4 weeks with no opens" — every one of these is an *action* fired by a signal a proxy or a corporate link-scanner can generate with no human involved. The re-engagement leg is broken the *other* way: privacy proxies keep opens firing for a long-dead contact, so an opens-only sunset almost never triggers and the dead are held as active forever.
+
+**Shipped (both dual-located copies, diff-identical):** a new **Critical Rule 9** ("Score and Route on Confirmed Signal, Not Machine Events"), a themed section **"An Engagement Event Is an Input; a Score Is an Action,"** a new **Scoring Signal Integrity** success metric, a machine-contamination caveat on the open-rate metric, and five re-based decision points in the deliverables (point values → open=0 / bare-click waits for a resolved session; both behavioral triggers; the nurture-branch promotion; the implicit-scoring example).
+
+**What is ours vs. borrowed.** This is a *consuming* agent: the evidence tiers (confirmed-human / probable-human / unconfirmed / silent), the contamination mechanics (MPP, Safe Links), and every primary-source citation live in `email-deliverability-specialist`'s Rule 9 and are **referenced, not re-derived** — so this run asserts **no new external claims and no new figures**. The distinct framing is automation-specific and ours: deliverability's worst case is a lingering dead address, this agent's is a *poisoned forecast and a wasted sales call* (an action on a machine event spends real resources and corrupts the conversion data the model is tuned on); the false-negative re-engagement direction; and the MQL threshold as the one irreversible, human-reaching action that only Probable-human-or-above may cross. Seams drawn: the scoring-model math stays with `analytics-marketing-ops-architect`, and the single-provider open-collapse anomaly routes to `email-deliverability-specialist`.
+
+**Verified before claiming done:** `scripts/lint-agents.sh` on both copies → **2/2 pass**; the two copies are **diff-identical** (`cp` then `diff -q`); repo-wide broken-link check re-run → **0 broken**; grep confirmed my edit added **no new external URLs** and **no new asserted figures**.
+
+**Deferred (one change per run):** the remaining four consumers on the same backlog item — `email-newsletter-growth-strategist` open-rate tiering, `email-copywriter` subject-line A/B under-powering, and the two send-time reads (`content-newsletter-curator`, `sales-outbound-strategist`). Item marked **PARTLY WORKED 2026-08-13** with the remainder listed.
+
+---
+
 ### 2026-08-13 — the AEO/GEO playbook learns Bing now reports a native competitive share-of-voice number (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item, else a freshness pass.
