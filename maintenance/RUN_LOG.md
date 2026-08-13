@@ -1362,3 +1362,25 @@ The template doubles as an anti-fabrication boundary: agents may only assert cus
 **Checked:** 59 agents present; all 13 skills have valid `SKILL.md`; both manifests parse and hold required fields; no broken internal `.md` links after fixes; no personal/sensitive data committed.
 
 **Deferred (see [backlog.md](backlog.md)):** brand-context config, native subagents, additional loops, demo GIF, awesome-list submissions, community-marketplace submission.
+
+---
+
+### 2026-08-13 — Skill Scout: the engagement signal the deliverability agent trusted (automated)
+
+**Focus discipline (rotation):** email / analytics / marketing-ops — last the focus on 2026-08-10 (first run), the oldest of the four (content/SEO-AEO-GEO 08-10 second run, paid/social 08-11, PMM/sales/GTM 08-12). Its queue entered the run holding one open SCOPE QUESTION (who owns the instrumentation contract), which needs a maintainer decision rather than more evidence.
+
+**Surveyed:** 13 sources → 1 enhance (+1 co-credit), 2 watch, 9 dismissed. Full rows in [scout-ledger.md](scout-ledger.md).
+
+**Shipped:** `email/email-deliverability-specialist` (both dual-located copies) — new **Critical Rule 9**, a **"The Engagement Signal Is Machine-Contaminated: Reading Opens and Clicks Before Acting"** section, an **Engagement Signal Integrity Audit** deliverable, and three rewritten/added success metrics. 244 → 302 lines.
+
+The gap was verified by grep before writing: `Mail Privacy Protection`, `MPP`, and `tracking pixel` returned **zero** hits repo-wide, while `open rate` returned hits in six decision-bearing agents. The deliverability agent — the largest email agent and **never enhanced since the first release** — selected IP-warming cohorts from "email openers from past 7 days," identified inactive contacts by "no opens/clicks in 180-365 days," defined `Engagement rate (opens + clicks / total delivered)`, targeted `>25% engagement rate overall`, and diagnosed low engagement as a content problem with no branch for *the instrument changed*.
+
+The sharpest layer is the **B2B inversion**: the market's advice (both credited sources included) is "opens are dirty, fall back to clicks," which is consumer-shaped and inverts here, because corporate security gateways fetch and detonate links before delivery — contamination scales with the security maturity of the account, so the better the logo, the dirtier the click. Also ours: the asymmetry between the two failure modes (a machine open quietly keeps a dead address on the list; a machine click *fires* nurture branches and MQL thresholds, a consequence handed to `email-automation-engineer` and `analytics-marketing-ops-architect`), the four-tier evidence model carrying the repo's standing *unknown never rounds to engaged* into the list, the warming-cohort trap (extend the ramp rather than dilute the cohort), the unsubscribe-`GET` consequence, the instrument-declaration discipline (a bot-filtering toggle and a placement incident look identical in the chart), and an explicit list of what is *still* clean so the section does not overcorrect.
+
+**Deliberately not adopted:** the source's 25-40% prevalence figure (explicitly consumer/DTC-derived, and its "B2B skews lower" aside conflates the mail *provider* with the mail *client* — a work account read in Apple Mail on an iPhone is fully affected). The file instructs measuring your own share by three own-data reads instead of inheriting a number. The two sources also disagree on whether open-based subject-line tests survive; resolving that produced our own under-powering argument rather than picking a side.
+
+**Sources:** [`justinwilliames/orbit-for-claude`](https://github.com/justinwilliames/orbit-for-claude) (MIT) and, independently, [`Mailneo/skills`](https://github.com/Mailneo/skills) (MIT) — both licences verified via the GitHub license API this run. Ideas only; no text from either was reused. Every mechanism claim is quoted from and cited to a primary vendor or standards source read 2026-08-13: Apple, Microsoft Learn (Safe Links), HubSpot, Klaviyo, RFC 8058. **No prevalence, inflation, scanner-share, or engagement-lift figure asserted.**
+
+**Verified:** lint 2/2; the two copies are diff-identical; 341 internal links, 0 broken; all 7 new external URLs return HTTP 200.
+
+**Filed:** a backlog item to re-base the three downstream consumers still deciding on raw opens (`email-automation-engineer` branch logic, `email-newsletter-growth-strategist` tiering, `email-copywriter` subject-line tests), plus `content-newsletter-curator` and `sales-outbound-strategist` send-time claims — deliberately left out of this run under the one-change-per-run rule. Also filed a watch on `modest-curator478/claude-skills`, whose `leadership/` tree is a second independent arrival at the open "grade the marketing function" scope question.
