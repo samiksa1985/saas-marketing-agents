@@ -4,6 +4,26 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-14 — the Ghostwriter gets the interview *method* two agents already lean on; the 2026-08-14 curation item fully closes (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`jq`); all 13 skills carry a `SKILL.md` with `name` + `description`; **0 broken internal `.md` links** repo-wide; both live `Last reviewed` dates inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-13 = 1 day; `integrations/README.md` 2026-07-23 = 22 days). No P0.
+
+**Backlog item pulled:** the **`expert-interview` slice** of the 2026-08-14 curation item (line 90) — its sibling `semantic-gap-analysis` slice shipped earlier today, leaving this half explicitly open with a "check the `content-thought-leadership-ghostwriter` Rule 2 overlap first; do not duplicate" instruction. Above it, every P1 item is blocked or human-owned: subagents (#1) on decisions; the distribution items are outward third-party submissions gated on human-written wording / a star threshold / an in-app form / a "genuine usage" framing that would risk fabrication for a young repo; both P1-skill-curation proposals blocked on scope/legal decisions; and the P2 items above 90 are large-change proposals or SCOPE-QUESTION decisions needing a human. So the `expert-interview` slice was the top *unblocked, autonomous-appropriate* item.
+
+**Overlap check first (as instructed).** The interview *targets* existed (Rule 2 mandates a 60–90 min executive interview extracting philosophy / contrarian viewpoint / specific experience) but the *method* did not: `question bank`, `depth over breadth`, `knowledge document`, `scope limit`, `surprise`, `2-4 questions`, `sequentially`, and `who should not` grepped to **0/2** on the ghostwriter file. Repo-wide, the only "question bank" is the sales-discovery one in `sales-enablement` — a different object (buyer discovery, not expertise extraction) — and `content-case-study-producer`'s interview is the *customer's* success story (STAR/quantified), also a different object. So no duplication risk, and a real gap: this is the repo's *control named, instrument absent* pattern, and it is doubly load-bearing because today's `seo-content-optimizer` credibility (Rule 10) and coverage sections both route their **practitioner** Experience/information-gain interview *to this agent as "the model," to be extended past executives* — a pointer that dead-ended in a one-line mandate.
+
+**Shipped** (both dual-located copies of `content-thought-leadership-ghostwriter`, kept diff-identical): new **Critical Rule 9** (interview-as-method + the executive-vs-practitioner two-chairs framing + the `content-case-study-producer` seam + the no-manufacture boundary), a **"The Expert Interview Method"** section (session discipline: 2–4 questions at a time, depth over breadth, calibrate to the interviewee, no 20-question dump; the **four-pull taxonomy** — contrarian / specificity / *surprise* / *scope-limit "who should NOT"*, the last two net-new repo-wide; topic tilts; the one-extraction rule; and a reusable **knowledge document, not a transcript** as the output), an **Expert Knowledge Document** deliverable, and a **First-hand density** success metric. `seo-content-optimizer` deliberately **not** re-touched (already edited twice today; it references the instrument, this agent owns it) — so the seam is completed rather than duplicated.
+
+**Attribution / guardrails:** ideas-only, written from scratch; the four question archetypes + reusable-doc output surfaced by the `expert-interview` skill in [inhouseseo/superseo-skills](https://github.com/inhouseseo/superseo-skills) (Apache-2.0, license re-verified 2026-08-14; notice requirements would apply to any direct adaptation and none was made). The executive-vs-practitioner split, the seam, the one-extraction rule, the no-manufacture boundary, and the B2B topic tilts are ours. No engagement, ranking, or visibility figure asserted.
+
+**Verified:** `bash scripts/lint-agents.sh` on both changed files → 2/2 PASS; `diff` of the two copies → identical; no internal `.md` links introduced (external URLs only). Backlog item marked done (both slices), CHANGELOG `[Unreleased] › Changed` bullet added.
+
+**Deferred:** the `expert-interview` reference bundle (`voice-injection-playbook.md`, `eeat-signal-embedding.md`, etc.) was not mined further — the SKILL.md method was the load-bearing gap; the reference files are elaborations of the same idea and grep as already-owned. The open watch items (Bhanunamikaze/Agentic-SEO-Skill line 89; the revops/leadership tree line 87) remain for future content/SEO and ops runs.
+
+---
+
 ### 2026-08-14 — the Newsletter Curator stops optimizing send time on a proxy's clock; the six-consumer re-base closes (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
