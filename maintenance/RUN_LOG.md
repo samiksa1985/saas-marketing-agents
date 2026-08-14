@@ -4,6 +4,22 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-14 — the Outbound Strategist stops reading cold send-time and its conversion base off scanner traffic (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check (all clean, no P0):** `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` parse with required fields intact (`jq`); all 13 skills carry a `SKILL.md` with `name` + `description`; **0 broken internal `.md` links** repo-wide (324 checked, Python resolver, re-run after edits); both live `Last reviewed` dates inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-13 = 1 day; `integrations/README.md` 2026-07-23 = 22 days). No P0.
+
+**Backlog item pulled:** the ongoing **downstream-consumers re-base** of the machine-contaminated engagement signal (line 86 — the three email consumers were worked 2026-08-13; two send-time reads remained, "one per run"). Pulled the higher-consequence of the two: **`sales/sales-outbound-strategist`**. Cold B2B outbound is the maximal-contamination surface — no prior relationship, work addresses, security-mature enterprises whose scanners fire on 100% of a send (the anchor's "the better the logo, the dirtier the click/open"). One file, its two dual-located copies. `content-newsletter-curator` (the warmer opt-in list) left for a future run.
+
+**The gap, verified in-file:** four decisions read timing/winners off opens — the email-cadence "Tuesday-Thursday 9am-11am for best open rates" (line 149), the A/B "Send time (Tue 9am vs. Wed 10am vs. Thu 2pm)" (200), "archive highest open rate performers" (205), and "timing patterns … that maximizes engagement" (208). And a structural defect the three email consumers lacked: **Response Rate was defined as "percentage of *opens* that receive a reply"** (235) — a contaminated denominator, *and* internally impossible (a 1-5% cold reply rate *of opens*, opens being 8-15% of sends, would fall below the 0.5-2% meeting rate; you cannot book more meetings than replies). So the targets were always per-delivered. Grep confirmed the file had **zero** prior mention of proxy/MPP/scanner/bot/contamination.
+
+**Shipped (both dual-located copies, diff-identical):** a new **Critical Rule 9** ("Opens Are the Weakest Signal Outbound Owns — and Cold Enterprise Is Where They're Weakest"), a themed section **"Opens Measure the Scanner, Replies Measure the Buyer,"** four re-based decision points (all four moved from opens to replies-per-delivered / meetings booked, with the "can't power a reply-based test → say so" honesty rule), and two rebuilt Success Metrics (Open Rate → directional deliverability read only, never a conversion base or copy verdict; Response Rate → denominator corrected to **delivered**, every figure untouched). The **distinct framing** vs. the three email consumers: this is the only surface with a native *confirmed-human* signal opens lack — the reply — so the reframe is constructive rather than merely cautionary; the send-time read is uniquely broken because scanners prefetch within seconds of delivery, making a "best open time" mostly the SDR's own send clock echoed back; and the Response Rate fix also repairs a pre-existing internal inconsistency. Consuming agent references `email-deliverability-specialist` Rule 9 for the mechanism/tiers and keeps lead-scoring math with `analytics-marketing-ops-architect`; no new external claims or figures.
+
+**Verified:** `scripts/lint-agents.sh` on both copies — **2/2 pass**; `diff` — copies identical; link check re-run — **0 broken** (324); both referenced agents (`email-deliverability-specialist`, `analytics-marketing-ops-architect`) exist in-tree. **Deferred:** `content-newsletter-curator`'s send-time read (the last consumer on line 86); everything else on line 86 is done. No fabricated metrics — the two targets are unchanged and only their denominators/instruments were corrected; Apple MPP / Microsoft Safe Links mechanism reused from the anchor's already-cited primary sources rather than re-asserted.
+
+---
+
 ### 2026-08-13 — the Copywriter stops crowning a subject line on a number machines inflate, with a significance rule that isn't one (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
