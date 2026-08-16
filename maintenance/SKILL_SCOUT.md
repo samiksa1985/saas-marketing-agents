@@ -30,9 +30,14 @@ manufacture a change to look busy.
    - **Enhance:** rewrite/extend our agent or skill in *our* format and voice, incorporating the
      ideas/structure/best-practices worth learning. Lint it (`bash scripts/lint-agents.sh <file>`),
      keep dual-located copies in sync, commit.
-   - **Add (clear-cut):** create the new agent/skill in our schema (frontmatter + Identity / Core
-     Mission / Critical Rules / …), lint, and commit. Cap: **≤1 new agent per run.**
-   - **Add (ambiguous / large / license-risky):** do **not** auto-add. File a backlog item under
+   - **Add (a genuine gap):** **write and ship the new agent** in our schema (frontmatter + Identity /
+     Core Mission / Critical Rules / Deliverables / Success Metrics), lint it, register it in
+     `AGENTS_INDEX.md` and the owning skill's agent table, and commit. Cap: **≤1 new agent per run.**
+     Adding is expected, not exceptional — a repo that only ever edits itself stops growing. Before
+     adding, prove the gap: no existing agent owns the role (check `AGENTS_INDEX.md`), the role is
+     durable rather than a fad, and there's real demand evidence. If it warrants a **new discipline**
+     directory, create it and note the structural change in the run log.
+   - **Add (license-risky or structurally large):** do **not** auto-add. File a backlog item under
      "skill curation" **and** open a GitHub issue proposing it, with sources — let a human decide.
 5. **Record.** Append to [scout-ledger.md](scout-ledger.md) every source you evaluated and the verdict
    (adopted / enhanced-ours / dismissed / watch). Append a dated [RUN_LOG.md](RUN_LOG.md) entry; add a
