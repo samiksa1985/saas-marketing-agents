@@ -4,6 +4,33 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-16 — the Google surface of the ad-policy discipline (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
+
+**Health check:** clean, no P0. `marketplace.json` and the one `plugin.json` parse with required fields intact; every `SKILL.md` (13) carries `name` + `description`; **0 broken internal `.md` links** repo-wide; the only two "Last reviewed" docs are inside the 90-day window (`guides/aeo-geo-playbook.md` 2026-08-13; `integrations/README.md` 2026-07-23). All P1 items remain blocked on maintainer decisions (persona subagents #1, `seo-programmatic` #2, `ops-legal-compliance` legal validation) or are gated/external distribution submissions not appropriate to auto-take unattended. Pulled the top **unblocked** actionable item, backlog line 91.
+
+**Shipped:** `paid-media/paid-media-ppc-strategist` (both dual-located copies) — new **Critical Rule 11**, a **"The policy gate: running inside Google's rulebook"** section under Operating a Live Account, a **Search Ad Policy Pre-Flight** deliverable, and a **Policy pre-flight discipline** success metric.
+
+**The gap, grep-verified before writing.** The 2026-08-16 Meta/LinkedIn ship deliberately left Google's surface to this agent, which had an operational spend-change gate and a learning-phase section but **no policy dimension at all**: `ad polic`, `disapprov`, `trademark`, `restricted categor`, and `account suspen` all returned **zero** on both copies of the PPC strategist. Same run, different agent, distinct surface — so a one-change-per-run follow-on, not a duplicate.
+
+**Referenced, not restated.** The shipped Social Ads section owns the shared machinery — account-scale-before-ad-scale ordering, the four dispositions (pass / fix required / block / unreviewable), *approved never rounds to compliant*, *quote the clause or drop the finding* — and this section points at it rather than re-deriving it. What it adds is only what Google does differently:
+
+- **Two enforcement speeds, and the fast one has no reverse.** Most violations get a documented warning ≥7 days out and a three-strike ladder (3-day hold → 7-day hold → suspension); the *egregious* class (and misrepresentation at its severe end) is suspended on detection with no warning, reaches related accounts on the same payment method, and is rarely reinstated — so the pre-flight screens that no-reverse class **first**. Google's own two-tier enforcement is the reason for the blast-radius ordering rule the social specialist already applies.
+- **Misrepresentation is the policy face of the ad-to-landing-page relevance Quality Score already rewards** — dishonest pricing, unavailable offers, unclear relevance, misleading representation read as the same ad-must-be-true-to-its-page coherence this agent chases for cost reasons; the gated demo / "free"-that-isn't is a Rule 2 problem and a policy exposure at once.
+- **A competitor's name in ad text is an account-level bet, not a campaign test** — the B2B-search-critical asymmetry: Google does not restrict a rival's trademark as a *keyword* (conquesting bids allowed) but restricts it in *ad text* absent the reseller/informational exception, and the remedy is domain-scoped ("*restrictions will generally be applied on an ongoing basis in any ads that use the same second-level domain in their final URL*"), so a "vs."/"alternatives" headline wagers the whole domain's paid-search presence and belongs at media-plan stage. The exception turns on what the landing page *is*, not on the wording.
+- **Restricted/limited categories** flagged with the *product-market-is-not-your-ad-category* trap (embedded fintech, security/background-check tooling), per campaign and per country.
+
+**What is ours:** the two-enforcement-speeds ordering read, the misrepresentation-as-landing-page-relevance reframe, the keyword-vs-ad-text reconciliation with the domain-scoped remedy, and the exception-turns-on-the-destination seam.
+
+**Sourcing & honesty.** Ideas from the same MIT sources the shipped section credits (`gooseworks-ai/goose-skills`, `AgriciDaniel/claude-ads`, `nowork-studio/notfair-plugin`); written from scratch. Every Google position cited to primary policy docs read 2026-08-16 — [Trademarks](https://support.google.com/adspolicy/answer/6118), [Misrepresentation](https://support.google.com/adspolicy/answer/6020955), [What happens if you violate our policies](https://support.google.com/adspolicy/answer/7187501), [account suspensions overview](https://support.google.com/adspolicy/answer/9841640), [Google Ads policies](https://support.google.com/adspolicy/answer/6008942). Only the domain-scope sentence is quoted verbatim; every other Google position is paraphrased-and-cited because it was read through a page summariser (stated in-file). No approval, rejection, appeal-success, or suspension-frequency figure asserted — Google publishes none.
+
+**Verified:** lint 2/2; the two copies are diff-identical; broken-link recheck 0 repo-wide; all six cross-referenced agents (`paid-media-social-ads-specialist`, `paid-media-creative-strategist`, `design-ad-creative-producer`, `pmm-messaging-architect`, `ops-legal-compliance`, `ops-quality-assurance`) exist in both locations; all five new external URLs HTTP 200.
+
+**Deferred:** backlog line 92 (whether the enforcement register is a paid-media or client-ops artifact, and whether `ops-quality-assurance`'s pre-launch checklist needs a platform-policy row) — a maintainer decision, explicitly untouched by this ship. Line 91 marked done.
+
+---
+
 ### 2026-08-14 — the Ghostwriter gets the interview *method* two agents already lean on; the 2026-08-14 curation item fully closes (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.
