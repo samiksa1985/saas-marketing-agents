@@ -20,7 +20,7 @@ description: "Product marketing and go-to-market strategy for B2B SaaS launches 
 
 Product Marketing Operations brings together positioning strategists, launch managers, messaging architects, competitive intelligence specialists, and customer advocacy leaders to build market-winning strategies for product launches and ongoing positioning. This skill orchestrates your go-to-market strategy to establish clear market positioning, build competitive differentiation, launch new products and features with impact, and develop the customer proof that drives sales pipeline. Whether you're launching a new product category, repositioning your solution in response to competitive threats, building customer advocacy for analyst briefings, or conducting win/loss analysis to understand market dynamics, Product Marketing Operations routes your request to the right specialist and ensures your GTM strategy aligns positioning, messaging, and customer proof.
 
-## The Team: 5 Specialist Agents
+## The Team: 7 Specialist Agents
 
 | # | Agent | File | What They Do |
 |---|-------|------|-------------|
@@ -29,6 +29,8 @@ Product Marketing Operations brings together positioning strategists, launch man
 | 3 | Launch Manager | `agents/pmm-launch-manager.md` | Plans and executes product launches and feature releases with coordinated demand generation, PR, analyst relations, sales enablement, and customer communication |
 | 4 | Competitive Intelligence Specialist | `agents/pmm-competitive-intelligence.md` | Monitors competitive landscape, analyzes competitor positioning and capabilities, identifies market gaps, and provides strategic recommendations for competitive differentiation |
 | 5 | Customer Advocacy Lead | `agents/pmm-customer-advocacy.md` | Builds customer advocacy programs including case studies, customer testimonials, analyst briefing participation, community programs, and G2 review management |
+| 6 | Pricing & Packaging Strategist | `agents/pmm-pricing-packaging-strategist.md` | Sets the price architecture positioning converts into revenue: value metric, tier and packaging design, willingness-to-pay research, discount floors and the deal-desk matrix, price-change and migration comms, and AI-feature monetization |
+| 7 | Agent Readiness Strategist | `agents/pmm-agent-readiness-strategist.md` | Makes the product evaluable, priceable and transactable by an AI agent: machine-readable pricing and catalog data, agent traversal of the buying path, API/docs/MCP as distribution, agent identity posture, and the autonomy and approval-gate design |
 
 ## How to Use
 

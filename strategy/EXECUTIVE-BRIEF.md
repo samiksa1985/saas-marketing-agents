@@ -99,7 +99,7 @@ What do you want to achieve? Examples:
 - "Improve email open rate from 18% to 25%"
 
 ### Step 3: Assemble Your Agents (2 min)
-You don't need all 59 agents. Different modes use different subsets:
+You don't need all 69 agents. Different modes use different subsets:
 - **Full Strategy**: 40-50 agents working across 12+ weeks
 - **Campaign Sprint**: 15-25 agents working across 2-6 weeks
 - **Micro-Project**: 5-10 agents working across 1-5 days
@@ -183,7 +183,7 @@ CATALYST balances structure with flexibility:
 - **Flexible enough** to scale from 1-day micro-projects to multi-month strategies
 - **Simple enough** that any marketing team can adopt it in days, not months
 
-The 59 agents and 6 phases provide the structure. The three operating modes and quality gate system provide the flexibility. The result: B2B SaaS marketing that compounds in effectiveness with each campaign cycle.
+The 69 agents and 6 phases provide the structure. The three operating modes and quality gate system provide the flexibility. The result: B2B SaaS marketing that compounds in effectiveness with each campaign cycle.
 
 ---
 

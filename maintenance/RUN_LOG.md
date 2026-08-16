@@ -1318,6 +1318,29 @@ The section adds: three **blast-radius tiers** (contained ≤50 known addresses 
 
 ---
 
+### 2026-08-17 — Roster expansion: 59 → 69 agents, 13 → 18 skills (manual)
+
+**Why:** an audit of the session's work showed the scout had updated 33 of 59 agents but **added zero** — it was capped at
+"propose new agents as issues." The owner asked for genuine additions, so the policy changed (the scout may now ship one new
+agent per run and create new disciplines) and this run made the first large addition.
+
+**Method:** a four-lens gap analysis (org design · market demand · competitor rosters · 2026-native disciplines) produced 35
+candidates; synthesis de-duplicated them, verified each against the real roster by grep, and returned **12 recommended / 13
+rejected**. Ten "build" verdicts were then authored in parallel, each researching its own domain.
+
+**Shipped:** 10 new agents across 5 new disciplines (`growth/`, `partnerships/`, `events/`, `comms/`, `developer-marketing/`)
+and 5 new skills. Every agent registered in `AGENTS_INDEX.md`, copied into its skill, and added to that skill's agent table;
+counts updated in README (incl. badges), llms.txt, CITATION.cff, both manifests, the suite router, the CATALYST orchestrator,
+integrations, loops, strategy docs and CONTRIBUTING.
+
+**Rejected, notably:** `marketing-engineer` (conflicts with the standing 2026-08-02 decision that mechanical implementation
+work is out of scope), `pm-review-platform-strategist` (already owned by `pmm-customer-advocacy`), `first-party-data-engineer`
+and `localization-program-manager` (overlap). Two "maybe" items — AI content governance and GTM signal strategy — were left
+in the backlog for the scout rather than forced in.
+
+**Verified:** all 69 agents lint clean; 0 broken internal links; both manifests parse; 18 skills each have a `SKILL.md`;
+top-level and plugin copies identical; no personal or sensitive data in any new file.
+
 ### 2026-07-21 — Skill Scout: new job + first pass + 2 enhancements (manual)
 
 **New capability:** stood up the second recurring job — the **Skill Scout** ([SKILL_SCOUT.md](SKILL_SCOUT.md) + [scout-ledger.md](scout-ledger.md), a daily task). It monitors GitHub/web for high-value marketing skills, compares them to our inventory, and either enhances an existing agent or adds a missing one — under a hard licensing guardrail (learn ideas, never copy prose; attribute permissive adaptations; ideas-only for restrictive/unlicensed sources).

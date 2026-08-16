@@ -1,12 +1,12 @@
 # SaaS Marketing Agents — Full Index
 
-**59 specialist B2B SaaS marketing agents across 11 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
+**69 specialist B2B SaaS marketing agents across 16 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
 
 Each agent is a self-contained Markdown persona (Identity · Core Mission · Critical Rules · Deliverables · Success Metrics). Install the whole team as a Claude Code plugin — `/plugin marketplace add shalintripathi/saas-marketing-agents` then `/plugin install saas-marketing@saas-marketing-agents` — or open any file below directly in your AI tool. See the [README](README.md) for the quick start.
 
-**Jump to:** [Content Marketing](#content-marketing) · [SEO & Organic Growth](#seo--organic-growth) · [Paid Media](#paid-media) · [Social Media](#social-media) · [Email Marketing](#email-marketing) · [Design](#design) · [Sales Enablement](#sales-enablement) · [Product Marketing](#product-marketing) · [Analytics](#analytics) · [Project Management](#project-management) · [Client Operations](#client-operations)
+**Jump to:** [Content Marketing](#content-marketing) · [SEO & Organic Growth](#seo--organic-growth) · [Paid Media](#paid-media) · [Social Media](#social-media) · [Email Marketing](#email-marketing) · [Design](#design) · [Sales Enablement](#sales-enablement) · [Product Marketing](#product-marketing) · [Growth](#growth) · [Analytics](#analytics) · [Communications](#communications) · [Partnerships](#partnerships) · [Events & Field Marketing](#events--field-marketing) · [Developer Marketing](#developer-marketing) · [Project Management](#project-management) · [Client Operations](#client-operations)
 
-> **59 agents** indexed below. Last generated 2026-07-21.
+> **69 agents** indexed below. Last generated 2026-08-17.
 
 ---
 
@@ -26,7 +26,7 @@ _7 agents_
 
 ## SEO & Organic Growth
 
-_6 agents_
+_7 agents_
 
 | | Agent | File | Role |
 |---|---|---|---|
@@ -35,6 +35,7 @@ _6 agents_
 | 🗝️ | **Keyword Researcher** | [`seo/seo-keyword-researcher.md`](seo/seo-keyword-researcher.md) | Data miner who maps B2B SaaS search landscape, competitive gaps, and buyer intent clusters before content strategy |
 | 🔗 | **Link Building Strategist** | [`seo/seo-link-building-strategist.md`](seo/seo-link-building-strategist.md) | Authority builder who earns links through strategy, PR, and relationship networks—never through buying or manipulation |
 | 🌍 | **Local & International SEO Specialist** | [`seo/seo-local-and-international.md`](seo/seo-local-and-international.md) | Multi-market growth strategist optimizing B2B SaaS for global expansion, localization, and regional keyword strategies |
+| 🧩 | **Programmatic SEO Strategist** | [`seo/seo-programmatic-strategist.md`](seo/seo-programmatic-strategist.md) | Dataset-and-template builder who ships thousands of pages that each earn their index slot—and prunes the ones that don't before they become index bloat |
 | 🔍 | **Technical SEO Auditor** | [`seo/seo-technical-auditor.md`](seo/seo-technical-auditor.md) | Forensic specialist uncovering crawlability issues, Core Web Vitals problems, and technical barriers to ranking |
 
 ## Paid Media
@@ -102,15 +103,26 @@ _6 agents_
 
 ## Product Marketing
 
-_5 agents_
+_7 agents_
 
 | | Agent | File | Role |
 |---|---|---|---|
+| 🤝 | **Agent Readiness Strategist** | [`product-marketing/pmm-agent-readiness-strategist.md`](product-marketing/pmm-agent-readiness-strategist.md) | Makes the product evaluable, priceable and transactable by a machine — the transactable half of AI visibility, audited from the buying agent's side of the wire |
 | 🔬 | **Competitive Intelligence Specialist** | [`product-marketing/pmm-competitive-intelligence.md`](product-marketing/pmm-competitive-intelligence.md) | Competitive analysis and battle card development for B2B SaaS |
 | 🌟 | **Customer Advocacy Manager** | [`product-marketing/pmm-customer-advocacy.md`](product-marketing/pmm-customer-advocacy.md) | Customer marketing, advocacy programs, and reference development for B2B SaaS |
 | 🚀 | **Product Launch Manager** | [`product-marketing/pmm-launch-manager.md`](product-marketing/pmm-launch-manager.md) | Product launch orchestration with tiered frameworks and internal enablement |
 | 💬 | **Messaging Architect** | [`product-marketing/pmm-messaging-architect.md`](product-marketing/pmm-messaging-architect.md) | Message house development and value proposition frameworks for SaaS |
 | 🎯 | **Product Positioning Strategist** | [`product-marketing/pmm-positioning-strategist.md`](product-marketing/pmm-positioning-strategist.md) | B2B SaaS positioning expert using category design and competitive framing |
+| 💰 | **Pricing & Packaging Strategist** | [`product-marketing/pmm-pricing-packaging-strategist.md`](product-marketing/pmm-pricing-packaging-strategist.md) | Sets the value metric, tiers, and discount floors that turn positioning into revenue — and defends them against the deal that wants an exception |
+
+## Growth
+
+_2 agents_
+
+| | Agent | File | Role |
+|---|---|---|---|
+| 🌱 | **Customer Marketing Lead** | [`growth/growth-customer-marketing-lead.md`](growth/growth-customer-marketing-lead.md) | Carries net revenue retention as a marketing number—adoption, expansion, churn-save and renewal marketing to the installed base, where the cheapest ARR in the company already lives |
+| 🚀 | **PLG Activation Strategist** | [`growth/growth-plg-activation-strategist.md`](growth/growth-plg-activation-strategist.md) | Owns the self-serve funnel behind the login wall — the causally validated activation event, the trial architecture, and the PQL definition product-led sales runs on |
 
 ## Analytics
 
@@ -123,6 +135,39 @@ _5 agents_
 | 📊 | **Marketing Data Storyteller** | [`analytics/analytics-data-storyteller.md`](analytics/analytics-data-storyteller.md) | Executive reporting, data visualization, and campaign post-mortems |
 | ⚙️ | **Marketing Ops Architect** | [`analytics/analytics-marketing-ops-architect.md`](analytics/analytics-marketing-ops-architect.md) | Marketing technology stack, data integration, and lead lifecycle design |
 | 📈 | **Marketing Performance Analyst** | [`analytics/analytics-performance-analyst.md`](analytics/analytics-performance-analyst.md) | Marketing funnel metrics, cohort analysis, and ROI measurement |
+
+## Communications
+
+_2 agents_
+
+| | Agent | File | Role |
+|---|---|---|---|
+| 🏛️ | **Analyst Relations Manager** | [`comms/comms-analyst-relations-manager.md`](comms/comms-analyst-relations-manager.md) | Runs the Gartner, Forrester and IDC evaluation machine — criteria decomposition, evidence assembly, and the long campaign behind a single dot on a chart |
+| 📣 | **Public Relations Strategist** | [`comms/comms-pr-strategist.md`](comms/comms-pr-strategist.md) | The company's voice to third-party gatekeepers—earned coverage, announcement architecture, and the sentences that hold a crisis together |
+
+## Partnerships
+
+_1 agents_
+
+| | Agent | File | Role |
+|---|---|---|---|
+| 🔗 | **Partner Ecosystem Marketer** | [`partnerships/partner-ecosystem-marketer.md`](partnerships/partner-ecosystem-marketer.md) | Markets with and through other companies—tech alliances, channel partners, and the cloud-marketplace buying path where the budget is already committed |
+
+## Events & Field Marketing
+
+_1 agents_
+
+| | Agent | File | Role |
+|---|---|---|---|
+| 🎪 | **Field Marketing & Events Strategist** | [`events/events-field-marketing-strategist.md`](events/events-field-marketing-strategist.md) | Turns rooms into pipeline — buys conferences against a pre-committed payback model, runs the meeting engine behind the booth, and refuses to call a banner a strategy |
+
+## Developer Marketing
+
+_1 agents_
+
+| | Agent | File | Role |
+|---|---|---|---|
+| ⌨️ | **Developer Audience Strategist** | [`developer-marketing/devmkt-developer-audience-strategist.md`](developer-marketing/devmkt-developer-audience-strategist.md) | Developer marketer who earns credibility in terminals, docs, and repos—where every classic B2B tactic backfires |
 
 ## Project Management
 

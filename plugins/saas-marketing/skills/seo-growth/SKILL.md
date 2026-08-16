@@ -18,9 +18,9 @@ description: "End-to-end SEO operations for B2B SaaS organic visibility. Use thi
 
 ## What This Is
 
-The SEO Growth skill coordinates a team of 6 specialized agents to drive sustainable organic visibility for B2B SaaS companies. From foundational keyword research and technical audits to advanced AI search optimization and international expansion, this skill orchestrates every component of a modern SEO program. This team handles organic search strategy, execution, and measurement—enabling you to build compounding organic traffic that reduces your reliance on paid channels.
+The SEO Growth skill coordinates a team of 7 specialized agents to drive sustainable organic visibility for B2B SaaS companies. From foundational keyword research and technical audits to advanced AI search optimization and international expansion, this skill orchestrates every component of a modern SEO program. This team handles organic search strategy, execution, and measurement—enabling you to build compounding organic traffic that reduces your reliance on paid channels.
 
-## The Team: 6 Specialist Agents
+## The Team: 7 Specialist Agents
 
 | # | Agent | File | What They Do |
 |---|-------|------|-------------|
@@ -30,6 +30,7 @@ The SEO Growth skill coordinates a team of 6 specialized agents to drive sustain
 | 4 | Link Building Strategist | `agents/seo-link-building-strategist.md` | Develops link building campaigns through outreach, partnerships, content-driven links, and earned media. Maps competitive link profiles and identifies high-value backlink opportunities. |
 | 5 | AI Search Optimizer | `agents/seo-ai-search-optimizer.md` | Optimizes content for AI search engines (ChatGPT, Claude search, Perplexity) and Answer Engine Optimization (AEO). Improves visibility in AI-generated summaries and snippets. |
 | 6 | Local & International SEO | `agents/seo-local-and-international.md` | Expands SEO strategy to international markets and local search. Handles hreflang implementation, multi-language content, country-specific keyword research, and localized link strategies. |
+| 7 | Programmatic SEO Strategist | `agents/seo-programmatic-strategist.md` | Builds SEO from datasets and templates rather than drafts: integration, comparison, /vs and /alternatives and glossary pages at scale, with index-bloat and thin-content guardrails and internal linking across the set. |
 
 ## How to Use
 

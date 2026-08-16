@@ -14,7 +14,7 @@ CATALYST operates on five core principles:
 
 2. **Phase-Based Progress**: Work flows through six distinct phases (Discovery → Strategy → Foundation → Build → Launch → Optimize) with quality gates ensuring readiness before advancement.
 
-3. **Flexibility in Scope**: Three operating modes allow CATALYST to scale from micro-campaigns (5-10 agents, 1-5 days) to full annual strategies (all 59 agents, 12+ weeks).
+3. **Flexibility in Scope**: Three operating modes allow CATALYST to scale from micro-campaigns (5-10 agents, 1-5 days) to full annual strategies (all 69 agents, 12+ weeks).
 
 4. **Data-Driven Decision Making**: Every phase produces metrics, insights, and validated assumptions that feed downstream work and inform optimization.
 
@@ -31,7 +31,7 @@ Every agent receives this file alongside its task brief, and its rules override 
 
 If the file is absent, CATALYST offers to draft one and proceeds on explicitly-labelled assumptions. Phase 0 (Discovery) exists in part to fill the gaps a thin brand context leaves.
 
-## The 59 CATALYST Agents Across 12 Categories
+## The 69 CATALYST Agents Across 16 Disciplines
 
 ### Discovery & Insights (8 agents)
 - Customer Insights Researcher
