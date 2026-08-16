@@ -81,28 +81,30 @@ See the [Integrations Guide](integrations/README.md) for tool-by-tool setup.
 
 ## 📋 The team (69 specialist agents)
 
-| Discipline | Count | What they do |
-|-----------|-------|--------------|
-| **Content Marketing** | 7 | Blog, case study, whitepaper, newsletter, copywriting, video scripts, thought leadership |
-| **SEO & Organic Growth** | 7 | Keyword strategy, technical SEO, link building, **AI/AEO/GEO**, local & international, **programmatic SEO** |
-| **Paid Media** | 6 | PPC, creative strategy, budget optimization, programmatic, attribution, social ads |
-| **Social Media** | 6 | LinkedIn, YouTube, Reddit, Twitter/X, community, influencer partnerships |
-| **Email Marketing** | 5 | Lifecycle, copywriting, automation, deliverability, newsletter growth |
-| **Design** | 5 | Landing pages, brand identity, presentations, visual content, ad creative |
-| **Sales Enablement** | 6 | Outbound, discovery, battle cards, proposals, pipeline, enablement content |
-| **Product Marketing** | 7 | Positioning, messaging, launch, competitive intel, customer advocacy, **pricing & packaging**, **agent readiness** |
-| **Growth** | 2 | **PLG activation** (signup → first invoice, PQLs) and **customer marketing** (expansion, churn-save, NRR) |
-| **Analytics** | 5 | CRO, customer insights, data storytelling, marketing ops, performance |
-| **Communications** | 2 | **PR & earned media**, **analyst relations** (Magic Quadrant, Wave) |
-| **Partnerships** | 1 | **Co-marketing, channel, and cloud-marketplace GTM** |
-| **Events & Field** | 1 | **Conferences, owned events, roadshows, and the webinar engine** |
-| **Developer Marketing** | 1 | **Docs, quickstarts, SDKs, DevRel — marketing to engineers** |
-| **Project Management** | 4 | Campaign coordination, resource allocation, scrum, client success |
-| **Client Operations** | 4 | Reporting, QA, legal/compliance, financial tracking |
+Every agent is a named role with its own remit, critical rules, and deliverables — click any one to read it.
+
+| Discipline | Agents |
+|-----------|--------|
+| **Content Marketing** (7) | [Content Blog Strategist](content/content-blog-strategist.md) · [Content Case Study Producer](content/content-case-study-producer.md) · [Content Copywriter](content/content-copywriter.md) · [Content Newsletter Curator](content/content-newsletter-curator.md) · [Content Thought Leadership Ghostwriter](content/content-thought-leadership-ghostwriter.md) · [Content Video Script Writer](content/content-video-script-writer.md) · [Content Whitepaper Architect](content/content-whitepaper-architect.md) |
+| **SEO & Organic Growth** (7) | [AI Search Optimizer](seo/seo-ai-search-optimizer.md) · [Content Optimizer](seo/seo-content-optimizer.md) · [Keyword Researcher](seo/seo-keyword-researcher.md) · [Link Building Strategist](seo/seo-link-building-strategist.md) · [Local & International SEO Specialist](seo/seo-local-and-international.md) · [Programmatic SEO Strategist](seo/seo-programmatic-strategist.md) · [Technical SEO Auditor](seo/seo-technical-auditor.md) |
+| **Paid Media** (6) | [Attribution Analyst](paid-media/paid-media-attribution-analyst.md) · [Budget Optimizer](paid-media/paid-media-budget-optimizer.md) · [Creative Strategist](paid-media/paid-media-creative-strategist.md) · [PPC Strategist](paid-media/paid-media-ppc-strategist.md) · [Programmatic Media Buyer](paid-media/paid-media-programmatic-buyer.md) · [Social Ads Specialist](paid-media/paid-media-social-ads-specialist.md) |
+| **Social Media** (6) | [Community Strategist](social/social-community-builder.md) · [B2B Influencer & Creator Partnerships Manager](social/social-influencer-partnerships.md) · [LinkedIn Organic Strategist](social/social-linkedin-strategist.md) · [Reddit Community Specialist](social/social-reddit-specialist.md) · [Twitter/X Strategist](social/social-twitter-strategist.md) · [YouTube Producer & Content Strategist](social/social-youtube-producer.md) |
+| **Email Marketing** (5) | [Marketing Automation Engineer](email/email-automation-engineer.md) · [Email Copywriter & Conversion Specialist](email/email-copywriter.md) · [Email Deliverability Specialist](email/email-deliverability-specialist.md) · [Email Lifecycle Architect](email/email-lifecycle-architect.md) · [Newsletter Growth & Monetization Strategist](email/email-newsletter-growth-strategist.md) |
+| **Design** (5) | [Ad Creative Producer](design/design-ad-creative-producer.md) · [Brand Identity Strategist](design/design-brand-identity-strategist.md) · [Content Visual Designer](design/design-content-visual-designer.md) · [Presentation Designer](design/design-presentation-designer.md) · [UI Landing Page Specialist](design/design-ui-landing-page-specialist.md) |
+| **Sales Enablement** (6) | [Deal Strategist](sales/sales-deal-strategist.md) · [Discovery Coach](sales/sales-discovery-coach.md) · [Enablement Content Creator](sales/sales-enablement-content-creator.md) · [Outbound Strategist](sales/sales-outbound-strategist.md) · [Pipeline Analyst](sales/sales-pipeline-analyst.md) · [Proposal Architect](sales/sales-proposal-architect.md) |
+| **Product Marketing** (7) | [Agent Readiness Strategist](product-marketing/pmm-agent-readiness-strategist.md) · [Competitive Intelligence Specialist](product-marketing/pmm-competitive-intelligence.md) · [Customer Advocacy Manager](product-marketing/pmm-customer-advocacy.md) · [Product Launch Manager](product-marketing/pmm-launch-manager.md) · [Messaging Architect](product-marketing/pmm-messaging-architect.md) · [Product Positioning Strategist](product-marketing/pmm-positioning-strategist.md) · [Pricing & Packaging Strategist](product-marketing/pmm-pricing-packaging-strategist.md) |
+| **Growth** (2) | [Customer Marketing Lead](growth/growth-customer-marketing-lead.md) · [PLG Activation Strategist](growth/growth-plg-activation-strategist.md) |
+| **Analytics** (5) | [Conversion Rate Optimizer](analytics/analytics-conversion-rate-optimizer.md) · [Customer Insights Researcher](analytics/analytics-customer-insights-researcher.md) · [Marketing Data Storyteller](analytics/analytics-data-storyteller.md) · [Marketing Ops Architect](analytics/analytics-marketing-ops-architect.md) · [Marketing Performance Analyst](analytics/analytics-performance-analyst.md) |
+| **Communications** (2) | [Analyst Relations Manager](comms/comms-analyst-relations-manager.md) · [Public Relations Strategist](comms/comms-pr-strategist.md) |
+| **Partnerships** (1) | [Partner Ecosystem Marketer](partnerships/partner-ecosystem-marketer.md) |
+| **Events & Field Marketing** (1) | [Field Marketing & Events Strategist](events/events-field-marketing-strategist.md) |
+| **Developer Marketing** (1) | [Developer Audience Strategist](developer-marketing/devmkt-developer-audience-strategist.md) |
+| **Project Management** (4) | [Campaign Coordinator](project-management/pm-campaign-coordinator.md) · [Client Success Manager](project-management/pm-client-success-manager.md) · [Marketing Agile Facilitator](project-management/pm-marketing-ops-scrum-master.md) · [Resource Allocator](project-management/pm-resource-allocator.md) |
+| **Client Operations** (4) | [Financial Tracker](client-ops/ops-financial-tracker.md) · [Legal Compliance Officer](client-ops/ops-legal-compliance.md) · [Quality Assurance Manager](client-ops/ops-quality-assurance.md) · [Reporting Specialist](client-ops/ops-reporting-specialist.md) |
 
 _These 16 disciplines hold all 69 specialist agents. On top sits the **[CATALYST orchestrator](#️-catalyst-orchestrator)**, which coordinates them._
 
-**→ Full [Agent Index](AGENTS_INDEX.md)** with every agent's role and when to use it.
+**→ Full [Agent Index](AGENTS_INDEX.md)** — every agent with a one-line description of what it does and when to reach for it.
 
 ---
 

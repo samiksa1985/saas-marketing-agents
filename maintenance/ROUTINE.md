@@ -24,6 +24,14 @@ This is the instruction set an automated agent (or a human) follows on each sche
 
 6. **Notify.** Send a short push notification summarizing the run (item shipped + anything that needs a human).
 
+## Discoverability (every run)
+
+Before committing, apply the [Discoverability Standard](DISCOVERABILITY.md). In short: if a count, name,
+or capability changed, update the **GitHub About description** (`gh repo edit --description`), README and
+badges, `AGENTS_INDEX.md`, `llms.txt`, and both manifests in the *same* run — grep for the old number to
+catch stale copies. Name specifics rather than abstractions, and write commit messages that state the
+user-facing benefit. Describing the project accurately is part of the work, not an afterthought.
+
 ## Hard guardrails
 
 - **Never commit personal or sensitive information** — no emails, keys, tokens, private notes, analytics data, or anything specific to the maintainer's other projects. Public author attribution only.

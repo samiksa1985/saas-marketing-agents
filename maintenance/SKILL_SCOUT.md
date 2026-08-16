@@ -39,10 +39,14 @@ manufacture a change to look busy.
      directory, create it and note the structural change in the run log.
    - **Add (license-risky or structurally large):** do **not** auto-add. File a backlog item under
      "skill curation" **and** open a GitHub issue proposing it, with sources — let a human decide.
-5. **Record.** Append to [scout-ledger.md](scout-ledger.md) every source you evaluated and the verdict
+5. **Make it findable.** Apply the [Discoverability Standard](DISCOVERABILITY.md): a new agent that nobody
+   can find helps nobody. Its **name and the problem it solves** must reach the README (not just its own
+   directory), `AGENTS_INDEX.md`, `llms.txt`, and the owning skill's `description:` frontmatter — and if the
+   agent or skill count changed, update the **GitHub About description** and README badges in the same run.
+6. **Record.** Append to [scout-ledger.md](scout-ledger.md) every source you evaluated and the verdict
    (adopted / enhanced-ours / dismissed / watch). Append a dated [RUN_LOG.md](RUN_LOG.md) entry; add a
    `CHANGELOG.md` `[Unreleased]` bullet if user-facing; update [backlog.md](backlog.md).
-6. **Notify.** Send a push notification summarizing what changed and its source(s). If the run was a
+7. **Notify.** Send a push notification summarizing what changed and its source(s). If the run was a
    genuine no-op, stop quietly (no notification).
 
 ---
