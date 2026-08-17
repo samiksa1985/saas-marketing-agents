@@ -4,6 +4,25 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-17 — the paid-ABM execution layer, so the ABM program's list actually runs as a buy (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, then the top unblocked backlog item.
+
+**Health check (all clean, no P0).** Broken internal `.md` links: **0** across a whole-repo crawl (447 links checked). Manifests: `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` both parse with required fields. All **19** skills carry a `SKILL.md` with `name` + `description`. AEO/GEO playbook `Last reviewed 2026-08-13` — 4 days old, fresh. Counts reconcile end to end: **73** `.md` files in the 18 category dirs minus the **3** CATALYST framework docs in `strategy/` = **70** agents, matching `AGENTS_INDEX.md` (70 across 17 disciplines), the README badge, `llms.txt`, `CITATION.cff`, both manifests, and the live GitHub About (70 agents / 19 skills). No stale count anywhere.
+
+**Backlog item shipped (top unblocked).** Most P1 items are blocked on maintainer decisions (native subagents [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); seo-programmatic [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2); the pricing-ownership and instrumentation-contract scope questions) or are human-gated external submissions. The top concrete, unblocked item was the 2026-08-17 scout's flagged paid-run enhancement: give `paid-media-social-ads-specialist` the **paid-ABM execution layer** that `abm-account-based-strategist`'s Rule 7 already hands here but nothing owned.
+
+- Added **Critical Rule 11** + a new section, *"The Account List Is a Media Object: Building and Delivering the Paid ABM Buy"*, covering four mechanics: (1) **one matched audience/campaign per tier** — a blended list forfeits per-tier budget, frequency, and reporting and lets delivery concentrate off the strategic few; tiers under LinkedIn's 300-match floor route elsewhere rather than blend up to size; (2) **match rate is coverage, not setup** — Meta's hash-and-match means a work-email-only list matches a smaller share of itself; fixes are more identifiers per contact and preferring LinkedIn's company-to-company match for enumerated lists; (3) **air cover buys reach, not conversions** — an open-pipeline audience can't produce the ~50 events/7 days a conversion ad set needs to exit Meta's learning phase, so it runs on reach and is scored on penetration/progression; (4) a **self-rotating engagement exclusion** for frequency — engaged accounts graduate into an exclusion so prospecting budget keeps refreshing.
+- Added a matching **Deliverable** ("Paid ABM Audience Construction & Delivery Plan") and a **Success Metric** (tier-segmented delivery + matched-share-as-coverage), consistent with the agent's existing pattern.
+
+**Sourcing discipline.** Every platform claim quoted from and cited to primary docs read 2026-08-17: Meta [Customer List Custom Audiences](https://www.facebook.com/business/help/341425252616329) / [customer-info best practices](https://www.facebook.com/business/help/606443329504150) (match mechanics), [About the learning phase](https://www.facebook.com/business/help/112167992830700) (~50 events/7 days), [Frequency Controls for Reservation](https://www.facebook.com/business/help/285326585139636); LinkedIn [Retargeting with Matched Audiences](https://www.linkedin.com/help/lms/answer/a427551) and [campaign targeting Include/Exclude](https://www.linkedin.com/help/lms/answer/a420751), plus the ≥300-match floor already cited in the ABM agent. Ideas-only, MIT-credited to [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills); the source's unsourced go/no-go thresholds (list size, deal size, budget floor) deliberately **not** carried; the work-email match penalty flagged directional (Meta publishes no match rate by identifier type).
+
+**Verified.** Both dual copies (`paid-media/` and `plugins/saas-marketing/skills/paid-media-ops/agents/`) edited to be diff-identical; `scripts/lint-agents.sh` passes **2/2**; broken-link crawl still 0; no count changed, so no discoverability ripple.
+
+**Deferred.** Backlog line 94 marked done. The related maintainer decisions (line 92 combined pre-launch gate ownership; line 95 ABM-as-slash-commands architecture) remain open and are not scout calls.
+
+---
+
 ### 2026-08-17 — the stale roster count, swept off every installed surface (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, fix any P0 before touching the backlog.
