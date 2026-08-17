@@ -1,7 +1,7 @@
 # Monthly ABM Loop
 
 **Cadence:** Monthly (e.g., first working week of each month)
-**Owner agent:** CATALYST orchestrator
+**Owner agent:** CATALYST orchestrator, with [`abm-account-based-strategist`](../abm/abm-account-based-strategist.md) owning the account list, the tiers, and the scoreboard throughout
 **Goal:** Every month, re-score your target accounts, refresh tiered messaging for the ones that moved, ship the next multi-channel touch, and retire what isn't working — so account coverage compounds instead of restarting each quarter.
 
 This is the recurring counterpart to the one-shot [ABM campaign workflow](../examples/workflow-abm-campaign.md). That workflow stands a program up from zero over 3–4 weeks. **This loop is what you run forever after.** The difference that matters: this loop carries a persistent **account ledger** from month to month, so each run starts from what the last run learned rather than from a blank target list.
@@ -47,12 +47,12 @@ One row per account, carried forward and updated every run. Keep it wherever you
 
 | # | Agent | Does | Hands off |
 |---|-------|------|-----------|
-| 1 | `pmm-competitive-intelligence` | Re-scores the ledger against new signals and researched account news; proposes tier promotions, demotions, additions, retirements — each with the evidence behind it | Scored account list + proposed tier changes |
+| 1 | `abm-account-based-strategist` (with `pmm-competitive-intelligence` for competitor and account news) | Re-scores the ledger against new signals and researched account news; proposes tier promotions, demotions, additions, retirements — each with the evidence behind it, and re-checks the list against current sales capacity before anything is promoted | Scored account list + proposed tier changes |
 | 2 | `analytics-customer-insights-researcher` | For accounts that moved up, maps the buying committee: who else must be reached, what each role is measured on, which are still uncovered | Committee + coverage gaps per account |
 | 3 | `pmm-messaging-architect` (with `pmm-positioning-strategist` on new Tier 1s) | Refreshes messaging per tier: one-to-one angles for Tier 1, cluster messaging for Tier 2, segment messaging for Tier 3 — reusing last month's winners, retiring what got no response | Tiered message set for this cycle |
 | 4 | `sales-enablement-content-creator` (+ `design-content-visual-designer` when an asset needs to look finished) | Produces only the assets this month's touches actually need — not a full library. Reuses existing assets wherever the message didn't change | This cycle's asset set |
 | 5 | `sales-outbound-strategist`, then `email-copywriter` + `email-automation-engineer`, `social-linkedin-strategist`, `paid-media-social-ads-specialist` | Sequences the month's multi-channel touches per tier and builds them: email steps, LinkedIn engagement, ad audiences refreshed against the current ledger. Suppression rules first — accounts already in an active sales conversation get handed to sales, not sequenced | Scheduled monthly touch plan per tier |
-| 6 | `sales-pipeline-analyst` + `analytics-performance-analyst` | Measures the cycle against the *previous* ledger: which accounts progressed a stage, which channels produced first contact, which messages got replies, which accounts have gone quiet long enough to retire | Updated ledger + this cycle's read-out |
+| 6 | `abm-account-based-strategist` (scoreboard + credit rule) with `sales-pipeline-analyst` + `analytics-performance-analyst` | Measures the cycle against the *previous* ledger: which accounts progressed a stage, which channels produced first contact, which messages got replies, which accounts have gone quiet long enough to retire | Updated ledger + this cycle's read-out |
 | 7 | `pm-campaign-coordinator` | Turns the read-out into next month's inputs: owners, dates, and the shortlist of decisions a human has to make | Next cycle's brief |
 
 Steps 2–4 can run in parallel across tiers once Step 1 has settled the tier list. Step 5 must wait for all of them — a touch plan built on stale messaging is the most common way this loop degrades.

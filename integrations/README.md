@@ -1,8 +1,8 @@
 # Integrations Guide
 
-This guide shows how to use SaaS Marketing Agents with your favorite AI coding tools. All 69 agents are plain Markdown with YAML frontmatter, so they port across these platforms — but each tool has its own rules/agents convention, and the sections below give the current one for each.
+This guide shows how to use SaaS Marketing Agents with your favorite AI coding tools. All 70 agents are plain Markdown with YAML frontmatter, so they port across these platforms — but each tool has its own rules/agents convention, and the sections below give the current one for each.
 
-> **Two ways in.** Claude Code can install the whole thing as a plugin (18 skills including the CATALYST orchestrator). Every other tool consumes the raw agent files, either by reference or by copying them into that tool's rules directory. `scripts/install.sh` automates the copying — see [Using the install script](#using-the-install-script).
+> **Two ways in.** Claude Code can install the whole thing as a plugin (19 skills including the CATALYST orchestrator). Every other tool consumes the raw agent files, either by reference or by copying them into that tool's rules directory. `scripts/install.sh` automates the copying — see [Using the install script](#using-the-install-script).
 
 ---
 
@@ -17,7 +17,7 @@ This guide shows how to use SaaS Marketing Agents with your favorite AI coding t
 /plugin install saas-marketing@saas-marketing-agents
 ```
 
-The 18 skills then load as `/saas-marketing:<skill>` (e.g. `/saas-marketing:seo-growth`, `/saas-marketing:catalyst-orchestrator`). Describe what you need and the orchestrator routes it to the right specialists.
+The 19 skills then load as `/saas-marketing:<skill>` (e.g. `/saas-marketing:seo-growth`, `/saas-marketing:catalyst-orchestrator`). Describe what you need and the orchestrator routes it to the right specialists.
 
 **Or reference the raw files** — start a session in your clone of this repo and `@`-mention an agent:
 
@@ -172,7 +172,7 @@ Where each `--tool` writes:
 
 | `--tool` | Destination | Format |
 |---|---|---|
-| `cowork` | `~/.claude/skills/` | 18 skill folders (`SKILL.md` + `agents/`) |
+| `cowork` | `~/.claude/skills/` | 19 skill folders (`SKILL.md` + `agents/`) |
 | `claude` | `~/.claude/agents/` | one `.md` per agent |
 | `cursor` | `~/.cursor/rules/` | one `.mdc` per agent |
 | `copilot` | `~/.copilot/agents/` | one `.agent.md` per agent |

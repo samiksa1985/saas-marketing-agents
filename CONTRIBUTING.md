@@ -96,7 +96,7 @@ expertise: [tag1, tag2, tag3]
 
 - `name`: Display name of the agent (string)
 - `slug`: URL-friendly identifier (kebab-case, no spaces)
-- `category`: One of the 16 disciplines listed above
+- `category`: One of the 17 disciplines listed above
 - `description`: Single-line summary (50 characters max recommended)
 - `expertise`: Array of 3-5 relevant tags or skills
 

@@ -1,12 +1,12 @@
 # SaaS Marketing Agents — Full Index
 
-**69 specialist B2B SaaS marketing agents across 16 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
+**70 specialist B2B SaaS marketing agents across 17 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
 
 Each agent is a self-contained Markdown persona (Identity · Core Mission · Critical Rules · Deliverables · Success Metrics). Install the whole team as a Claude Code plugin — `/plugin marketplace add shalintripathi/saas-marketing-agents` then `/plugin install saas-marketing@saas-marketing-agents` — or open any file below directly in your AI tool. See the [README](README.md) for the quick start.
 
-**Jump to:** [Content Marketing](#content-marketing) · [SEO & Organic Growth](#seo--organic-growth) · [Paid Media](#paid-media) · [Social Media](#social-media) · [Email Marketing](#email-marketing) · [Design](#design) · [Sales Enablement](#sales-enablement) · [Product Marketing](#product-marketing) · [Growth](#growth) · [Analytics](#analytics) · [Communications](#communications) · [Partnerships](#partnerships) · [Events & Field Marketing](#events--field-marketing) · [Developer Marketing](#developer-marketing) · [Project Management](#project-management) · [Client Operations](#client-operations)
+**Jump to:** [Content Marketing](#content-marketing) · [SEO & Organic Growth](#seo--organic-growth) · [Paid Media](#paid-media) · [Social Media](#social-media) · [Email Marketing](#email-marketing) · [Design](#design) · [Sales Enablement](#sales-enablement) · [Product Marketing](#product-marketing) · [Account-Based Marketing](#account-based-marketing) · [Growth](#growth) · [Analytics](#analytics) · [Communications](#communications) · [Partnerships](#partnerships) · [Events & Field Marketing](#events--field-marketing) · [Developer Marketing](#developer-marketing) · [Project Management](#project-management) · [Client Operations](#client-operations)
 
-> **69 agents** indexed below. Last generated 2026-08-17.
+> **70 agents** indexed below. Last generated 2026-08-17.
 
 ---
 
@@ -114,6 +114,14 @@ _7 agents_
 | 💬 | **Messaging Architect** | [`product-marketing/pmm-messaging-architect.md`](product-marketing/pmm-messaging-architect.md) | Message house development and value proposition frameworks for SaaS |
 | 🎯 | **Product Positioning Strategist** | [`product-marketing/pmm-positioning-strategist.md`](product-marketing/pmm-positioning-strategist.md) | B2B SaaS positioning expert using category design and competitive framing |
 | 💰 | **Pricing & Packaging Strategist** | [`product-marketing/pmm-pricing-packaging-strategist.md`](product-marketing/pmm-pricing-packaging-strategist.md) | Sets the value metric, tiers, and discount floors that turn positioning into revenue — and defends them against the deal that wants an exception |
+
+## Account-Based Marketing
+
+_1 agents_
+
+| | Agent | File | Role |
+|---|---|---|---|
+| 🏢 | **Account-Based Marketing Strategist** | [`abm/abm-account-based-strategist.md`](abm/abm-account-based-strategist.md) | Owns the target account list, its 1:1/1:few/1:many tiers, and the orchestration contract every channel executes against — measured in account coverage and pipeline, never MQLs |
 
 ## Growth
 

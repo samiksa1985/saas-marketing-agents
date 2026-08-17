@@ -1,6 +1,6 @@
 ---
 name: catalyst-orchestrator
-description: "Master orchestrator for B2B SaaS marketing campaigns using the CATALYST framework (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation). Coordinates 69 specialist agents across 16 marketing disciplines. Use this skill for ANY large-scale marketing initiative: full GTM launches, annual marketing plans, multi-channel campaigns, quarterly planning, or any task requiring coordination across content, SEO, paid media, social, email, design, sales enablement, product marketing, analytics, project management, and client operations. Also triggers on: marketing strategy, campaign plan, GTM launch, quarterly plan, marketing ops, full-funnel campaign, marketing audit, growth plan."
+description: "Master orchestrator for B2B SaaS marketing campaigns using the CATALYST framework (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation). Coordinates 70 specialist agents across 16 marketing disciplines. Use this skill for ANY large-scale marketing initiative: full GTM launches, annual marketing plans, multi-channel campaigns, quarterly planning, or any task requiring coordination across content, SEO, paid media, social, email, design, sales enablement, product marketing, analytics, project management, and client operations. Also triggers on: marketing strategy, campaign plan, GTM launch, quarterly plan, marketing ops, full-funnel campaign, marketing audit, growth plan."
 ---
 
 # CATALYST Orchestrator: Master Marketing Framework
@@ -20,11 +20,11 @@ Brand context is what turns generic B2B SaaS output into output that sounds like
 
 ## What This Is
 
-CATALYST (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation) is the master orchestration framework for enterprise-scale B2B SaaS marketing. It coordinates 69 specialized agents across 12 functional categories executing campaigns from strategy through optimization. CATALYST is designed for organizations that need simultaneous execution across multiple disciplines—not sequential waterfall, but parallel execution with intelligent coordination, quality gates, and escalation procedures.
+CATALYST (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation) is the master orchestration framework for enterprise-scale B2B SaaS marketing. It coordinates 70 specialized agents across 12 functional categories executing campaigns from strategy through optimization. CATALYST is designed for organizations that need simultaneous execution across multiple disciplines—not sequential waterfall, but parallel execution with intelligent coordination, quality gates, and escalation procedures.
 
 CATALYST operates in three modes:
 
-1. **CATALYST-Full**: Complete annual planning (69 agents, 12+ weeks) for comprehensive GTM launches and year-round marketing strategy
+1. **CATALYST-Full**: Complete annual planning (70 agents, 12+ weeks) for comprehensive GTM launches and year-round marketing strategy
 2. **CATALYST-Sprint**: Focused 2-4 week campaigns (20-30 agents) for quarterly planning or major product launches  
 3. **CATALYST-Micro**: Rapid 1-5 day execution (5-10 agents) for tactical campaigns or immediate needs
 
@@ -32,7 +32,7 @@ All three modes flow through six phase gates ensuring strategic clarity before b
 
 ## The Team / How It Works
 
-### 16 Disciplines & 69 Specialist Agents
+### 17 Disciplines & 70 Specialist Agents
 
 | Discipline | Agents | Specialty |
 |----------|--------|-----------|
@@ -44,6 +44,7 @@ All three modes flow through six phase gates ensuring strategic clarity before b
 | **Design Operations** | 5 agents | Landing pages, brand identity, presentations, visual content, ad creative |
 | **Sales Enablement** | 6 agents | Outbound, discovery coaching, deal strategy, battle cards, proposals, pipeline analysis |
 | **Product Marketing** | 7 agents | Positioning, messaging, launches, competitive intel, customer advocacy, pricing & packaging, agent readiness |
+| **Account-Based Marketing** | 1 agent | Target account list and 1:1/1:few/1:many tiering, capacity-sized coverage, signals-to-actions, per-tier orchestration contract, account coverage and penetration |
 | **Growth** | 2 agents | PLG activation (signup → first invoice, PQLs, in-product upgrade moments), customer marketing (expansion, churn-save, NRR) |
 | **Marketing Analytics** | 5 agents | Performance analysis, attribution modeling, CRO, customer insights, marketing ops architecture |
 | **Communications** | 2 agents | PR and earned media, announcements, crisis comms; analyst relations (Magic Quadrant, Wave, MarketScape) |
@@ -53,7 +54,7 @@ All three modes flow through six phase gates ensuring strategic clarity before b
 | **Marketing Project Management** | 4 agents | Campaign coordination, timeline management, resource allocation, stakeholder communication |
 | **Client Operations** | 4 agents | Client reporting, QA, financial tracking, legal compliance |
 
-**Total: 16 Disciplines × 69 Specialist Agents**
+**Total: 17 Disciplines × 70 Specialist Agents**
 
 ### CATALYST Phase Architecture
 
@@ -268,7 +269,7 @@ Choose the CATALYST mode based on your initiative scope:
 #### **CATALYST-Full**: Annual Planning & Major GTM Launches
 - **Use when**: Annual marketing planning, major product launch, market entry, comprehensive strategy refresh
 - **Timeline**: 12+ weeks end-to-end
-- **Agents**: All 69 agents across all 16 disciplines
+- **Agents**: All 70 agents across all 17 disciplines
 - **Scope**: Full funnel (awareness, consideration, decision, adoption)
 - **Budget**: Enterprise-scale multi-channel campaigns
 - **Expected Output**: Comprehensive annual strategy, full content calendar, multi-channel campaigns, reporting infrastructure
@@ -396,7 +397,7 @@ Even within CATALYST, you can invoke individual category skills for focused work
 
 ### CATALYST-Full: Enterprise Campaign
 
-**Timeline**: 12+ weeks | **Team**: All 69 agents | **Scope**: Full GTM strategy
+**Timeline**: 12+ weeks | **Team**: All 70 agents | **Scope**: Full GTM strategy
 
 - **Week 1-3**: Phase 0 Discovery (10 customer interviews, 5 competitor analyses, technical audits)
 - **Week 4-6**: Phase 1 Strategy (positioning, messaging, audience segmentation, channel strategy, KPIs)
@@ -512,7 +513,7 @@ The following playbooks are included in the agents/ directory to guide execution
 - **phase-3-build.md** - Content production, creative development, asset creation across all channels
 - **phase-4-launch.md** - Campaign activation, media buying, email launch, monitoring procedures
 - **phase-5-optimize.md** - Performance analysis, A/B testing, budget optimization, continuous improvement
-- **catalyst-strategy.md** - CATALYST framework overview and 69-agent reference guide
+- **catalyst-strategy.md** - CATALYST framework overview and 70-agent reference guide
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: saas-marketing-suite
-description: "Complete B2B SaaS marketing agency powered by 69 AI agents across 16 specialties. This is the entry point for ALL marketing requests. Routes to the right specialist team: content marketing, SEO, paid media, social media, email marketing, design, sales enablement, product marketing, analytics, project management, or client operations. Use this skill when the request spans multiple disciplines or when unsure which specialist to invoke. Also triggers on: marketing help, marketing team, marketing agency, what can you do, marketing capabilities."
+description: "Complete B2B SaaS marketing agency powered by 70 AI agents across 17 specialties. This is the entry point for ALL marketing requests. Routes to the right specialist team: content marketing, SEO, paid media, social media, email marketing, design, sales enablement, product marketing, account-based marketing (ABM), growth, analytics, project management, or client operations. Use this skill when the request spans multiple disciplines or when unsure which specialist to invoke. Also triggers on: marketing help, marketing team, marketing agency, what can you do, marketing capabilities."
 ---
 
 # SaaS Marketing Suite: Complete Agency Router
@@ -18,7 +18,7 @@ description: "Complete B2B SaaS marketing agency powered by 69 AI agents across 
 
 ## What This Is
 
-The SaaS Marketing Suite is the entry point for ANY B2B SaaS marketing request. It's a complete agency powered by 69 specialist agents across 16 functional disciplines. When you don't know which team to ask or your request spans multiple disciplines, you invoke this skill and it routes to the right specialists.
+The SaaS Marketing Suite is the entry point for ANY B2B SaaS marketing request. It's a complete agency powered by 70 specialist agents across 17 functional disciplines. When you don't know which team to ask or your request spans multiple disciplines, you invoke this skill and it routes to the right specialists.
 
 Think of it as your full-service marketing department:
 - **Need content?** Route to Content Marketing
@@ -41,7 +41,7 @@ Think of it as your full-service marketing department:
 
 The skill includes a routing decision matrix to identify which team(s) you need based on your request.
 
-## The Complete Team: 69 Specialist Agents Across 16 Disciplines
+## The Complete Team: 70 Specialist Agents Across 17 Disciplines
 
 ### Core Marketing Disciplines
 
@@ -58,13 +58,14 @@ The skill includes a routing decision matrix to identify which team(s) you need 
 | **Marketing Analytics** | 5 | Performance reporting, attribution modeling, forecasting, CRO optimization, data storytelling |
 | **Marketing Project Management** | 4 | Campaign coordination, timeline management, resource allocation, stakeholder communication, risk management |
 | **Client Operations** | 4 | Client reporting, QA/compliance, budget tracking, legal compliance, audit trails, brand quality |
+| **Account-Based Marketing** | 1 | The target account list and its 1:1/1:few/1:many tiers, capacity-sized coverage, signals-to-actions, the per-tier orchestration contract, and account coverage/penetration measurement |
 | **Growth** | 2 | PLG activation (signup to first invoice, PQL definition, in-product upgrade moments) and customer marketing (adoption, expansion, churn-save, NRR) |
 | **Communications** | 2 | PR and earned media, announcements, crisis comms, and the industry-analyst program (Magic Quadrant, Forrester Wave, IDC) |
 | **Partnerships** | 1 | Co-marketing with tech alliances and channel partners, integration launches, cloud-marketplace GTM |
 | **Events & Field Marketing** | 1 | Conference and sponsorship selection, booths, owned events and roadshows, the webinar engine, event-sourced pipeline |
 | **Developer Marketing** | 1 | Docs as a marketing surface, quickstarts and time-to-first-call, SDKs, open source, DevRel |
 
-**Total: 69 Specialist Agents** across 16 disciplines, plus the **CATALYST orchestrator** that coordinates them.
+**Total: 70 Specialist Agents** across 17 disciplines, plus the **CATALYST orchestrator** that coordinates them.
 
 ---
 
@@ -411,7 +412,7 @@ START: What is your primary need?
 
 **Request**: "Plan and execute our full GTM launch"
 - **Route**: CATALYST Orchestrator (CATALYST-Full mode)
-- **Scope**: All 69 agents across all 16 disciplines
+- **Scope**: All 70 agents across all 17 disciplines
 - **Timeline**: 12+ weeks end-to-end
 
 **Request**: "Create our annual marketing strategy and plan"
@@ -446,12 +447,13 @@ START: What is your primary need?
 | Marketing Analytics | 5 |
 | Marketing Project Management | 4 |
 | Client Operations | 4 |
+| Account-Based Marketing | 1 |
 | Growth | 2 |
 | Communications | 2 |
 | Partnerships | 1 |
 | Events & Field Marketing | 1 |
 | Developer Marketing | 1 |
-| **TOTAL** | **69** |
+| **TOTAL** | **70** |
 
 ---
 
