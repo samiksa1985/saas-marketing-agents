@@ -2,7 +2,7 @@
 
 ## Framework Overview
 
-CATALYST is a comprehensive multi-agent orchestration framework designed specifically for B2B SaaS marketing teams. It coordinates 59 specialized marketing agents working across 12 functional categories to execute highly targeted, data-driven marketing campaigns from strategy through optimization and continuous improvement.
+CATALYST is a comprehensive multi-agent orchestration framework designed specifically for B2B SaaS marketing teams. It coordinates 69 specialized marketing agents working across 12 functional categories to execute highly targeted, data-driven marketing campaigns from strategy through optimization and continuous improvement.
 
 The framework is built on the principle that modern B2B SaaS marketing requires simultaneous execution across multiple specialized domains—from market research and strategic positioning to technical SEO, paid advertising, content production, and advanced analytics. Rather than sequential waterfall execution, CATALYST enables parallel agent execution with intelligent handoff protocols, quality gates, and escalation procedures.
 
@@ -130,7 +130,7 @@ If the file is absent, CATALYST offers to draft one and proceeds on explicitly-l
 
 ### CATALYST-Full: Complete Annual Strategy
 
-**Duration**: 12-16 weeks | **Agents Engaged**: All 59 | **Scope**: Comprehensive annual marketing strategy
+**Duration**: 12-16 weeks | **Agents Engaged**: All 69 | **Scope**: Comprehensive annual marketing strategy
 
 CATALYST-Full orchestrates a complete marketing transformation, running all six phases sequentially with full team coordination:
 

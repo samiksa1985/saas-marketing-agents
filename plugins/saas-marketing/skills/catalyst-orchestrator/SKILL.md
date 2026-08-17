@@ -20,7 +20,7 @@ Brand context is what turns generic B2B SaaS output into output that sounds like
 
 ## What This Is
 
-CATALYST (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation) is the master orchestration framework for enterprise-scale B2B SaaS marketing. It coordinates 59 specialized agents across 12 functional categories executing campaigns from strategy through optimization. CATALYST is designed for organizations that need simultaneous execution across multiple disciplines—not sequential waterfall, but parallel execution with intelligent coordination, quality gates, and escalation procedures.
+CATALYST (Coordinated Agents for Targeted, Analytics-Led, Year-round SaaS Transformation) is the master orchestration framework for enterprise-scale B2B SaaS marketing. It coordinates 69 specialized agents across 12 functional categories executing campaigns from strategy through optimization. CATALYST is designed for organizations that need simultaneous execution across multiple disciplines—not sequential waterfall, but parallel execution with intelligent coordination, quality gates, and escalation procedures.
 
 CATALYST operates in three modes:
 
@@ -512,7 +512,7 @@ The following playbooks are included in the agents/ directory to guide execution
 - **phase-3-build.md** - Content production, creative development, asset creation across all channels
 - **phase-4-launch.md** - Campaign activation, media buying, email launch, monitoring procedures
 - **phase-5-optimize.md** - Performance analysis, A/B testing, budget optimization, continuous improvement
-- **catalyst-strategy.md** - CATALYST framework overview and 59-agent reference guide
+- **catalyst-strategy.md** - CATALYST framework overview and 69-agent reference guide
 
 ---
 

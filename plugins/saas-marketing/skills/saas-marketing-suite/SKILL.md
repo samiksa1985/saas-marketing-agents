@@ -436,17 +436,22 @@ START: What is your primary need?
 | Category | Agents |
 |----------|--------|
 | Content Marketing | 7 |
-| SEO & Growth | 6 |
+| SEO & Growth | 7 |
 | Paid Media Operations | 6 |
 | Social Media Operations | 6 |
 | Email Marketing Operations | 5 |
 | Design Operations | 5 |
 | Sales Enablement | 6 |
-| Product Marketing | 5 |
+| Product Marketing | 7 |
 | Marketing Analytics | 5 |
 | Marketing Project Management | 4 |
 | Client Operations | 4 |
-| **TOTAL** | **59** |
+| Growth | 2 |
+| Communications | 2 |
+| Partnerships | 1 |
+| Events & Field Marketing | 1 |
+| Developer Marketing | 1 |
+| **TOTAL** | **69** |
 
 ---
 

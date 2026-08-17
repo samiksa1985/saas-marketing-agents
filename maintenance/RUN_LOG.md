@@ -4,6 +4,27 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-17 — the stale roster count, swept off every installed surface (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, fix any P0 before touching the backlog.
+
+**Health check.** Broken internal `.md` links: **0** (whole-repo crawl). Manifests: `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` both parse with required fields. All **18** skills carry a `SKILL.md` with `name` + `description`. AEO/GEO playbook `Last reviewed 2026-08-13` — 4 days old, fresh. Live GitHub About description already correct (69 agents / 18 skills). Agent files on disk reconcile to **69** across the 16 discipline dirs, matching `AGENTS_INDEX.md` (regenerated today) and the README badge.
+
+**The P0 it surfaced — a stale public count.** Grepping the old number found `59` still asserted as the agent count in **eight** places the roster growth (59 → 69) never reached, all of them installed/user-facing:
+- `saas-marketing-suite/SKILL.md` "Quick Reference: Agent Count by Category" — the worst of them: it listed only **11** disciplines and summed to 59 *by omission*, having silently dropped **Growth, Communications, Partnerships, Events & Field Marketing, Developer Marketing** and undercounted **SEO (6→7)** and **Product Marketing (5→7)**. The same file's canonical table 380 lines up already listed all 16 disciplines at 69 correctly — so the quick-reference was internally contradicted. Rebuilt it to enumerate all **16 disciplines summing to 69**, using the canonical table's exact names/order.
+- CATALYST framework docs — `catalyst-strategy.md` (both dual-located copies) intro + the CATALYST-Full "Agents Engaged: All 59" spec; `catalyst-orchestrator/SKILL.md` intro + the "59-agent reference guide" pointer; `EXECUTIVE-BRIEF.md` intro, bullet, and the "59-agent full-year strategies" scaling line. All corrected to 69.
+- `ROADMAP.md` "expose the 59 personas" → 69.
+
+**Deliberately left intact: `12 functional categories`.** It reads stale next to "16 disciplines" but is not — it is CATALYST's *operational* execution lens (Discovery & Insights, Brand & Creative, Demand Generation, …), a different grouping from the 16 org disciplines, and its enumerated groups in `catalyst-strategy.md` already sum to **69** (verified). Changing it would have introduced an error, not fixed one.
+
+**Also corrected (internal, but count-governing):** the backlog's own "keep the README badge counts (agents: 59, skills: 13)" sync-reminder — itself out of sync — → (69, 18), and a P2 item's "all 59 agents" → 69. **Left as historical record:** three dated/issue-linked backlog notes (items scoped 2026-07-23 and surfaced 2026-08-08/08-13) whose "59" accurately reflects the roster size when written.
+
+**Verified.** Full diff is pure count changes — no prose or structure touched beyond the rebuilt table. The rebuilt table's category rows sum to 69. No persona agent was modified (the only touched file under an `agents/` dir is `catalyst-strategy.md`, a 2,686-word framework reference, not a persona — the persona lint schema does not apply to it, and the edit changed a digit, not a section). The two `catalyst-strategy.md` copies remain diff-identical but for their intended `../` vs `../../../` brand-context path. Re-ran the link + manifest checks post-edit: still clean. Final grep confirms no stale roster `59` remains on any installed or public surface.
+
+**Deferred:** nothing new. The backlog's top unblocked items stay blocked on maintainer decisions (native-subagent single-source-of-truth in [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1); the programmatic-SEO persona-vs-section call in [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2)).
+
+---
+
 ### 2026-08-16 — the Google surface of the ad-policy discipline (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check, then the top unblocked backlog item.

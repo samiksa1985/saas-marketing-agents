@@ -42,14 +42,14 @@ Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the 
 
 ## P2 — later
 - [ ] Add a golden input/output example per agent.
-- [ ] GitHub Pages catalog with copy-to-clipboard for all 59 agents.
+- [ ] GitHub Pages catalog with copy-to-clipboard for all 69 agents.
 - [ ] MCP tool recipes (GA4, GSC, HubSpot, Ahrefs) to move agents from advisory to executable. **Consider promoting to P1** — the 2026-07-25 scout found the market moving decisively this way (OpenClaudia's 34 skills wire straight into Resend/HubSpot/GA4 APIs), and the 2026-07-26 paid scout found the same independently (hyperfx-ai's 24 skills over 100+ integrations; AgriciDaniel/claude-ads' capability-gated adapters across 12 ad platforms). Two independent signals in two days. Any such work inherits both gates now in the repo: the pre-send gate in `email-automation-engineer` and the spend-change gate in `paid-media-ppc-strategist` — read-only scopes by default, writes opt-in per task, sends and spend changes never implied.
 - [ ] Evaluation harness: rubrics + regression checks for agent output.
 - [ ] De-duplicate agent sources (single source of truth; generate the browseable and installable copies).
 
 ## Notes
 - Social launch posts live in the maintainer's private launch kit and are **posted by a human**, never automated.
-- Keep the README badge counts (agents: 59, skills: 13) and the agent index in sync when agents are added.
+- Keep the README badge counts (agents: 69, skills: 18) and the agent index in sync when agents are added.
 
 ## P2 — skill curation (from the [Skill Scout](SKILL_SCOUT.md); see [scout-ledger.md](scout-ledger.md))
 - [x] Give `analytics/analytics-conversion-rate-optimizer` the **trust half of experiment discipline** — the checks that decide whether to believe a result that is already powered and significant. The agent had power (Rule 2: sample size, 95%) and nothing on validity; grep-verified absent (`sample ratio mismatch`/`SRM`/`optional stopping`/`novelty effect`/`primacy effect` = 0 repo-wide; `guardrail metric` only on the Twitter agent; `peeking` only on the paid strategist), and Rule 2's "reach 95% before declaring a winner" actively invited peeking. — done 2026-08-10 (new "Trust the Split Before the Winner" section + Critical Rule 9 + Experiment Trust Report deliverable + Rule 2 pointer + a rewritten success metric that removes the "60-70% of tests win" quota, both dual-located copies. **SRM** as a chi-squared pre-verdict gate (strict `p < 0.001`, discard-not-adjust on unexplained mismatch), the **B2B small-N inversion** (the SRM check is itself underpowered at low volume → inspect the mechanism directly), **peeking**/optional-stopping discipline, **generalized guardrails**, the **novelty/primacy** durability read, and a gated ship/investigate/extend/stop/revert verdict with *invalid, rerun* in front. Seams drawn to `paid-media-creative-strategist` (power for paid tests) and `analytics-performance-analyst` (observational anomalies). Ideas-only; surfaced by `ab-test-analysis` in [phuryn/pm-skills](https://github.com/phuryn/pm-skills) (MIT, 25k★); SRM facts cited to Kohavi/Tang/Xu 2020 + Fabijan et al. KDD 2019; the small-N inversion, discard-not-adjust rule, guardrail generalization, and seams are ours; lint 2/2, copies diff-identical.)
