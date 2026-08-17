@@ -4,6 +4,24 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-17 — backlog honesty: two items the roster growth shipped but never closed (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, then the top unblocked backlog item.
+
+**Health check (all clean, no P0).** Broken internal `.md` links: **0** across a whole-repo crawl. Manifests: `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` both parse with required fields. All **19** skills carry a `SKILL.md` with `name` + `description`. Only two "Last reviewed" docs, both fresh: AEO/GEO playbook `2026-08-13` (4 days) and `integrations/README.md` `2026-07-23`. Counts reconcile end to end: **70** agents on disk = `AGENTS_INDEX.md` (70, per-discipline subcounts sum to 70) = README badge = `llms.txt` = `plugin.json` = `marketplace.json` = `ROADMAP.md` = the live GitHub About (70 agents / 19 skills). No stale count anywhere; the roster-growth commits also lint clean (the 10 category agents added in `d13e2ee` pass `scripts/lint-agents.sh` 10/10).
+
+**The P0-adjacent defect it surfaced — a dishonest backlog.** Today's roster-growth commit `d13e2ee` (59→69) shipped several agents but never touched `backlog.md`, so two items still read as open decisions after the decision had been made *by shipping the agent*:
+- **Line 40** (`seo/seo-programmatic-strategist` PROPOSAL, scoped in [#2](https://github.com/shalintripathi/saas-marketing-agents/issues/2)): the agent shipped and **#2 is closed**, yet the item read "blocked on that decision."
+- **Line 62** (the pricing/packaging SCOPE QUESTION, escalated to a maintainer call after five sightings): `product-marketing/pmm-pricing-packaging-strategist` shipped, owning the exact seam the item flagged as unowned (value metric, tiers, packaging, willingness-to-pay, discount floors), yet the item read "awaiting a maintainer decision."
+
+This was not cosmetic: the **immediately preceding run** (the paid-ABM entry below) re-listed *both* as "blocked on maintainer decisions" in its own health check — the stale backlog was actively feeding wrong conclusions into later runs, which would keep skipping shipped work as blocked or re-scoping it.
+
+**Shipped.** Marked both `[x]` with dated, sourced closure notes: #2's persona-vs-section call settled in favour of a net-new persona (index-bloat pruning is the guardrail nothing else owns; overlap seams drawn in the agent's Rule 10), and the pricing boundary resolved *in favour of scope* (pricing belongs; competitor pricing still consumed from `pmm-competitive-intelligence`, deal-level pricing still left to sales). Verified both agents' dual copies are diff-identical and lint 2/2 each before writing the notes.
+
+**Deliberately left open.** Line 14 (native subagents, [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1) still **open**) and line 81 (the "grade the marketing function" scope question — no such assessment persona shipped; `pmm-agent-readiness-strategist` assesses a *company's* AI-readiness, not the marketing function's quality). Their "59" references stay as historical/issue-linked record, consistent with the 2026-08-17 count-sweep run's decision. No count changed, so no discoverability ripple; not user-facing, so no CHANGELOG entry.
+
+---
+
 ### 2026-08-17 — the paid-ABM execution layer, so the ABM program's list actually runs as a buy (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, then the top unblocked backlog item.
