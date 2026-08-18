@@ -1,6 +1,6 @@
 ---
 name: marketing-analytics
-description: "Marketing analytics and data-driven optimization for B2B SaaS campaigns. Use this skill when analyzing marketing performance, optimizing conversion rates, running A/B tests, conducting customer research, creating marketing dashboards, building attribution models, analyzing funnel metrics, or storytelling with data. Also triggers on: marketing ops, performance analytics, CRO, conversion rate, A/B testing, data storytelling, customer insights, marketing dashboards, attribution, funnel metrics."
+description: "Marketing analytics and data-driven optimization for B2B SaaS campaigns. Use this skill when analyzing marketing performance, optimizing conversion rates, running A/B tests, conducting customer research, creating marketing dashboards, building attribution models, analyzing funnel metrics, or storytelling with data. Also triggers on: marketing ops, performance analytics, CRO, conversion rate, A/B testing, data storytelling, customer insights, marketing dashboards, attribution, funnel metrics, tracking plan, event taxonomy, UTM taxonomy, GA4 audit, consent mode, instrumentation contract."
 ---
 
 # Marketing Analytics
@@ -28,7 +28,7 @@ Marketing Analytics brings together performance analysts, conversion rate optimi
 | 2 | Conversion Rate Optimizer | `agents/analytics-conversion-rate-optimizer.md` | Designs and executes CRO testing programs, analyzes conversion funnels, identifies friction points, and optimizes user experience for higher conversion rates |
 | 3 | Customer Insights Researcher | `agents/analytics-customer-insights-researcher.md` | Conducts customer research (surveys, interviews, behavioral analysis) to understand buyer needs, motivations, and decision-making behavior |
 | 4 | Data Storyteller | `agents/analytics-data-storyteller.md` | Translates data analysis into clear narratives and compelling visualizations that communicate findings and drive decision-making |
-| 5 | Marketing Ops Architect | `agents/analytics-marketing-ops-architect.md` | Designs marketing operations infrastructure, implements tracking and attribution, and builds dashboards and reporting systems that enable data-driven marketing |
+| 5 | Marketing Ops Architect | `agents/analytics-marketing-ops-architect.md` | Designs marketing operations infrastructure, authors the marketing instrumentation contract (tracking plan, event taxonomy, UTM taxonomy) that every measurement audit grades against, implements tracking and attribution, and builds dashboards and reporting systems that enable data-driven marketing |
 
 ## How to Use
 

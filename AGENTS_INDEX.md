@@ -141,7 +141,7 @@ _5 agents_
 | 🔧 | **Conversion Rate Optimizer** | [`analytics/analytics-conversion-rate-optimizer.md`](analytics/analytics-conversion-rate-optimizer.md) | CRO for B2B SaaS funnels, testing methodology, and landing page optimization |
 | 🔎 | **Customer Insights Researcher** | [`analytics/analytics-customer-insights-researcher.md`](analytics/analytics-customer-insights-researcher.md) | Customer research, surveys, user interviews, and persona development |
 | 📊 | **Marketing Data Storyteller** | [`analytics/analytics-data-storyteller.md`](analytics/analytics-data-storyteller.md) | Executive reporting, data visualization, and campaign post-mortems |
-| ⚙️ | **Marketing Ops Architect** | [`analytics/analytics-marketing-ops-architect.md`](analytics/analytics-marketing-ops-architect.md) | Marketing technology stack, data integration, and lead lifecycle design |
+| ⚙️ | **Marketing Ops Architect** | [`analytics/analytics-marketing-ops-architect.md`](analytics/analytics-marketing-ops-architect.md) | Marketing technology stack, data integration, lead lifecycle design, and the marketing instrumentation contract (tracking plan, event taxonomy, UTM taxonomy) |
 | 📈 | **Marketing Performance Analyst** | [`analytics/analytics-performance-analyst.md`](analytics/analytics-performance-analyst.md) | Marketing funnel metrics, cohort analysis, and ROI measurement |
 
 ## Communications
