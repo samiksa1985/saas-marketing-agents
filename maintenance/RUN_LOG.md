@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-18 — Backlog honesty: the distribution items are traction-gated, and the queue now says so with cited rules (automated maintenance-routine run)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, then the top unblocked backlog item.
+
+**Health check (all clean, no P0).** Manifests: `.claude-plugin/marketplace.json` and `plugins/saas-marketing/.claude-plugin/plugin.json` both parse with required fields (`jq`). All **19** skills carry a `SKILL.md`. Broken internal `.md` links: **0** across a whole-repo crawl. Agent lint **70/70**. Freshness-tracked docs both inside 90 days: AEO/GEO playbook `2026-08-13`, `integrations/README.md` `2026-07-23` (the `2026-04-03` stamps elsewhere are the CATALYST framework version-stamps, not "Last reviewed" guides). Counts reconcile end to end and unchanged: **70** agents (73 `.md` in the 18 discipline dirs − 3 non-agent files in `strategy/`) = README badge = `AGENTS_INDEX.md` = `llms.txt` = both manifests = the live GitHub About (70 / 19 / 17 disciplines). No stale count anywhere.
+
+**Backlog selection + the finding.** P0 empty; P1 high-leverage (native subagents #1) blocked on in-thread decisions; `ops-legal-compliance` blocked on legal validation; P2 items are large builds ROUTINE says to propose as issues, or watch items filed today (`sidchaudhary/gtm-skills`, 0★, must survive contact first). The top items presenting as *unblocked* were the P1 **distribution** submissions — so I verified each against its own `CONTRIBUTING.md`, and two were **misrepresented in the queue**: `hesreallyhim/awesome-claude-code` requires **≥100 stars** (*"Resources that fail these criteria will be closed automatically"*) yet the backlog recorded only a soft "once README polished" gate; `VoltAgent/awesome-agent-skills` requires *"real community usage… Brand new skills… not accepted"* yet the backlog recorded **no gate at all**. At **5 stars** both auto-close or get declined, and the repo's no-fabrication guardrail forbids padding an entry with "used by" claims — so firing either now would spend a run on a PR that bounces off a 30k★ / 100★-minimum list. (Consistent with the earlier 08-18 run's instinct to defer distribution on unattended runs — this run makes that instinct explicit and cited in the item text rather than re-derived each time.)
+
+**Shipped:** `maintenance/backlog.md` — a section note under **P1 — distribution** stating all four items are traction/process-gated (verified 2026-08-18, 5 stars) and none is a valid "pull the top unblocked item" candidate, plus the two items rewritten with their exact primary-source gates. Line 22 also now records VoltAgent's exact entry format (Community → Marketing subcategory, ≤10-word description, PR title) so an *eligible* future run can execute without re-reading the rules. No agent/skill content changed; not user-facing, so no `CHANGELOG` entry and no count/discoverability sweep owed.
+
+**Verify:** backlog still parses as Markdown (no broken links introduced — the two new links are inline-code repo names, not link targets); whole-repo count reconciliation re-confirmed 70/19/17 including the live GitHub About; no agent files touched, so lint state unchanged (70/70 from this run's health check).
+
+---
+
 ### 2026-08-18 — Content Optimizer gains the single hand-built comparison/alternatives page (automated maintenance-routine run)
 
 **Job:** [ROUTINE.md](ROUTINE.md), one iteration — health check first, then the top unblocked backlog item.
