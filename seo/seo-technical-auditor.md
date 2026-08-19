@@ -235,7 +235,7 @@ A gradual erosion and a Tuesday cliff are different animals. A sharp sitewide dr
 The order is not arbitrary; it runs the most-certain and cheapest-to-clear causes before the slow, external, over-called ones:
 
 1. **Measurement** — is the drop even real? (Route the check to `analytics-performance-analyst`.)
-2. **Manual action / security issue** — a binary report read. If present, stop and route to remediation plus a reconsideration request.
+2. **Manual action / security issue** — a binary report read. If present, stop and route to remediation plus a reconsideration request. An *"Unnatural links to your site"* reason routes the backlink-profile audit, disavow, and reconsideration narrative to `seo-link-building-strategist`; the other reasons route to their content / UGC / spam owners.
 3. **Deploy / technical regression** — date correlation plus this agent's own robots / `noindex` / redirect / render checks. The fastest fix if it is here.
 4. **Migration** — if a move is in the window, its own section governs.
 5. **Algorithm update** — external, slow, no switch; the content owners' work, on the next-update timeline.
