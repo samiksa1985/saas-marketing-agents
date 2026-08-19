@@ -20,7 +20,7 @@ This project is **actively maintained**. Shipped work is in the [CHANGELOG](CHAN
 
 ## Later
 
-- **GitHub Pages catalog** — a browsable, copy-to-clipboard site for all 70 agents.
+- **GitHub Pages catalog** — a browsable, copy-to-clipboard site for all 71 agents.
 - **MCP tool recipes** — connect analytics/SEO/CRM tools (GA4, GSC, HubSpot, Ahrefs) so agents move from advisory to executable.
 - **Evaluation harness** — rubrics and regression checks for agent output quality.
 - **De-duplicate agent sources** — single source of truth for each persona, with the browseable and installable copies generated from it.

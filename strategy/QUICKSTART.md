@@ -19,7 +19,7 @@ You need these systems in place (or committed to setup during Phase 2):
 ### 2. Human Resources
 Minimum viable team by operating mode:
 
-**CATALYST-Full** (70 agents):
+**CATALYST-Full** (71 agents):
 - Option A: Full 15-25 person in-house marketing team
 - Option B: 5-8 person core team + agency partners filling specialist roles
 - Option C: Network of freelance specialists coordinated by 2-3 project managers

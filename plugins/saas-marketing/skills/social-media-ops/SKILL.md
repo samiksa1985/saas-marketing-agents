@@ -1,6 +1,6 @@
 ---
 name: social-media-ops
-description: "Comprehensive social media operations for B2B SaaS brand building and engagement. Use this skill to develop LinkedIn strategy, manage Twitter/X presence, create YouTube content, engage on Reddit communities, build community, develop influencer partnerships, and execute organic social campaigns. Also triggers on: LinkedIn, Twitter/X, YouTube, Reddit, community, influencer, social media strategy, organic social, employee advocacy."
+description: "Comprehensive social media operations for B2B SaaS brand building and engagement. Use this skill to develop LinkedIn strategy, manage Twitter/X presence, create YouTube content, engage on Reddit communities, build community, develop influencer partnerships, start or fix a B2B podcast, book podcast guests and guest appearances, write show notes and transcripts, and execute organic social campaigns. Also triggers on: LinkedIn, Twitter/X, YouTube, Reddit, community, influencer, social media strategy, organic social, employee advocacy, podcast, podcast strategy, podcast guesting, show notes, audiogram, episode transcript."
 ---
 
 # Social Media Operations Skill
@@ -20,7 +20,7 @@ description: "Comprehensive social media operations for B2B SaaS brand building 
 
 The Social Media Operations skill coordinates a team of 6 specialist agents to build brand visibility, drive engagement, and establish authority across social platforms. From strategic LinkedIn thought leadership and community building to YouTube content production and influencer partnerships, this team executes across every major social channel. This skill enables you to leverage organic social as a sustainable acquisition and brand-building channel, reducing dependence on paid media.
 
-## The Team: 6 Specialist Agents
+## The Team: 7 Specialist Agents
 
 | # | Agent | File | What They Do |
 |---|-------|------|-------------|
@@ -30,6 +30,7 @@ The Social Media Operations skill coordinates a team of 6 specialist agents to b
 | 4 | Reddit Specialist | `agents/social-reddit-specialist.md` | Identifies relevant subreddits, engages authentically in communities, answers questions, shares expertise, and develops soft-sell participation strategy. Prevents spamming while building credibility. |
 | 5 | Community Builder | `agents/social-community-builder.md` | Develops community strategy, moderates discussions, identifies community leaders, enables user-generated content, and transforms followers into advocates. Manages Discord, Slack communities, forums. |
 | 6 | Influencer Partnership Manager | `agents/social-influencer-partnerships.md` | Identifies relevant influencers, manages partnership relationships, coordinates content collaborations, tracks campaign performance, and negotiates terms. |
+| 7 | Podcast & Audio Strategist | `agents/social-podcast-strategist.md` | Decides whether the company should run a show at all, builds the guest list as an account plan, books the guest tour on other people's shows, produces proofread transcripts and show notes, and holds the rights, consent and FTC disclosure register. Measures pipeline, never downloads. |
 
 ## How to Use
 
@@ -75,6 +76,15 @@ The Social Media Operations skill coordinates a team of 6 specialist agents to b
 - "Develop partnership strategy with [influencer name]" → Influencer Partnership Manager
 - "Create influencer marketing campaign" → Influencer Partnership Manager
 - "Manage ongoing influencer relationships" → Influencer Partnership Manager
+
+**Podcast & Audio**
+- "Should we start a podcast?" → Podcast & Audio Strategist (the go/no-go comes first)
+- "Our podcast stalled after 8 episodes—what went wrong?" → Podcast & Audio Strategist
+- "Who should we book as guests?" → Podcast & Audio Strategist (guest list as account plan)
+- "Get me booked on podcasts our buyers listen to" → Podcast & Audio Strategist (guest tour)
+- "Write show notes and clean up this episode transcript" → Podcast & Audio Strategist
+- "How do we measure whether the podcast is working?" → Podcast & Audio Strategist (never downloads)
+- "Do we have to disclose that we paid for this guest spot?" → Podcast & Audio Strategist (16 CFR § 255.5), with the legal verdict from Legal Compliance Officer
 
 **Integrated Social Campaigns**
 - "Build coordinated social strategy across all channels" → All agents coordinate

@@ -1,12 +1,12 @@
 # SaaS Marketing Agents — Full Index
 
-**70 specialist B2B SaaS marketing agents across 17 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
+**71 specialist B2B SaaS marketing agents across 17 disciplines**, coordinated by the [CATALYST orchestrator](plugins/saas-marketing/skills/catalyst-orchestrator/SKILL.md).
 
 Each agent is a self-contained Markdown persona (Identity · Core Mission · Critical Rules · Deliverables · Success Metrics). Install the whole team as a Claude Code plugin — `/plugin marketplace add shalintripathi/saas-marketing-agents` then `/plugin install saas-marketing@saas-marketing-agents` — or open any file below directly in your AI tool. See the [README](README.md) for the quick start.
 
 **Jump to:** [Content Marketing](#content-marketing) · [SEO & Organic Growth](#seo--organic-growth) · [Paid Media](#paid-media) · [Social Media](#social-media) · [Email Marketing](#email-marketing) · [Design](#design) · [Sales Enablement](#sales-enablement) · [Product Marketing](#product-marketing) · [Account-Based Marketing](#account-based-marketing) · [Growth](#growth) · [Analytics](#analytics) · [Communications](#communications) · [Partnerships](#partnerships) · [Events & Field Marketing](#events--field-marketing) · [Developer Marketing](#developer-marketing) · [Project Management](#project-management) · [Client Operations](#client-operations)
 
-> **70 agents** indexed below. Last generated 2026-08-17.
+> **71 agents** indexed below. Last generated 2026-08-19.
 
 ---
 
@@ -53,13 +53,14 @@ _6 agents_
 
 ## Social Media
 
-_6 agents_
+_7 agents_
 
 | | Agent | File | Role |
 |---|---|---|---|
 | 🏘️ | **Community Strategist** | [`social/social-community-builder.md`](social/social-community-builder.md) | SaaS community-led growth expert building engaged, self-sustaining communities across Slack, Discord, and forums that drive retention and advocacy |
 | 🤝 | **B2B Influencer & Creator Partnerships Manager** | [`social/social-influencer-partnerships.md`](social/social-influencer-partnerships.md) | SaaS partnership strategist who identifies, recruits, and manages micro-influencers and industry creators to amplify brand reach and drive qualified leads |
 | 💼 | **LinkedIn Organic Strategist** | [`social/social-linkedin-strategist.md`](social/social-linkedin-strategist.md) | B2B SaaS LinkedIn master who transforms brands into industry thought leaders through algorithm-native organic strategies |
+| 🎙️ | **Podcast & Audio Strategist** | [`social/social-podcast-strategist.md`](social/social-podcast-strategist.md) | Runs the B2B podcast as a relationship engine, not a media property — the go/no-go on having a show, a guest list that doubles as an account plan, the guest tour on other people's shows, and a scoreboard that refuses to be downloads |
 | 🔴 | **Reddit Community Specialist** | [`social/social-reddit-specialist.md`](social/social-reddit-specialist.md) | B2B SaaS expert in authentic Reddit engagement, the 90/10 rule, and building credibility through value-first community contribution |
 | 🐦 | **Twitter/X Strategist** | [`social/social-twitter-strategist.md`](social/social-twitter-strategist.md) | B2B SaaS authority on X/Twitter real-time engagement, thread mechanics, and community-driven growth for tech brands |
 | ▶️ | **YouTube Producer & Content Strategist** | [`social/social-youtube-producer.md`](social/social-youtube-producer.md) | B2B SaaS YouTube specialist who builds searchable, watch-time-optimized educational video content that attracts and converts decision-makers |
