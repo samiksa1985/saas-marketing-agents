@@ -4,6 +4,20 @@ Append-only log of every maintenance run. Newest first. Each entry: date, what s
 
 ---
 
+### 2026-08-19 — Maintenance: **P0 stale-count fix** — sync the two surfaces the podcast add missed (automated)
+
+**Job:** [ROUTINE.md](ROUTINE.md), one iteration. **Health check first.** Ran the full pass: broken internal `.md` links (**205 files, 0 broken**), manifests (`marketplace.json` + `plugin.json` both valid via `jq`), every skill has a `SKILL.md` with `name` + `description` (**19/19**), `Last reviewed` dates (playbook 2026-08-13, integrations 2026-07-23 — both well inside 90 days), and — the emphasis this run — **stale public counts** against reality (`find` = 71 agent files across 18 category dirs; `ls plugins/.../skills/` = 19) and the **live GitHub About** (`gh repo view` = "71 specialist marketing agents and 19 installable Claude Code skills").
+
+**Found and fixed one P0.** Today's earlier Skill Scout run (commit `3b63a6b`, Podcast & Audio Strategist) grew the roster **70 → 71** and swept the primary surfaces correctly (README + both badges, `AGENTS_INDEX.md`, `llms.txt`, `CITATION.cff`, both manifests, the suite router, the About description — all verified 71 this run). But `grep -rniE '70 (agents|specialist|personas)'` surfaced **three secondary spots still on 70**:
+- [`ROADMAP.md`](../ROADMAP.md) "Native subagents" — *"expose the **70** personas"* → **71** (a direct, now-false roster assertion; the same line was corrected 59 → 69 on 2026-08-17 but missed the two subsequent adds).
+- [`strategy/QUICKSTART.md`](../strategy/QUICKSTART.md) ×2 — the CATALYST-Full team-size ranges *"Agent Pool (40-**70** specialists)"* and *"Team: 40-**70** agents"* → **40-71**, aligning them with the same page's "CATALYST-Full (**71** agents)."
+
+**Verified after the fix:** re-grep for `70 (agents|specialist|personas)` / `expose the 70` outside `maintenance/` and `CHANGELOG` returns **nothing**; ROADMAP and QUICKSTART are single-located (no dual copies to sync); no links added or removed, so the 0-broken link state holds. Also confirmed today's podcast agent itself is clean: the two dual-located copies are **diff-identical**, lint **2/2**, and it is registered in `AGENTS_INDEX.md` (Social Media now 7) and the `social-media-ops` skill table.
+
+**Deferred:** nothing actionable. P1 high-leverage is done or blocked (native-subagents is [#1](https://github.com/shalintripathi/saas-marketing-agents/issues/1), blocked on two in-thread decisions); the distribution queue is entirely traction-gated (5 stars, verified 2026-08-18); the open scout-curation items are the Skill Scout track's queue and it already shipped its one change today (the podcast add) — a freshness pass 6 days after the last (playbook 2026-08-13) would risk a padding commit. One P0 fixed is this run's one change.
+
+---
+
 ### 2026-08-19 — Skill Scout: **ADD** — the largest untouched channel in the repo finally has an owner (automated)
 
 **Job:** [SKILL_SCOUT.md](SKILL_SCOUT.md), one iteration. **This run ADDED.** The 08-18 run enhanced, so the alternation rule put an add first this run; the discipline rotation put **organic social** in focus, last a primary focus on 2026-08-07.

@@ -3,7 +3,7 @@
 Prioritized queue for the [maintenance routine](ROUTINE.md). Each run pulls the top unblocked item. `P0` = correctness/health (do first). `P1` = high-leverage growth. `P2` = nice-to-have. Mark items `[x]` when done and note the date; keep this list honest.
 
 ## P0 — correctness & health (always first if present)
-- [ ] (none open — health checks pass as of 2026-07-21)
+- [ ] (none open — health checks pass as of 2026-08-19, after fixing three stale `70`→`71` roster counts in ROADMAP.md and QUICKSTART.md that the 2026-08-19 podcast add missed)
 
 ## P1 — high-leverage
 - [x] Add `brand-context.md` template + wire the CATALYST orchestrator to read it first, so agent output is tailored to a user's ICP/product/voice. — done 2026-07-21 (`templates/brand-context.md`; orchestrator Step 0).
