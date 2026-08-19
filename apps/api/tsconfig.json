@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "references": [
+    { "path": "../../packages/config" },
+    { "path": "../../packages/i18n" },
+    { "path": "../../packages/domain" }
+  ],
+  "include": ["src/**/*.ts"]
+}

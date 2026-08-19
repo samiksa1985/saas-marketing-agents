@@ -1,0 +1,29 @@
+{
+  "name": "saas-marketing-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@10",
+  "engines": { "node": ">=22.0.0" },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "tsc -b && npm --workspace apps/web run build",
+    "dev": "concurrently \"npm:dev:api\" \"npm:dev:web\" \"npm:dev:worker\"",
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:worker": "npm --workspace apps/worker run dev",
+    "typecheck": "tsc -b --pretty false && npm --workspace apps/web run typecheck",
+    "lint": "prettier --check apps packages",
+    "test": "tsx --test packages/*/src/**/*.test.ts",
+    "db:generate": "npm --workspace packages/db run generate",
+    "db:migrate": "npm --workspace packages/db run migrate",
+    "db:check": "npm --workspace packages/db run check",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "concurrently": "^9.1.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@platform/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "prettier --check src",
+    "test": "node --test",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "check": "tsx src/check.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.27.1",
+    "@types/node": "^22.10.0"
+  }
+}

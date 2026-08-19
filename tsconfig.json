@@ -1,0 +1,23 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/config" },
+    { "path": "./packages/contracts" },
+    { "path": "./packages/domain" },
+    { "path": "./packages/i18n" },
+    { "path": "./packages/registry" },
+    { "path": "./packages/validation" },
+    { "path": "./packages/artifacts" },
+    { "path": "./packages/handoffs" },
+    { "path": "./packages/approvals" },
+    { "path": "./packages/audit" },
+    { "path": "./packages/auth" },
+    { "path": "./packages/agent-runtime" },
+    { "path": "./packages/workflow-runtime" },
+    { "path": "./packages/ai-gateway" },
+    { "path": "./packages/tool-gateway" },
+    { "path": "./packages/db" },
+    { "path": "./apps/api" },
+    { "path": "./apps/worker" }
+  ]
+}

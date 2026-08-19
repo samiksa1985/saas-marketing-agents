@@ -106,3 +106,12 @@ personal/
 .env.local
 .env.*.local
 debug.log
+
+# Generated build artifacts
+.next/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+node_modules/
+coverage/

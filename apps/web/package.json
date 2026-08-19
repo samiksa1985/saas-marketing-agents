@@ -1,0 +1,23 @@
+{
+  "name": "@platform/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3000",
+    "typecheck": "tsc --noEmit",
+    "lint": "prettier --check app",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@platform/i18n": "0.1.0",
+    "next": "^15.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.2"
+  }
+}
