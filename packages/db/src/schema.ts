@@ -30,21 +30,30 @@ export const entityStatusEnum = pgEnum('entity_status', [
 ]);
 export const workflowStatusEnum = pgEnum('workflow_status', [
   'created',
+  'ready',
   'running',
+  'awaiting_validation',
+  'awaiting_human',
+  'accepted',
+  'blocked',
+  'repair_required',
+  'retryable_failure',
   'paused',
-  'completed',
   'failed',
-  'stopped',
+  'cancelled',
+  'superseded',
 ]);
 export const taskStatusEnum = pgEnum('task_status', [
   'created',
   'ready',
+  'claimed',
   'running',
   'blocked',
   'awaiting_validation',
   'awaiting_human',
   'accepted',
   'repair_required',
+  'retryable_failure',
   'failed',
   'cancelled',
 ]);

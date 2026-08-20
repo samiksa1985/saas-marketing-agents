@@ -1,0 +1,11 @@
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'ready';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'awaiting_validation';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'awaiting_human';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'accepted';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'blocked';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'repair_required';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'retryable_failure';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'cancelled';
+ALTER TYPE workflow_status ADD VALUE IF NOT EXISTS 'superseded';
+ALTER TYPE task_status ADD VALUE IF NOT EXISTS 'claimed';
+ALTER TYPE task_status ADD VALUE IF NOT EXISTS 'retryable_failure';

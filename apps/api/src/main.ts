@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
 import { RegistryController, RegistryService } from './registry.controller.js';
+import { WorkflowApiService, WorkflowController } from './workflow.controller.js';
 
 @Injectable()
 class AppService {
@@ -30,8 +31,8 @@ class AppController {
   }
 }
 @Module({
-  controllers: [AppController, RegistryController],
-  providers: [AppService, RegistryService],
+  controllers: [AppController, RegistryController, WorkflowController],
+  providers: [AppService, RegistryService, WorkflowApiService],
 })
 class AppModule {}
 

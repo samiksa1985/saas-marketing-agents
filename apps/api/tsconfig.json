@@ -10,7 +10,8 @@
     { "path": "../../packages/config" },
     { "path": "../../packages/i18n" },
     { "path": "../../packages/domain" },
-    { "path": "../../packages/registry" }
+    { "path": "../../packages/registry" },
+    { "path": "../../packages/workflow-runtime" }
   ],
   "include": ["src/**/*.ts"]
 }
