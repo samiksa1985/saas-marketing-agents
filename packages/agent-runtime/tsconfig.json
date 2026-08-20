@@ -1,6 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "references": [{ "path": "../contracts" }, { "path": "../validation" }],
+  "references": [
+    { "path": "../contracts" },
+    { "path": "../validation" },
+    { "path": "../ai-gateway" }
+  ],
   "include": ["src/**/*.ts"]
 }

@@ -843,8 +843,39 @@ export class InMemoryWorkflowRuntime implements WorkflowRuntime {
   }
 }
 
-export class LocalWorkflowExecutor {
+export class LocalWorkflowExecutor implements WorkflowRuntime {
   constructor(private readonly runtime: InMemoryWorkflowRuntime) {}
+  createWorkflow(input: CreateWorkflowInput): Promise<Workflow> {
+    return this.runtime.createWorkflow(input);
+  }
+  start(
+    workflowId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Workflow> {
+    return this.runtime.start(workflowId, context, metadata);
+  }
+  pause(
+    workflowId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Workflow> {
+    return this.runtime.pause(workflowId, context, metadata);
+  }
+  resume(
+    workflowId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Workflow> {
+    return this.runtime.resume(workflowId, context, metadata);
+  }
+  cancel(
+    workflowId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Workflow> {
+    return this.runtime.cancel(workflowId, context, metadata);
+  }
   async run(
     workflowId: string,
     context: TenantContext,
@@ -867,3 +898,5 @@ export class LocalWorkflowExecutor {
     }
   }
 }
+
+export * from './temporal.js';

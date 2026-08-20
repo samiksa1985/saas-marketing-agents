@@ -512,3 +512,144 @@ export const auditEvents = pgTable(
   },
   (table) => [index('audit_events_tenant_occurred_idx').on(table.tenantId, table.occurredAt)],
 );
+
+export const executionRuns = pgTable(
+  'execution_runs',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    workflowId: uuid('workflow_id')
+      .notNull()
+      .references(() => workflows.id),
+    status: varchar('status', { length: 40 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 200 }).notNull(),
+    correlationId: varchar('correlation_id', { length: 200 }).notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('execution_runs_idempotency_unique').on(table.tenantId, table.idempotencyKey),
+    index('execution_runs_workflow_idx').on(table.tenantId, table.workflowId),
+  ],
+);
+export const executionSteps = pgTable(
+  'execution_steps',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    executionRunId: uuid('execution_run_id')
+      .notNull()
+      .references(() => executionRuns.id),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id),
+    executionId: varchar('execution_id', { length: 200 }).notNull(),
+    status: varchar('status', { length: 40 }).notNull(),
+    attemptNumber: integer('attempt_number').notNull().default(1),
+    correlationId: varchar('correlation_id', { length: 200 }).notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('execution_steps_execution_unique').on(table.tenantId, table.executionId),
+    index('execution_steps_task_idx').on(table.tenantId, table.taskId),
+  ],
+);
+export const providerCalls = pgTable(
+  'provider_calls',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    executionId: varchar('execution_id', { length: 200 }).notNull(),
+    provider: varchar('provider', { length: 80 }).notNull(),
+    model: varchar('model', { length: 120 }).notNull(),
+    status: varchar('status', { length: 40 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 200 }).notNull(),
+    correlationId: varchar('correlation_id', { length: 200 }).notNull(),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('provider_calls_idempotency_unique').on(table.tenantId, table.idempotencyKey),
+    index('provider_calls_execution_idx').on(table.tenantId, table.executionId),
+  ],
+);
+export const providerUsage = pgTable(
+  'provider_usage',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    providerCallId: uuid('provider_call_id')
+      .notNull()
+      .references(() => providerCalls.id),
+    inputTokens: integer('input_tokens').notNull(),
+    outputTokens: integer('output_tokens').notNull(),
+    totalTokens: integer('total_tokens').notNull(),
+    estimatedCost: text('estimated_cost').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('provider_usage_tenant_idx').on(table.tenantId, table.providerCallId)],
+);
+export const retryAttempts = pgTable(
+  'retry_attempts',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    executionStepId: uuid('execution_step_id')
+      .notNull()
+      .references(() => executionSteps.id),
+    attemptNumber: integer('attempt_number').notNull(),
+    reason: text('reason').notNull(),
+    retryable: boolean('retryable').notNull(),
+    createdAt: times.createdAt,
+  },
+  (table) => [
+    uniqueIndex('retry_attempts_unique').on(table.executionStepId, table.attemptNumber),
+    index('retry_attempts_tenant_idx').on(table.tenantId),
+  ],
+);
+export const workflowEvents = pgTable(
+  'workflow_events',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    workflowId: uuid('workflow_id')
+      .notNull()
+      .references(() => workflows.id),
+    taskId: uuid('task_id').references(() => tasks.id),
+    executionId: varchar('execution_id', { length: 200 }),
+    eventType: varchar('event_type', { length: 120 }).notNull(),
+    correlationId: varchar('correlation_id', { length: 200 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('workflow_events_tenant_workflow_idx').on(
+      table.tenantId,
+      table.workflowId,
+      table.occurredAt,
+    ),
+    index('workflow_events_execution_idx').on(table.tenantId, table.executionId),
+  ],
+);
+export const executionErrors = pgTable(
+  'execution_errors',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    executionId: varchar('execution_id', { length: 200 }).notNull(),
+    workflowId: uuid('workflow_id')
+      .notNull()
+      .references(() => workflows.id),
+    taskId: uuid('task_id').references(() => tasks.id),
+    code: varchar('code', { length: 80 }).notNull(),
+    message: text('message').notNull(),
+    retryable: boolean('retryable').notNull(),
+    correlationId: varchar('correlation_id', { length: 200 }).notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('execution_errors_tenant_execution_idx').on(table.tenantId, table.executionId)],
+);

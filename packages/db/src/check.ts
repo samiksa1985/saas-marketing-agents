@@ -28,6 +28,13 @@ const requiredTables = [
   'approvalRequests',
   'approvalDecisions',
   'auditEvents',
+  'executionRuns',
+  'executionSteps',
+  'providerCalls',
+  'providerUsage',
+  'retryAttempts',
+  'workflowEvents',
+  'executionErrors',
 ];
 const missing = requiredTables.filter((table) => !(table in schema));
 if (missing.length > 0)

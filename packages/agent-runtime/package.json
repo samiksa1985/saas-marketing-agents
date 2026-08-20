@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@platform/contracts": "0.1.0",
-    "@platform/validation": "0.1.0"
+    "@platform/validation": "0.1.0",
+    "@platform/ai-gateway": "0.1.0"
   }
 }
