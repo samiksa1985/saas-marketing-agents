@@ -34,7 +34,9 @@ function extractFrontMatter(
 
   const result: Record<string, string> = {};
 
-  for (const line of match[1].split('\n')) {
+  const body = match[1] ?? '';
+
+  for (const line of body.split('\n')) {
     const separator = line.indexOf(':');
 
     if (separator < 1) {
