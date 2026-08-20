@@ -28,6 +28,7 @@ const agentDirectories = [
   'seo',
   'social',
 ];
+
 const frontmatterPattern = /^---\n([\s\S]*?)\n---\n/;
 
 function findRepositoryRoot(start: string): string {
@@ -190,7 +191,11 @@ export class RegistryLoader {
 
   private async parseWorkstream(sourcePath: string): Promise<WorkstreamDefinition> {
     const source = await this.required(sourcePath);
-    const workstreamId = sourcePath.match(/strategy\/workstreams\/(\d{2})-/)?.[1];
+
+    // Normalize Windows paths so the parser behaves the same on Windows and Unix.
+    const normalizedSourcePath = sourcePath.replace(/\\/g, '/');
+    const workstreamId = normalizedSourcePath.match(/strategy\/workstreams\/(\d{2})-/)?.[1];
+
     if (!workstreamId)
       throw new RegistryValidation(`Workstream ID cannot be resolved in ${sourcePath}`);
     const revision = hash(source);
@@ -229,6 +234,7 @@ export interface RegistrySnapshot {
   workstreams: WorkstreamDefinition[];
   graphSource: string;
 }
+
 export function createRegistrySnapshot(
   agents: AgentDefinition[] = [],
   workstreams: WorkstreamDefinition[] = [],
