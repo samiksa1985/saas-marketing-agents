@@ -1,4 +1,35 @@
-import { tenants, users, engagements, artifacts, auditEvents } from './schema.js';
-const tables = [tenants, users, engagements, artifacts, auditEvents];
-if (tables.length !== 5) throw new Error('Database schema foundation is incomplete');
-console.log(`Database schema foundation validated: ${tables.length} tables`);
+import * as schema from './schema.js';
+
+const requiredTables = [
+  'tenants',
+  'tenantMembers',
+  'roles',
+  'permissions',
+  'engagements',
+  'workflows',
+  'workflowGraphSnapshots',
+  'tasks',
+  'taskAttempts',
+  'taskDependencies',
+  'executionLeases',
+  'agentDefinitions',
+  'agentVersions',
+  'agentCapabilities',
+  'workstreamDefinitions',
+  'workstreamVersions',
+  'dependencyEdges',
+  'gateDefinitions',
+  'artifacts',
+  'artifactVersions',
+  'artifactDependencies',
+  'artifactValidations',
+  'handoffs',
+  'handoffDecisions',
+  'approvalRequests',
+  'approvalDecisions',
+  'auditEvents',
+];
+const missing = requiredTables.filter((table) => !(table in schema));
+if (missing.length > 0)
+  throw new Error(`Database schema foundation is incomplete: ${missing.join(', ')}`);
+console.log(`Database schema foundation validated: ${requiredTables.length} tables`);

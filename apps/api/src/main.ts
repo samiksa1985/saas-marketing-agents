@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
+import { RegistryController, RegistryService } from './registry.controller.js';
 
 @Injectable()
 class AppService {
@@ -28,7 +29,10 @@ class AppController {
     return createLocaleContext(locale);
   }
 }
-@Module({ controllers: [AppController], providers: [AppService] })
+@Module({
+  controllers: [AppController, RegistryController],
+  providers: [AppService, RegistryService],
+})
 class AppModule {}
 
 const config = loadConfig();

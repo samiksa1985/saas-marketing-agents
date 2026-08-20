@@ -9,7 +9,8 @@
   "references": [
     { "path": "../../packages/config" },
     { "path": "../../packages/i18n" },
-    { "path": "../../packages/domain" }
+    { "path": "../../packages/domain" },
+    { "path": "../../packages/registry" }
   ],
   "include": ["src/**/*.ts"]
 }

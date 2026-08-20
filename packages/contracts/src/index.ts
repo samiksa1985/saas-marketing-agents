@@ -2,6 +2,22 @@ import type { Locale } from '@platform/i18n';
 export type { Locale } from '@platform/i18n';
 
 export type Id = string;
+export type Version = string;
+export type AgentStatus = 'active' | 'inactive' | 'archived';
+export type DependencyKind = 'blocking' | 'optional' | 'informational' | 'unresolved';
+export type ReadinessState = 'ready' | 'blocked' | 'invalid';
+export type ValidationState = 'valid' | 'invalid' | 'unresolved';
+export type TaskStatus =
+  | 'created'
+  | 'ready'
+  | 'running'
+  | 'blocked'
+  | 'awaiting_validation'
+  | 'awaiting_human'
+  | 'accepted'
+  | 'repair_required'
+  | 'failed'
+  | 'cancelled';
 export type EntityStatus = 'active' | 'inactive' | 'blocked' | 'archived';
 export type ArtifactStatus =
   | 'draft'
@@ -45,6 +61,97 @@ export type Permission =
   | 'artifact:write'
   | 'approval:decide'
   | 'audit:read';
+export interface AgentDefinition {
+  agentId: string;
+  name: string;
+  specialty: string;
+  category: string;
+  sourcePath: string;
+  sourceRevision: string;
+  inputContractSummary: string;
+  outputContractSummary: string;
+  approvalRequirements: string[];
+  active: boolean;
+  version: Version;
+}
+export interface AgentVersion extends AgentDefinition {
+  versionId: Id;
+  agentId: string;
+}
+export interface WorkstreamDefinition {
+  workstreamId: string;
+  name: string;
+  sourcePath: string;
+  sourceRevision: string;
+  objective: string;
+  upstreamDependencies: string[];
+  downstreamConsumers: string[];
+  outputs: string[];
+  acceptanceCriteria: string[];
+  blockingDependencies: string[];
+  optionalDependencies: string[];
+  approvalGates: string[];
+  unresolvedInputs: string[];
+  version: Version;
+}
+export interface WorkstreamVersion extends WorkstreamDefinition {
+  versionId: Id;
+  workstreamId: string;
+}
+export interface DependencyEdge {
+  id: Id;
+  graphVersion: Version;
+  fromWorkstreamId: string;
+  toWorkstreamId: string;
+  kind: DependencyKind;
+  source: string;
+  unresolvedReason?: string;
+}
+export interface WorkflowGraphSnapshot {
+  version: Version;
+  sourcePath: string;
+  sourceRevision: string;
+  workstreamIds: string[];
+  edges: DependencyEdge[];
+  hasCycles: boolean;
+}
+export interface Task {
+  id: Id;
+  tenantId: Id;
+  workflowId: Id;
+  workstreamId: string;
+  status: TaskStatus;
+}
+export interface TaskDependency {
+  taskId: Id;
+  dependsOnTaskId: Id;
+  kind: DependencyKind;
+  satisfied: boolean;
+}
+export interface ArtifactReference {
+  artifactId: Id;
+  version: Version;
+  tenantId: Id;
+  status: ArtifactStatus;
+  accepted: boolean;
+}
+export interface ReadinessResult {
+  state: ReadinessState;
+  reasons: string[];
+  satisfiedDependencies: string[];
+  unresolvedDependencies: string[];
+}
+export interface ValidationResult {
+  state: ValidationState;
+  reasons: string[];
+}
+export interface TenantContext {
+  tenantId: Id;
+  userId?: Id;
+  roles: Role[];
+  permissions: Permission[];
+  locale: Locale;
+}
 export interface Engagement {
   id: Id;
   tenantId: Id;
