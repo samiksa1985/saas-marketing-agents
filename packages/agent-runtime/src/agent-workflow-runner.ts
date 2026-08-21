@@ -16,14 +16,21 @@ import {
 } from './execution-orchestrator.js';
 
 import {
-  AgentArtifactCompletionService,
-} from './agent-artifact-completion.js';
+  AgentWorkflowCompleter,
+} from './agent-workflow-completer.js';
 
 import {
   WorkflowAgentExecutor,
   type WorkflowAgentExecutionResult,
   type WorkflowAgentRequestBuilder,
 } from './workflow-agent-executor.js';
+
+import {
+  WorkflowOrchestrator,
+  type WorkflowTaskExecutionContext,
+  type WorkflowTaskExecutionResult,
+  type WorkflowTaskExecutor,
+} from './workflow-orchestrator.js';
 
 export interface AgentWorkflowRunnerRequest {
   workflowId: string;
@@ -62,12 +69,60 @@ export interface AgentWorkflowRunnerOptions {
     WorkflowAgentRequestBuilder;
 }
 
+class AgentWorkflowTaskExecutor
+  implements WorkflowTaskExecutor {
+  public lastExecution:
+    WorkflowAgentExecutionResult |
+    undefined;
+
+  constructor(
+    private readonly agentExecutor:
+      WorkflowAgentExecutor,
+  ) {}
+
+  async execute(
+    context:
+      WorkflowTaskExecutionContext,
+  ): Promise<WorkflowTaskExecutionResult> {
+    const execution =
+      await this.agentExecutor.execute({
+        workflow:
+          context.workflow,
+
+        task:
+          context.task,
+
+        tenantContext:
+          context.tenantContext,
+
+        inputArtifacts:
+          context.inputArtifacts,
+      });
+
+    this.lastExecution =
+      execution;
+
+    return {
+      artifact:
+        execution.artifact as unknown as ProposedArtifact,
+    };
+  }
+
+  clear(): void {
+    this.lastExecution =
+      undefined;
+  }
+}
+
 export class AgentWorkflowRunner {
   private readonly agentExecutor:
     WorkflowAgentExecutor;
 
-  private readonly artifactCompletion:
-    AgentArtifactCompletionService;
+  private readonly taskExecutor:
+    AgentWorkflowTaskExecutor;
+
+  private readonly workflowOrchestrator:
+    WorkflowOrchestrator;
 
   constructor(
     private readonly options:
@@ -82,9 +137,18 @@ export class AgentWorkflowRunner {
           options.requestBuilder,
       });
 
-    this.artifactCompletion =
-      new AgentArtifactCompletionService(
+    this.taskExecutor =
+      new AgentWorkflowTaskExecutor(
+        this.agentExecutor,
+      );
+
+    this.workflowOrchestrator =
+      new WorkflowOrchestrator(
         options.runtime,
+        this.taskExecutor,
+        new AgentWorkflowCompleter(
+          options.runtime,
+        ),
       );
   }
 
@@ -99,17 +163,6 @@ export class AgentWorkflowRunner {
         request.workflowId,
         request.tenantContext,
       );
-
-    if (
-      workflow.status ===
-      'created'
-    ) {
-      await this.options.runtime.start(
-        workflow.id,
-        request.tenantContext,
-        request.metadata,
-      );
-    }
 
     const tasks =
       this.options.runtime.getTasks(
@@ -136,136 +189,110 @@ export class AgentWorkflowRunner {
       };
     }
 
-    const readyTask =
-      this.findNextReadyTask(
-        tasks,
-        request.tenantContext,
-      );
+    this.taskExecutor.clear();
 
-    if (!readyTask) {
+    const result =
+      await this.workflowOrchestrator.run({
+        workflowId:
+          request.workflowId,
+
+        tenantContext:
+          request.tenantContext,
+
+        metadata:
+          request.metadata,
+
+        maxTasks:
+          1,
+      });
+
+    const execution =
+      this.taskExecutor.lastExecution;
+
+    const record =
+      result.executedTasks[0];
+
+    if (
+      !record ||
+      !execution
+    ) {
+      const remainingTasks =
+        result.remainingTasks;
+
+      const blocked =
+        this.hasBlockedTasks(
+          remainingTasks,
+        );
+
+      const validationTask =
+        remainingTasks.find(
+          (task) =>
+            task.status ===
+            'awaiting_validation',
+        );
+
+      if (validationTask) {
+        return {
+          workflow:
+            result.workflow,
+
+          task:
+            validationTask,
+
+          stopReason:
+            'awaiting_existing_validation',
+        };
+      }
+
+      if (blocked) {
+        return {
+          workflow:
+            result.workflow,
+
+          stopReason:
+            'blocked',
+        };
+      }
+
       return {
-        workflow,
+        workflow:
+          result.workflow,
 
         stopReason:
-          this.hasBlockedTasks(
-            tasks,
-          )
-            ? 'blocked'
-            : 'no_ready_tasks',
+          'no_ready_tasks',
       };
     }
 
-    const lease =
-      await this.options.runtime.claimTask(
-        readyTask.id,
-
-        'agent-workflow-runner',
-
-        `${request.metadata.idempotencyKey}:${readyTask.id}`,
-
-        request.tenantContext,
-
-        {
-          ...request.metadata,
-
-          idempotencyKey:
-            `${request.metadata.idempotencyKey}:claim:${readyTask.id}`,
-        },
+    const completedTask =
+      result.remainingTasks.find(
+        (task) =>
+          task.id ===
+          record.taskId,
       );
 
-    const execution =
-      await this.agentExecutor.execute({
-        workflow,
+    const response: AgentWorkflowRunnerResult =
+      {
+        workflow:
+          result.workflow,
 
-        task:
-          readyTask,
+        lease:
+          record.lease,
 
-        tenantContext:
-          request.tenantContext,
+        execution,
 
-        inputArtifacts:
-          readyTask.inputArtifactReferences,
-      });
+        completedArtifact:
+          record.artifact,
 
-    const completion =
-      this.artifactCompletion.complete({
-        workflowId:
-          workflow.id,
+        stopReason:
+          'executed',
+      };
 
-        taskId:
-          readyTask.id,
-
-        tenantContext:
-          request.tenantContext,
-
-        artifact:
-          execution.artifact,
-
-        metadata: {
-          ...request.metadata,
-
-          reason:
-            'Agent execution completed with proposed artifact',
-
-          idempotencyKey:
-            `${request.metadata.idempotencyKey}:complete:${readyTask.id}`,
-        },
-      });
-
-    return {
-      workflow,
-
-      task:
-        completion.task,
-
-      lease,
-
-      execution,
-
-      completedArtifact:
-        completion.artifact,
-
-      stopReason:
-        'executed',
-    };
-  }
-
-  private findNextReadyTask(
-    tasks: Task[],
-    context: TenantContext,
-  ): Task | undefined {
-    const ordered =
-      [...tasks].sort(
-        (left, right) =>
-          left.workstreamId.localeCompare(
-            right.workstreamId,
-          ),
-      );
-
-    for (const task of ordered) {
-      if (
-        ![
-          'created',
-          'ready',
-          'repair_required',
-          'retryable_failure',
-        ].includes(task.status)
-      ) {
-        continue;
-      }
-
-      const readiness =
-        this.options.runtime.isTaskReady(
-          task.id,
-          context,
-        );
-
-      if (readiness.ready) {
-        return task;
-      }
+    if (completedTask) {
+      response.task =
+        completedTask;
     }
 
-    return undefined;
+    return response;
   }
 
   private hasBlockedTasks(
