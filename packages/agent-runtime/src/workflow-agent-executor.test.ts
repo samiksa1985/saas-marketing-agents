@@ -18,10 +18,12 @@ import type {
 
 import {
   AgentExecutionOrchestrator,
+  type AgentOrchestrationRequest,
 } from './execution-orchestrator.js';
 
 import {
   WorkflowAgentExecutor,
+  type WorkflowAgentExecutionRequest,
   type WorkflowAgentRequestBuilder,
 } from './workflow-agent-executor.js';
 
@@ -30,22 +32,23 @@ function context(
 ): TenantContext {
   return {
     tenantId,
+
     roles: [
       'tenant_admin',
     ],
+
     permissions: [
       'workflow:execute',
       'workflow:read',
       'artifact:read',
       'artifact:write',
     ],
+
     locale: 'en',
   };
 }
 
-function artifact(
-  overrides: Partial<ProposedAgentArtifact> = {},
-): ProposedAgentArtifact {
+function baseArtifact(): ProposedAgentArtifact {
   return {
     artifactId:
       'artifact-001',
@@ -84,9 +87,23 @@ function artifact(
 
     autoApproved:
       false,
-
-    ...overrides,
   };
+}
+
+function malformedArtifact(
+  overrides: {
+    tenantId?: string;
+    workflowId?: string;
+    taskId?: string;
+    workstreamId?: string;
+    accepted?: boolean;
+    autoApproved?: boolean;
+  } = {},
+): ProposedAgentArtifact {
+  return {
+    ...baseArtifact(),
+    ...overrides,
+  } as unknown as ProposedAgentArtifact;
 }
 
 const fakeDefinition: ParsedAgentDefinition = {
@@ -133,12 +150,15 @@ const fakeDefinition: ParsedAgentDefinition = {
 class FakeAgentExecutor
   implements AgentExecutor {
   public lastRequest:
-    | unknown
+    | Parameters<
+        AgentExecutor['execute']
+      >[0]
     | undefined;
 
   constructor(
-    private readonly resultArtifact =
-      artifact(),
+    private readonly resultArtifact:
+      ProposedAgentArtifact =
+        baseArtifact(),
   ) {}
 
   async execute(
@@ -157,10 +177,10 @@ class FakeAgentExecutor
         this.resultArtifact,
 
       usage: {
-        promptTokens:
+        inputTokens:
           10,
 
-        completionTokens:
+        outputTokens:
           20,
 
         totalTokens:
@@ -168,6 +188,9 @@ class FakeAgentExecutor
 
         estimatedCost:
           0.01,
+
+        currency:
+          'USD',
       },
 
       provider:
@@ -201,14 +224,13 @@ function createOrchestrator(
 }
 
 function createRequestBuilder(
-  overrides:
-    Partial<
-      ReturnType<
-        WorkflowAgentRequestBuilder
-      >
-    > = {},
+  overrides: Partial<
+    AgentOrchestrationRequest
+  > = {},
 ): WorkflowAgentRequestBuilder {
-  return (workflowContext) => ({
+  return (
+    workflowContext,
+  ): AgentOrchestrationRequest => ({
     tenantContext:
       workflowContext.tenantContext,
 
@@ -246,23 +268,30 @@ function createRequestBuilder(
         'mock',
 
       model:
-        'mock-model',
-
-      temperature:
-        0,
-
-      maxTokens:
-        1000,
+        'deterministic-v1',
 
       timeoutMs:
         10000,
 
-      maxCostUsd:
-        1,
+      maxRetries:
+        2,
 
       retryableErrors: [
         'rate_limited',
         'timeout',
+      ],
+
+      maxInputTokens:
+        4000,
+
+      maxOutputTokens:
+        2000,
+
+      costLimit:
+        1,
+
+      requiredCapabilities: [
+        'text-generation',
       ],
     },
 
@@ -273,7 +302,8 @@ function createRequestBuilder(
   });
 }
 
-function createWorkflowContext() {
+function createWorkflowContext():
+  WorkflowAgentExecutionRequest {
   return {
     workflow: {
       id:
@@ -398,12 +428,9 @@ test(
           createRequestBuilder(),
       });
 
-    const workflowContext =
-      createWorkflowContext();
-
     const result =
       await adapter.execute(
-        workflowContext,
+        createWorkflowContext(),
       );
 
     assert.equal(
@@ -435,23 +462,22 @@ test(
       result.artifact.autoApproved,
       false,
     );
+
+    assert.ok(
+      fakeExecutor.lastRequest,
+    );
   },
 );
 
 test(
   'workflow agent executor preserves tenant scope',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor();
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(),
+          ),
 
         requestBuilder:
           createRequestBuilder({
@@ -475,17 +501,12 @@ test(
 test(
   'workflow agent executor rejects workflow mismatch',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor();
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(),
+          ),
 
         requestBuilder:
           createRequestBuilder({
@@ -507,17 +528,12 @@ test(
 test(
   'workflow agent executor rejects task mismatch',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor();
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(),
+          ),
 
         requestBuilder:
           createRequestBuilder({
@@ -539,17 +555,12 @@ test(
 test(
   'workflow agent executor rejects workstream mismatch',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor();
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(),
+          ),
 
         requestBuilder:
           createRequestBuilder({
@@ -571,22 +582,17 @@ test(
 test(
   'workflow agent executor rejects cross-tenant artifact',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor(
-        artifact({
-          tenantId:
-            'tenant-b',
-        }),
-      );
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(
+              malformedArtifact({
+                tenantId:
+                  'tenant-b',
+              }),
+            ),
+          ),
 
         requestBuilder:
           createRequestBuilder(),
@@ -605,22 +611,17 @@ test(
 test(
   'workflow agent executor rejects accepted artifacts',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor(
-        artifact({
-          accepted:
-            true,
-        }),
-      );
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(
+              malformedArtifact({
+                accepted:
+                  true,
+              }),
+            ),
+          ),
 
         requestBuilder:
           createRequestBuilder(),
@@ -639,22 +640,17 @@ test(
 test(
   'workflow agent executor rejects auto-approved artifacts',
   async () => {
-    const fakeExecutor =
-      new FakeAgentExecutor(
-        artifact({
-          autoApproved:
-            true,
-        }),
-      );
-
-    const orchestrator =
-      createOrchestrator(
-        fakeExecutor,
-      );
-
     const adapter =
       new WorkflowAgentExecutor({
-        orchestrator,
+        orchestrator:
+          createOrchestrator(
+            new FakeAgentExecutor(
+              malformedArtifact({
+                autoApproved:
+                  true,
+              }),
+            ),
+          ),
 
         requestBuilder:
           createRequestBuilder(),
