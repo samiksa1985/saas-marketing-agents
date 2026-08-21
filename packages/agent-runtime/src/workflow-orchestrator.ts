@@ -79,7 +79,8 @@ export class RuntimeWorkflowTaskCompleter
     const task =
       tasks.find(
         (item) =>
-          item.id === context.task.id,
+          item.id ===
+          context.task.id,
       );
 
     if (!task) {
@@ -106,9 +107,7 @@ export type WorkflowOrchestrationStopReason =
 export interface WorkflowOrchestrationRequest {
   workflowId: string;
   tenantContext: TenantContext;
-
   metadata: TransitionMetadata;
-
   maxTasks?: number;
 }
 
@@ -145,15 +144,13 @@ export class WorkflowOrchestratorError
     message: string,
   ) {
     super(message);
+
     this.name =
       'WorkflowOrchestratorError';
   }
 }
 
 export class WorkflowOrchestrator {
-  private readonly completer:
-    WorkflowTaskCompleter;
-
   constructor(
     private readonly runtime:
       InMemoryWorkflowRuntime,
@@ -161,15 +158,9 @@ export class WorkflowOrchestrator {
     private readonly taskExecutor:
       WorkflowTaskExecutor,
 
-    completer?:
+    private readonly completer:
       WorkflowTaskCompleter,
-  ) {
-    this.completer =
-      completer ??
-      new RuntimeWorkflowTaskCompleter(
-        runtime,
-      );
-  }
+  ) {}
 
   async run(
     request: WorkflowOrchestrationRequest,
@@ -250,13 +241,9 @@ export class WorkflowOrchestrator {
         lease =
           await this.runtime.claimTask(
             readyTask.id,
-
             'workflow-orchestrator',
-
             `${request.metadata.idempotencyKey}:${readyTask.id}`,
-
             request.tenantContext,
-
             {
               ...request.metadata,
 
@@ -267,7 +254,6 @@ export class WorkflowOrchestrator {
       } catch (error) {
         throw new WorkflowOrchestratorError(
           'task_execution_failed',
-
           error instanceof Error
             ? error.message
             : 'Workflow task claim failed.',
@@ -294,7 +280,6 @@ export class WorkflowOrchestrator {
       } catch (error) {
         throw new WorkflowOrchestratorError(
           'task_execution_failed',
-
           error instanceof Error
             ? error.message
             : 'Workflow task execution failed.',
@@ -339,7 +324,6 @@ export class WorkflowOrchestrator {
       } catch (error) {
         throw new WorkflowOrchestratorError(
           'task_completion_failed',
-
           error instanceof Error
             ? error.message
             : 'Workflow task completion failed.',
@@ -470,11 +454,8 @@ export class WorkflowOrchestrator {
   ): WorkflowOrchestrationResult {
     return {
       workflow,
-
       executedTasks,
-
       remainingTasks,
-
       stopReason,
     };
   }

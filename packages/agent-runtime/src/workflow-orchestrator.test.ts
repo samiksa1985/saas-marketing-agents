@@ -17,6 +17,7 @@ import {
 
 import {
   WorkflowOrchestrator,
+  RuntimeWorkflowTaskCompleter,
   type WorkflowTaskExecutionContext,
   type WorkflowTaskExecutionResult,
   type WorkflowTaskExecutor,
@@ -27,16 +28,20 @@ function createContext(
 ): TenantContext {
   return {
     tenantId,
+
     roles: [
       'tenant_admin',
     ],
+
     permissions: [
       'workflow:execute',
       'workflow:read',
       'artifact:read',
       'artifact:write',
     ],
-    locale: 'en',
+
+    locale:
+      'en',
   };
 }
 
@@ -44,37 +49,49 @@ function metadata(
   key: string,
 ): TransitionMetadata {
   return {
-    actor: 'workflow-test',
-    reason: key,
+    actor:
+      'workflow-test',
+
+    reason:
+      key,
+
     timestamp:
       '2026-01-01T00:00:00.000Z',
-    idempotencyKey: key,
+
+    idempotencyKey:
+      key,
   };
 }
 
 class DeterministicTaskExecutor
   implements WorkflowTaskExecutor {
-  public calls: string[] = [];
+  public calls:
+    string[] = [];
 
   async execute(
-    context: WorkflowTaskExecutionContext,
+    context:
+      WorkflowTaskExecutionContext,
   ): Promise<WorkflowTaskExecutionResult> {
     this.calls.push(
       context.task.id,
     );
 
-    const artifact: ProposedArtifact = {
+    const artifact:
+      ProposedArtifact = {
       artifactId:
         `artifact-${context.task.id}`,
 
-      version: '1',
+      version:
+        '1',
 
       tenantId:
         context.task.tenantId,
 
-      status: 'draft',
+      status:
+        'draft',
 
-      accepted: false,
+      accepted:
+        false,
 
       workflowId:
         context.workflow.id,
@@ -106,6 +123,21 @@ class DeterministicTaskExecutor
   }
 }
 
+function createOrchestrator(
+  runtime:
+    InMemoryWorkflowRuntime,
+  executor:
+    DeterministicTaskExecutor,
+): WorkflowOrchestrator {
+  return new WorkflowOrchestrator(
+    runtime,
+    executor,
+    new RuntimeWorkflowTaskCompleter(
+      runtime,
+    ),
+  );
+}
+
 async function createWorkflow(
   selectedWorkstreamIds = [
     '01',
@@ -116,12 +148,14 @@ async function createWorkflow(
 
   const workflow =
     await runtime.createWorkflow({
-      tenantId: 'tenant-a',
+      tenantId:
+        'tenant-a',
 
       engagementId:
         'engagement-a',
 
-      locale: 'en',
+      locale:
+        'en',
 
       selectedWorkstreamIds,
 
@@ -139,13 +173,15 @@ function makeTasksRunnable(
   tasks: Task[],
 ): void {
   for (const task of tasks) {
-    task.unresolvedInputs = [];
+    task.unresolvedInputs =
+      [];
 
     for (
       const dependency of
         task.dependencyReferences
     ) {
-      dependency.satisfied = true;
+      dependency.satisfied =
+        true;
     }
   }
 }
@@ -175,7 +211,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -189,7 +225,9 @@ test(
           createContext(),
 
         metadata:
-          metadata('run-001'),
+          metadata(
+            'run-001',
+          ),
       });
 
     assert.equal(
@@ -248,7 +286,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -262,7 +300,9 @@ test(
           createContext(),
 
         metadata:
-          metadata('run-002'),
+          metadata(
+            'run-002',
+          ),
       });
 
     assert.equal(
@@ -350,7 +390,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -364,7 +404,9 @@ test(
           createContext(),
 
         metadata:
-          metadata('run-003'),
+          metadata(
+            'run-003',
+          ),
       });
 
     assert.equal(
@@ -412,7 +454,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -426,7 +468,9 @@ test(
           createContext(),
 
         metadata:
-          metadata('run-004'),
+          metadata(
+            'run-004',
+          ),
       });
 
     assert.equal(
@@ -471,7 +515,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -485,9 +529,12 @@ test(
           createContext(),
 
         metadata:
-          metadata('run-005'),
+          metadata(
+            'run-005',
+          ),
 
-        maxTasks: 1,
+        maxTasks:
+          1,
       });
 
     assert.equal(
@@ -517,7 +564,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -534,7 +581,9 @@ test(
             ),
 
           metadata:
-            metadata('run-006'),
+            metadata(
+              'run-006',
+            ),
         }),
       /Cross-tenant access denied/i,
     );
@@ -567,7 +616,7 @@ test(
       new DeterministicTaskExecutor();
 
     const orchestrator =
-      new WorkflowOrchestrator(
+      createOrchestrator(
         runtime,
         executor,
       );
@@ -581,7 +630,9 @@ test(
           createContext(),
 
         metadata:
-          metadata('run-007'),
+          metadata(
+            'run-007',
+          ),
       });
 
     assert.equal(
