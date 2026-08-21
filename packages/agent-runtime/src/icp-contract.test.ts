@@ -189,25 +189,28 @@ test(
     const definition =
       createEmptyICPDefinition();
 
+    const account =
+      makeAccount();
+
+    delete account.ownerId;
+
+    account.triggers = [
+      {
+        id: 'trigger-001',
+        family: 'growth',
+        signal:
+          'One trigger only.',
+        source:
+          'company-news',
+        detectedAt:
+          '2026-08-18T00:00:00.000Z',
+        confidence: 'medium',
+      },
+    ];
+
     const result =
       validateICPAccount(
-        makeAccount({
-          ownerId: undefined,
-
-          triggers: [
-            {
-              id: 'trigger-001',
-              family: 'growth',
-              signal:
-                'One trigger only.',
-              source:
-                'company-news',
-              detectedAt:
-                '2026-08-18T00:00:00.000Z',
-              confidence: 'medium',
-            },
-          ],
-        }),
+        account,
         definition.evidenceRules,
       );
 
