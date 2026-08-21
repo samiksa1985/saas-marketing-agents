@@ -2,23 +2,28 @@ import type {
   TenantContext,
 } from '@platform/contracts';
 
+import type {
+  ExecutionLease,
+  InMemoryWorkflowRuntime,
+  ProposedArtifact,
+  Task,
+  TransitionMetadata,
+  Workflow,
+} from '@platform/workflow-runtime';
+
 import {
   AgentExecutionOrchestrator,
 } from './execution-orchestrator.js';
+
+import {
+  AgentArtifactCompletionService,
+} from './agent-artifact-completion.js';
 
 import {
   WorkflowAgentExecutor,
   type WorkflowAgentExecutionResult,
   type WorkflowAgentRequestBuilder,
 } from './workflow-agent-executor.js';
-
-import type {
-  ExecutionLease,
-  InMemoryWorkflowRuntime,
-  Task,
-  TransitionMetadata,
-  Workflow,
-} from '@platform/workflow-runtime';
 
 export interface AgentWorkflowRunnerRequest {
   workflowId: string;
@@ -34,23 +39,39 @@ export type AgentWorkflowRunnerStopReason =
 
 export interface AgentWorkflowRunnerResult {
   workflow: Workflow;
+
   task?: Task;
+
   lease?: ExecutionLease;
+
   execution?: WorkflowAgentExecutionResult;
-  stopReason: AgentWorkflowRunnerStopReason;
+
+  completedArtifact?: ProposedArtifact;
+
+  stopReason:
+    AgentWorkflowRunnerStopReason;
 }
 
 export interface AgentWorkflowRunnerOptions {
   runtime: InMemoryWorkflowRuntime;
-  agentOrchestrator: AgentExecutionOrchestrator;
-  requestBuilder: WorkflowAgentRequestBuilder;
+
+  agentOrchestrator:
+    AgentExecutionOrchestrator;
+
+  requestBuilder:
+    WorkflowAgentRequestBuilder;
 }
 
 export class AgentWorkflowRunner {
-  private readonly agentExecutor: WorkflowAgentExecutor;
+  private readonly agentExecutor:
+    WorkflowAgentExecutor;
+
+  private readonly artifactCompletion:
+    AgentArtifactCompletionService;
 
   constructor(
-    private readonly options: AgentWorkflowRunnerOptions,
+    private readonly options:
+      AgentWorkflowRunnerOptions,
   ) {
     this.agentExecutor =
       new WorkflowAgentExecutor({
@@ -60,11 +81,19 @@ export class AgentWorkflowRunner {
         requestBuilder:
           options.requestBuilder,
       });
+
+    this.artifactCompletion =
+      new AgentArtifactCompletionService(
+        options.runtime,
+      );
   }
 
   async runNextReadyTask(
-    request: AgentWorkflowRunnerRequest,
-  ): Promise<AgentWorkflowRunnerResult> {
+    request:
+      AgentWorkflowRunnerRequest,
+  ): Promise<
+    AgentWorkflowRunnerResult
+  > {
     const workflow =
       this.options.runtime.getWorkflow(
         request.workflowId,
@@ -98,8 +127,10 @@ export class AgentWorkflowRunner {
     if (existingValidation) {
       return {
         workflow,
+
         task:
           existingValidation,
+
         stopReason:
           'awaiting_existing_validation',
       };
@@ -114,6 +145,7 @@ export class AgentWorkflowRunner {
     if (!readyTask) {
       return {
         workflow,
+
         stopReason:
           this.hasBlockedTasks(
             tasks,
@@ -155,15 +187,43 @@ export class AgentWorkflowRunner {
           readyTask.inputArtifactReferences,
       });
 
+    const completion =
+      this.artifactCompletion.complete({
+        workflowId:
+          workflow.id,
+
+        taskId:
+          readyTask.id,
+
+        tenantContext:
+          request.tenantContext,
+
+        artifact:
+          execution.artifact,
+
+        metadata: {
+          ...request.metadata,
+
+          reason:
+            'Agent execution completed with proposed artifact',
+
+          idempotencyKey:
+            `${request.metadata.idempotencyKey}:complete:${readyTask.id}`,
+        },
+      });
+
     return {
       workflow,
 
       task:
-        readyTask,
+        completion.task,
 
       lease,
 
       execution,
+
+      completedArtifact:
+        completion.artifact,
 
       stopReason:
         'executed',
