@@ -29,6 +29,73 @@ export interface WorkflowTaskExecutor {
   ): Promise<WorkflowTaskExecutionResult>;
 }
 
+export interface WorkflowTaskCompletionContext {
+  workflow: Workflow;
+  task: Task;
+  tenantContext: TenantContext;
+  artifact: ProposedArtifact;
+  metadata: TransitionMetadata;
+  lease: ExecutionLease;
+}
+
+export interface WorkflowTaskCompletionResult {
+  task: Task;
+  artifact: ProposedArtifact;
+}
+
+export interface WorkflowTaskCompleter {
+  complete(
+    context: WorkflowTaskCompletionContext,
+  ): Promise<WorkflowTaskCompletionResult>;
+}
+
+export class RuntimeWorkflowTaskCompleter
+  implements WorkflowTaskCompleter {
+  constructor(
+    private readonly runtime:
+      InMemoryWorkflowRuntime,
+  ) {}
+
+  async complete(
+    context: WorkflowTaskCompletionContext,
+  ): Promise<WorkflowTaskCompletionResult> {
+    await this.runtime.executeTask(
+      context.task.id,
+      context.tenantContext,
+      {
+        ...context.metadata,
+
+        idempotencyKey:
+          `${context.metadata.idempotencyKey}:execute:${context.task.id}`,
+      },
+    );
+
+    const tasks =
+      this.runtime.getTasks(
+        context.workflow.id,
+        context.tenantContext,
+      );
+
+    const task =
+      tasks.find(
+        (item) =>
+          item.id === context.task.id,
+      );
+
+    if (!task) {
+      throw new Error(
+        `Workflow task disappeared during completion: ${context.task.id}`,
+      );
+    }
+
+    return {
+      task,
+      artifact:
+        context.artifact,
+    };
+  }
+}
+
 export type WorkflowOrchestrationStopReason =
   | 'completed'
   | 'awaiting_validation'
@@ -55,23 +122,26 @@ export interface WorkflowTaskExecutionRecord {
 export interface WorkflowOrchestrationResult {
   workflow: Workflow;
 
-  executedTasks: WorkflowTaskExecutionRecord[];
+  executedTasks:
+    WorkflowTaskExecutionRecord[];
 
   remainingTasks: Task[];
 
-  stopReason: WorkflowOrchestrationStopReason;
+  stopReason:
+    WorkflowOrchestrationStopReason;
 }
 
 export type WorkflowOrchestratorErrorCode =
   | 'workflow_not_found'
   | 'no_executor'
-  | 'task_execution_failed';
+  | 'task_execution_failed'
+  | 'task_completion_failed';
 
 export class WorkflowOrchestratorError
-  extends Error
-{
+  extends Error {
   constructor(
-    public readonly code: WorkflowOrchestratorErrorCode,
+    public readonly code:
+      WorkflowOrchestratorErrorCode,
     message: string,
   ) {
     super(message);
@@ -81,10 +151,25 @@ export class WorkflowOrchestratorError
 }
 
 export class WorkflowOrchestrator {
+  private readonly completer:
+    WorkflowTaskCompleter;
+
   constructor(
-    private readonly runtime: InMemoryWorkflowRuntime,
-    private readonly taskExecutor: WorkflowTaskExecutor,
-  ) {}
+    private readonly runtime:
+      InMemoryWorkflowRuntime,
+
+    private readonly taskExecutor:
+      WorkflowTaskExecutor,
+
+    completer?:
+      WorkflowTaskCompleter,
+  ) {
+    this.completer =
+      completer ??
+      new RuntimeWorkflowTaskCompleter(
+        runtime,
+      );
+  }
 
   async run(
     request: WorkflowOrchestrationRequest,
@@ -101,12 +186,15 @@ export class WorkflowOrchestrator {
     if (maxTasks <= 0) {
       return {
         workflow,
+
         executedTasks: [],
+
         remainingTasks:
           this.runtime.getTasks(
             workflow.id,
             request.tenantContext,
           ),
+
         stopReason:
           'max_tasks_reached',
       };
@@ -123,7 +211,8 @@ export class WorkflowOrchestrator {
       );
     }
 
-    const executedTasks: WorkflowTaskExecutionRecord[] =
+    const executedTasks:
+      WorkflowTaskExecutionRecord[] =
       [];
 
     for (
@@ -154,37 +243,58 @@ export class WorkflowOrchestrator {
         );
       }
 
-      const lease =
-        await this.runtime.claimTask(
-          readyTask.id,
-          'workflow-orchestrator',
-          `${request.metadata.idempotencyKey}:${readyTask.id}`,
-          request.tenantContext,
-          {
-            ...request.metadata,
-            idempotencyKey:
-              `${request.metadata.idempotencyKey}:claim:${readyTask.id}`,
-          },
-        );
-
-      let execution:
-        | WorkflowTaskExecutionResult;
+      let lease:
+        ExecutionLease;
 
       try {
-        execution =
-          await this.taskExecutor.execute(
+        lease =
+          await this.runtime.claimTask(
+            readyTask.id,
+
+            'workflow-orchestrator',
+
+            `${request.metadata.idempotencyKey}:${readyTask.id}`,
+
+            request.tenantContext,
+
             {
-              workflow,
-              task: readyTask,
-              tenantContext:
-                request.tenantContext,
-              inputArtifacts:
-                readyTask.inputArtifactReferences,
+              ...request.metadata,
+
+              idempotencyKey:
+                `${request.metadata.idempotencyKey}:claim:${readyTask.id}`,
             },
           );
       } catch (error) {
         throw new WorkflowOrchestratorError(
           'task_execution_failed',
+
+          error instanceof Error
+            ? error.message
+            : 'Workflow task claim failed.',
+        );
+      }
+
+      let execution:
+        WorkflowTaskExecutionResult;
+
+      try {
+        execution =
+          await this.taskExecutor.execute({
+            workflow,
+
+            task:
+              readyTask,
+
+            tenantContext:
+              request.tenantContext,
+
+            inputArtifacts:
+              readyTask.inputArtifactReferences,
+          });
+      } catch (error) {
+        throw new WorkflowOrchestratorError(
+          'task_execution_failed',
+
           error instanceof Error
             ? error.message
             : 'Workflow task execution failed.',
@@ -192,23 +302,49 @@ export class WorkflowOrchestrator {
       }
 
       executedTasks.push({
-        taskId: readyTask.id,
+        taskId:
+          readyTask.id,
+
         workstreamId:
           readyTask.workstreamId,
+
         lease,
+
         artifact:
           execution.artifact,
       });
 
-      await this.runtime.executeTask(
-        readyTask.id,
-        request.tenantContext,
-        {
-          ...request.metadata,
-          idempotencyKey:
-            `${request.metadata.idempotencyKey}:execute:${readyTask.id}`,
-        },
-      );
+      let completion:
+        WorkflowTaskCompletionResult;
+
+      try {
+        completion =
+          await this.completer.complete({
+            workflow,
+
+            task:
+              readyTask,
+
+            tenantContext:
+              request.tenantContext,
+
+            artifact:
+              execution.artifact,
+
+            metadata:
+              request.metadata,
+
+            lease,
+          });
+      } catch (error) {
+        throw new WorkflowOrchestratorError(
+          'task_completion_failed',
+
+          error instanceof Error
+            ? error.message
+            : 'Workflow task completion failed.',
+        );
+      }
 
       const remainingTasks =
         this.runtime.getTasks(
@@ -217,13 +353,17 @@ export class WorkflowOrchestrator {
         );
 
       const validationPending =
+        completion.task.status ===
+        'awaiting_validation' ||
         remainingTasks.some(
           (task) =>
             task.status ===
             'awaiting_validation',
         );
 
-      if (validationPending) {
+      if (
+        validationPending
+      ) {
         return this.buildResult(
           workflow,
           executedTasks,
@@ -248,12 +388,13 @@ export class WorkflowOrchestrator {
     tasks: Task[],
     tenantContext: TenantContext,
   ): Task | undefined {
-    const ordered = [...tasks].sort(
-      (a, b) =>
-        a.workstreamId.localeCompare(
-          b.workstreamId,
-        ),
-    );
+    const ordered =
+      [...tasks].sort(
+        (left, right) =>
+          left.workstreamId.localeCompare(
+            right.workstreamId,
+          ),
+      );
 
     for (const task of ordered) {
       if (
@@ -297,7 +438,8 @@ export class WorkflowOrchestrator {
     if (
       tasks.some(
         (task) =>
-          task.status === 'blocked',
+          task.status ===
+          'blocked',
       )
     ) {
       return 'blocked';
@@ -320,14 +462,19 @@ export class WorkflowOrchestrator {
 
   private buildResult(
     workflow: Workflow,
-    executedTasks: WorkflowTaskExecutionRecord[],
+    executedTasks:
+      WorkflowTaskExecutionRecord[],
     remainingTasks: Task[],
-    stopReason: WorkflowOrchestrationStopReason,
+    stopReason:
+      WorkflowOrchestrationStopReason,
   ): WorkflowOrchestrationResult {
     return {
       workflow,
+
       executedTasks,
+
       remainingTasks,
+
       stopReason,
     };
   }
