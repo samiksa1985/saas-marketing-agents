@@ -1,14 +1,19 @@
 import {
+  ArgumentsHost,
   BadRequestException,
   Body,
+  Catch,
   Controller,
+  ExceptionFilter,
   ForbiddenException,
   Get,
   Headers,
+  Inject,
   Injectable,
   Param,
   Post,
   Req,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 
@@ -24,6 +29,7 @@ import type {
 
 import {
   InMemoryWorkflowRuntime,
+  TenantIsolationError,
   type TransitionMetadata,
 } from '@platform/workflow-runtime';
 
@@ -78,6 +84,35 @@ function apiRequest(
 ): AuthenticatedRequest {
   return request as
     AuthenticatedRequest;
+}
+
+@Catch(
+  TenantIsolationError,
+)
+class TenantIsolationExceptionFilter
+  implements
+    ExceptionFilter<TenantIsolationError> {
+  catch(
+    _exception:
+      TenantIsolationError,
+    host:
+      ArgumentsHost,
+  ): void {
+    const response =
+      host
+        .switchToHttp()
+        .getResponse();
+
+    response
+      .status(403)
+      .json({
+        statusCode:
+          403,
+
+        message:
+          'Cross-tenant access denied',
+      });
+  }
 }
 
 @Injectable()
@@ -158,8 +193,14 @@ export class WorkflowApiService {
 @UseGuards(
   ApiAuthGuard,
 )
+@UseFilters(
+  TenantIsolationExceptionFilter,
+)
 export class WorkflowController {
   constructor(
+    @Inject(
+      WorkflowApiService,
+    )
     private readonly service:
       WorkflowApiService,
   ) {}

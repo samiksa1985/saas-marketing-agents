@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -37,6 +38,7 @@ export interface AuthenticatedRequest {
 export class ApiAuthGuard
   implements CanActivate {
   constructor(
+    @Inject(AUTH_PROVIDER)
     private readonly provider:
       AuthProvider,
   ) {}

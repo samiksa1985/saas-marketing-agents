@@ -1,7 +1,8 @@
 import {
-  ForbiddenException,
   Controller,
+  ForbiddenException,
   Get,
+  Inject,
   Injectable,
   Param,
   Req,
@@ -27,6 +28,9 @@ import {
   getAuthContext,
   type AuthenticatedRequest,
 } from './auth.guard.js';
+
+export const REGISTRY_SERVICE =
+  'PLATFORM_REGISTRY_SERVICE';
 
 function apiRequest(
   request: unknown,
@@ -143,6 +147,7 @@ export class RegistryService {
 
     return {
       graph,
+
       readiness:
         result,
     };
@@ -155,6 +160,9 @@ export class RegistryService {
 )
 export class RegistryController {
   constructor(
+    @Inject(
+      REGISTRY_SERVICE,
+    )
     private readonly registry:
       RegistryService,
   ) {}
