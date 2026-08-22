@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./oidc": {
+      "types": "./dist/oidc.d.ts",
+      "import": "./dist/oidc.js"
     }
   },
   "scripts": {
@@ -18,6 +22,7 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
-    "@platform/domain": "0.1.0"
+    "@platform/domain": "0.1.0",
+    "jose": "^6.1.0"
   }
 }

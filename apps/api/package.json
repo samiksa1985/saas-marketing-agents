@@ -16,6 +16,7 @@
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
+    "@platform/auth": "0.1.0",
     "@platform/config": "0.1.0",
     "@platform/i18n": "0.1.0",
     "@platform/domain": "0.1.0",
