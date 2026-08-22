@@ -10,6 +10,7 @@ import {
   Headers,
   Inject,
   Injectable,
+  NotFoundException,
   Param,
   Post,
   Req,
@@ -294,11 +295,28 @@ export class WorkflowController {
       'workflow:read',
     );
 
-    return this.service.runtime
+    try {
+      return this.service.runtime
       .getWorkflow(
         workflowId,
         context,
       );
+
+    } catch (
+      error
+    ) {
+      if (
+        error instanceof Error &&
+        error.message ===
+          'Workflow not found'
+      ) {
+        throw new NotFoundException(
+          'Workflow not found',
+        );
+      }
+
+      throw error;
+    }
   }
 
   @Post(
