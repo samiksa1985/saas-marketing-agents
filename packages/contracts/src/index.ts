@@ -240,3 +240,6 @@ export interface AuditEvent {
   occurredAt: string;
   payload: Record<string, unknown>;
 }
+
+export * from './marketing.js';
+export * from './marketing-agent-system.js';
