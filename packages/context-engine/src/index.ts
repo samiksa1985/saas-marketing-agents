@@ -7,6 +7,15 @@ import type {
 
 export type ContextScope = MarketingMemoryRecord['scope'];
 
+export interface ContextQuery {
+  tenantId: string;
+  scopes?: ContextScope[];
+  scopeIds?: string[];
+  keywords?: string[];
+  limit?: number;
+  minConfidence?: number;
+}
+
 export interface ContextSource {
   id: Id;
   tenantId: Id;

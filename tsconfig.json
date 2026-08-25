@@ -71,6 +71,12 @@
                        },
                        {
                            "path":  "./packages/marketing-commander"
+                       },
+                       {
+                           "path":  "./packages/marketing-os-persistence"
+                       },
+                       {
+                           "path":  "./packages/marketing-os-execution"
                        }
                    ]
 }

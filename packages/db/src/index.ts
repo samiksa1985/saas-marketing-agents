@@ -6,3 +6,4 @@ export function createDb(connectionString: string) {
   return drizzle(postgres(connectionString), { schema });
 }
 export { schema };
+export * from './schema.js';

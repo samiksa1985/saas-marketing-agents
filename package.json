@@ -13,7 +13,9 @@
                        "packages/context-engine",
                        "packages/acquisition-graph",
                        "packages/marketing-os-core",
-                       "packages/measurement-engine"
+                       "packages/measurement-engine",
+                       "packages/marketing-os-persistence",
+                       "packages/marketing-os-execution"
                    ],
     "scripts":  {
                     "build":  "tsc -b \u0026\u0026 npm --workspace apps/web run build",
