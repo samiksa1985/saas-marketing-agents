@@ -243,3 +243,27 @@ export interface AuditEvent {
 
 export * from './marketing.js';
 export * from './marketing-agent-system.js';
+export type CanonicalAgentTier =
+  | 'CONTROL'
+  | 'DOMAIN_LEADER'
+  | 'SPECIALIST'
+  | 'ADVISORY'
+  | 'WORKFLOW';
+
+export interface CanonicalAgentRecord {
+  id: string;
+  name: string;
+  tier: CanonicalAgentTier;
+  source: 'project1' | 'project2' | 'canonical';
+  mission: string;
+  agentDefinition?: AgentDefinition;
+  domainLeaderId?: string;
+  consolidationStatus:
+    | 'KEEP_AS_DOMAIN_LEADER'
+    | 'KEEP_AS_SPECIALIST'
+    | 'MERGE_CANDIDATE'
+    | 'WORKFLOW'
+    | 'DEFER'
+    | 'DROP_CANDIDATE';
+  reviewNote: string;
+}

@@ -51,6 +51,10 @@ import {
 } from './workflow.controller.js';
 
 import {
+  MarketingOsController,
+} from './marketing-os.controller.js';
+
+import {
   AUTH_PROVIDER,
   ApiAuthGuard,
 } from './auth.guard.js';
@@ -159,6 +163,7 @@ const authProviderFactory =
     AppController,
     RegistryController,
     WorkflowController,
+    MarketingOsController,
   ],
 
   providers: [
@@ -205,7 +210,7 @@ const app =
 const swagger =
   new DocumentBuilder()
     .setTitle(
-      'AI Customer Acquisition Platform API',
+      'AI Marketing OS API',
     )
     .setVersion(
       '1.0',

@@ -23,6 +23,9 @@
     "@platform/registry": "0.1.0",
     "@platform/workflow-runtime": "0.1.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "@platform/context-engine": "0.1.0",
+    "@platform/acquisition-graph": "0.1.0",
+    "@platform/marketing-os-core": "0.1.0"
   }
 }

@@ -1,31 +1,6 @@
-﻿import type { AgentDefinition } from '@platform/contracts';
+import type { AgentDefinition, CanonicalAgentRecord, CanonicalAgentTier } from '@platform/contracts';
 import { AgentRegistry, RegistryLoader } from './index.js';
 import { AI_MARKETING_OS_DOMAIN_AGENTS } from '@platform/contracts';
-
-export type CanonicalAgentTier =
-  | 'CONTROL'
-  | 'DOMAIN_LEADER'
-  | 'SPECIALIST'
-  | 'ADVISORY'
-  | 'WORKFLOW';
-
-export interface CanonicalAgentRecord {
-  id: string;
-  name: string;
-  tier: CanonicalAgentTier;
-  source: 'project1' | 'project2' | 'canonical';
-  mission: string;
-  agentDefinition?: AgentDefinition;
-  domainLeaderId?: string;
-  consolidationStatus:
-    | 'KEEP_AS_DOMAIN_LEADER'
-    | 'KEEP_AS_SPECIALIST'
-    | 'MERGE_CANDIDATE'
-    | 'WORKFLOW'
-    | 'DEFER'
-    | 'DROP_CANDIDATE';
-  reviewNote: string;
-}
 
 export interface CanonicalAgentRegistrySnapshot {
   version: string;

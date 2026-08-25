@@ -9,7 +9,11 @@
     "workspaces":  [
                        "apps/*",
                        "packages/*",
-                       "packages/marketing-commander"
+                       "packages/marketing-commander",
+                       "packages/context-engine",
+                       "packages/acquisition-graph",
+                       "packages/marketing-os-core",
+                       "packages/measurement-engine"
                    ],
     "scripts":  {
                     "build":  "tsc -b \u0026\u0026 npm --workspace apps/web run build",
