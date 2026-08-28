@@ -15,9 +15,9 @@
     "build": "tsc -b",
     "typecheck": "tsc -b --pretty false",
     "lint": "prettier --check src",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
-    "@platform/domain": "0.1.0"
+    "@platform/contracts": "0.1.0"
   }
 }
