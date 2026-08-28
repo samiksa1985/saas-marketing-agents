@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or } from 'drizzle-orm';
+﻿import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import type { MarketingMemoryRecord, TenantContext } from '@platform/contracts';
 import type { MemoryRepository, ContextQuery } from '@platform/context-engine';
 import type { createDb } from '@platform/db';
@@ -70,3 +70,5 @@ export class MarketingOutcomeStore {
     }).onConflictDoNothing();
   }
 }
+export * from './knowledge.js';
+

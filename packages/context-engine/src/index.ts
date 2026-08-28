@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ArtifactReference,
   Id,
   MarketingMemoryRecord,
@@ -108,6 +108,15 @@ export class InMemoryKnowledgeRetriever implements KnowledgeRetriever {
   }
 }
 
+export interface MarketingOperationalContext {
+  companyProfile?: unknown;
+  documents?: unknown[];
+  crm?: unknown;
+  marketing?: unknown;
+  analytics?: unknown;
+  finance?: unknown;
+}
+
 export interface MarketingContextSnapshot {
   tenantId: Id;
   generatedAt: string;
@@ -115,6 +124,7 @@ export interface MarketingContextSnapshot {
   knowledge: KnowledgeHit[];
   artifacts: ArtifactReference[];
   sources: ContextSource[];
+  operational?: MarketingOperationalContext;
 }
 
 export interface BuildContextRequest {
@@ -128,6 +138,7 @@ export interface BuildContextRequest {
   };
   knowledgeQuery?: string;
   artifacts?: ArtifactReference[];
+  operational?: MarketingOperationalContext;
 }
 
 export class MarketingContextBuilder {
@@ -178,6 +189,7 @@ export class MarketingContextBuilder {
       knowledge,
       artifacts: request.artifacts ?? [],
       sources,
+      ...(request.operational ? { operational: request.operational } : {}),
     };
   }
 }
@@ -203,3 +215,6 @@ export function createMemoryRecord(args: {
     updatedAt: now,
   };
 }
+
+
+

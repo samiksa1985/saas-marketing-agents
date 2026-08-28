@@ -1,4 +1,4 @@
-import type { Locale } from '@platform/i18n';
+﻿import type { Locale } from '@platform/i18n';
 export type { Locale } from '@platform/i18n';
 
 export type Id = string;
@@ -267,3 +267,21 @@ export interface CanonicalAgentRecord {
     | 'DROP_CANDIDATE';
   reviewNote: string;
 }
+
+export interface CanonicalCapabilityRecord {
+  id: string;
+  name: string;
+  ownerAgentId: string;
+  type: string;
+  mission: string;
+  inputs: string[];
+  outputs: string[];
+  allowedTools: string[];
+  deniedTools: string[];
+  approval: string;
+  risk: string;
+  evaluatorId: string;
+  enabled: boolean;
+  source: 'project1' | 'project2' | 'canonical';
+}
+

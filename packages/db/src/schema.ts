@@ -1,6 +1,7 @@
-import {
+﻿import {
   boolean,
   integer,
+  real,
   jsonb,
   pgEnum,
   pgTable,
@@ -10,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
   varchar,
+  vector,
   index,
 } from 'drizzle-orm/pg-core';
 
@@ -654,6 +656,103 @@ export const executionErrors = pgTable(
   (table) => [index('execution_errors_tenant_execution_idx').on(table.tenantId, table.executionId)],
 );
 
+export const documentSourceTypeEnum = pgEnum('document_source_type', [
+  'file',
+  'url',
+  'inline',
+]);
+
+export const documentStatusEnum = pgEnum('document_status', [
+  'uploaded',
+  'processing',
+  'ready',
+  'failed',
+  'archived',
+]);
+
+export const knowledgeDocuments = pgTable(
+  'knowledge_documents',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    name: text('name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    storagePath: text('storage_path').notNull(),
+    sourceType: documentSourceTypeEnum('source_type').notNull().default('file'),
+    status: documentStatusEnum('status').notNull().default('uploaded'),
+    sizeBytes: integer('size_bytes'),
+    checksum: text('checksum'),
+    metadata: jsonb('metadata').notNull().default({}),
+    sourceUrl: text('source_url'),
+    pageCount: integer('page_count'),
+    wordCount: integer('word_count'),
+    errorMessage: text('error_message'),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    ...times,
+  },
+  (table) => [
+    index('knowledge_documents_tenant_status_idx').on(table.tenantId, table.status),
+    index('knowledge_documents_tenant_source_idx').on(table.tenantId, table.sourceType),
+    index('knowledge_documents_tenant_checksum_idx').on(table.tenantId, table.checksum),
+  ],
+);
+
+export const knowledgeDocumentChunks = pgTable(
+  'knowledge_document_chunks',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: 'cascade' }),
+    chunkIndex: integer('chunk_index').notNull(),
+    text: text('text').notNull(),
+    embedding: jsonb('embedding'),
+    embeddingVector: vector('embedding_vector', { dimensions: 1536 }),
+    pageNumber: integer('page_number'),
+    slideNumber: integer('slide_number'),
+    sheetName: text('sheet_name'),
+    sourceRef: text('source_ref'),
+    tokenCount: integer('token_count'),
+    metadata: jsonb('metadata').notNull().default({}),
+    ...times,
+  },
+  (table) => [
+    index('knowledge_chunks_tenant_idx').on(table.tenantId),
+    index('knowledge_chunks_document_idx').on(table.documentId, table.chunkIndex),
+    index('knowledge_chunks_document_page_idx').on(table.documentId, table.pageNumber),
+  ],
+);
+
+export const knowledgeDocumentCitations = pgTable(
+  'knowledge_document_citations',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: 'cascade' }),
+    chunkId: uuid('chunk_id').references(() => knowledgeDocumentChunks.id, {
+      onDelete: 'set null',
+    }),
+    agentRunId: uuid('agent_run_id'),
+    workflowRunId: uuid('workflow_run_id'),
+    query: text('query').notNull(),
+    excerpt: text('excerpt').notNull(),
+    relevanceScore: real('relevance_score').notNull(),
+    sourceRef: text('source_ref'),
+    ...times,
+  },
+  (table) => [
+    index('knowledge_citations_tenant_created_idx').on(table.tenantId, table.createdAt),
+    index('knowledge_citations_agent_run_idx').on(table.agentRunId),
+    index('knowledge_citations_workflow_run_idx').on(table.workflowRunId),
+  ],
+);
 export const marketingMemoryRecords = pgTable('marketing_memory_records',{id:id(),tenantId:tenant(()=>tenants.id),scope:varchar('scope',{length:40}).notNull(),scopeId:uuid('scope_id').notNull(),statement:text('statement').notNull(),evidenceIds:jsonb('evidence_ids').notNull().default([]),confidence:integer('confidence'),...times},(table)=>[index('marketing_memory_tenant_scope_idx').on(table.tenantId,table.scope,table.scopeId),index('marketing_memory_tenant_updated_idx').on(table.tenantId,table.updatedAt)]);
 export const marketingOsPlanSnapshots = pgTable('marketing_os_plan_snapshots',{id:id(),tenantId:tenant(()=>tenants.id),goal:text('goal').notNull(),objective:varchar('objective',{length:80}).notNull(),plan:jsonb('plan').notNull(),context:jsonb('context').notNull(),readiness:jsonb('readiness').notNull(),...times},(table)=>[index('marketing_os_plan_tenant_updated_idx').on(table.tenantId,table.updatedAt)]);
 export const marketingOutcomeEvents = pgTable('marketing_outcome_events',{id:id(),tenantId:tenant(()=>tenants.id),type:varchar('type',{length:60}).notNull(),metric:varchar('metric',{length:120}).notNull(),value:integer('value').notNull(),sourceEntityId:uuid('source_entity_id').notNull(),occurredAt:timestamp('occurred_at',{withTimezone:true}).notNull(),attributes:jsonb('attributes').notNull(),...times},(table)=>[index('marketing_outcomes_tenant_occurred_idx').on(table.tenantId,table.occurredAt),index('marketing_outcomes_source_idx').on(table.tenantId,table.sourceEntityId)]);
+
+
+
+

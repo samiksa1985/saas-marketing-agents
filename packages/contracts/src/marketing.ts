@@ -1,4 +1,4 @@
-import type { Id, Locale } from './index.js';
+﻿import type { Id, Locale } from './index.js';
 
 export type MarketingEntityStatus = 'draft' | 'active' | 'paused' | 'archived' | 'completed';
 
@@ -194,6 +194,42 @@ export interface Customer {
   lifecycleStage: 'new' | 'active' | 'at_risk' | 'renewal' | 'churned' | 'expansion';
 }
 
+export interface LeadScoreAssessment {
+  leadId?: Id;
+  score: number;
+  temperature: 'HOT' | 'WARM' | 'COLD';
+  fit: number;
+  intent: number;
+  engagement: number;
+  timing: number;
+  factors: Record<string, number>;
+  recommendations: string[];
+  model: string;
+}
+
+export interface SalesForecast {
+  period: 'WEEK' | 'MONTH' | 'QUARTER';
+  periodStart: string;
+  periodEnd: string;
+  opportunityCount: number;
+  pipelineAmount: number;
+  weightedAmount: number;
+  winProbability: number;
+  confidence: number;
+  opportunityIds: Id[];
+}
+
+export interface ProposalDraft {
+  id: Id;
+  tenantId: Id;
+  opportunityId: Id;
+  title: string;
+  amount?: number;
+  currency?: string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  content: Record<string, unknown>;
+  requiresApproval: true;
+}
 export interface Outcome {
   id: Id;
   tenantId: Id;
@@ -238,3 +274,4 @@ export interface Recommendation {
   evidenceIds: Id[];
   requiresApproval: boolean;
 }
+

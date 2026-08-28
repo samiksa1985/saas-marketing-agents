@@ -1,0 +1,10 @@
+{
+  "version": "V1.8",
+  "source": "ai-marketing-os-v1.7-automation.zip",
+  "analytics_docs": true,
+  "metric_library": true,
+  "attribution_library": true,
+  "growth_recommendation_engine": true,
+  "analytics_api_contracts": true,
+  "status": "STRUCTURAL_VALIDATION_PASS"
+}
