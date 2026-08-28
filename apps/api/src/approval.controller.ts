@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   ConflictException,
@@ -60,7 +60,7 @@ interface DecideApprovalBody {
     string;
 }
 
-interface ApprovalRecord
+export interface ApprovalRecord
   extends Approval {
   createdAt:
     string;
