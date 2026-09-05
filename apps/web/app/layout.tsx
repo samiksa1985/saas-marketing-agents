@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AI Customer Acquisition Platform',
-  description: 'Commercial workflow control plane',
+  title: 'AI Marketing OS',
+  description: 'Tenant-scoped marketing operating system with governed AI execution.',
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

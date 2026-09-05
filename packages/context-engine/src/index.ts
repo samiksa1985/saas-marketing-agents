@@ -1,5 +1,6 @@
 ﻿import type {
   ArtifactReference,
+  CompanyIntelligenceProfile,
   Id,
   MarketingMemoryRecord,
   TenantContext,
@@ -66,13 +67,16 @@ export class InMemoryMarketingMemoryRepository implements MemoryRepository {
     this.records.set(record.id, { ...record });
   }
 
-  async search(context: TenantContext, query: {
-    scopes?: ContextScope[];
-    scopeIds?: Id[];
-    keywords?: string[];
-    limit?: number;
-    minConfidence?: number;
-  }): Promise<MarketingMemoryRecord[]> {
+  async search(
+    context: TenantContext,
+    query: {
+      scopes?: ContextScope[];
+      scopeIds?: Id[];
+      keywords?: string[];
+      limit?: number;
+      minConfidence?: number;
+    },
+  ): Promise<MarketingMemoryRecord[]> {
     const scopes = new Set(query.scopes ?? []);
     const scopeIds = new Set(query.scopeIds ?? []);
     const keywords = (query.keywords ?? []).map((x) => x.toLowerCase()).filter(Boolean);
@@ -81,8 +85,14 @@ export class InMemoryMarketingMemoryRepository implements MemoryRepository {
       .filter((item) => item.tenantId === context.tenantId)
       .filter((item) => scopes.size === 0 || scopes.has(item.scope))
       .filter((item) => scopeIds.size === 0 || scopeIds.has(item.scopeId))
-      .filter((item) => keywords.length === 0 || keywords.some((k) => item.statement.toLowerCase().includes(k)))
-      .filter((item) => query.minConfidence === undefined || (item.confidence ?? 0) >= query.minConfidence)
+      .filter(
+        (item) =>
+          keywords.length === 0 || keywords.some((k) => item.statement.toLowerCase().includes(k)),
+      )
+      .filter(
+        (item) =>
+          query.minConfidence === undefined || (item.confidence ?? 0) >= query.minConfidence,
+      )
       .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
       .slice(0, Math.min(query.limit ?? 20, 100))
       .map((item) => ({ ...item }));
@@ -93,7 +103,10 @@ export class InMemoryKnowledgeRetriever implements KnowledgeRetriever {
   constructor(private readonly hits: KnowledgeHit[] = []) {}
 
   async search(context: TenantContext, query: string, limit = 8): Promise<KnowledgeHit[]> {
-    const tokens = query.toLowerCase().split(/\s+/).filter((x) => x.length > 2);
+    const tokens = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((x) => x.length > 2);
     return this.hits
       .filter((hit) => hit.tenantId === context.tenantId)
       .map((hit) => {
@@ -109,7 +122,7 @@ export class InMemoryKnowledgeRetriever implements KnowledgeRetriever {
 }
 
 export interface MarketingOperationalContext {
-  companyProfile?: unknown;
+  companyProfile?: CompanyIntelligenceProfile;
   documents?: unknown[];
   crm?: unknown;
   marketing?: unknown;
@@ -215,6 +228,3 @@ export function createMemoryRecord(args: {
     updatedAt: now,
   };
 }
-
-
-

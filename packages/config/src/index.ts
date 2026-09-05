@@ -3,6 +3,10 @@ export type NodeEnvironment =
   | 'test'
   | 'production';
 
+export type WorkflowRuntimeMode =
+  | 'in-memory'
+  | 'temporal';
+
 export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
   apiPort: number;
@@ -10,6 +14,7 @@ export interface RuntimeConfig {
   databaseUrl: string;
   temporalAddress: string;
   temporalNamespace: string;
+  workflowRuntimeMode: WorkflowRuntimeMode;
   artifactBucket: string;
   artifactEndpoint?: string;
   aiProvider: string;
@@ -100,6 +105,32 @@ export function loadConfig(
     }
   }
 
+  const workflowRuntimeMode =
+    (env.WORKFLOW_RUNTIME_MODE ??
+      (nodeEnv === 'production'
+        ? 'temporal'
+        : 'in-memory')) as WorkflowRuntimeMode;
+
+  if (
+    ![
+      'in-memory',
+      'temporal',
+    ].includes(workflowRuntimeMode)
+  ) {
+    throw new Error(
+      'WORKFLOW_RUNTIME_MODE must be in-memory or temporal',
+    );
+  }
+
+  if (
+    nodeEnv === 'production' &&
+    workflowRuntimeMode !== 'temporal'
+  ) {
+    throw new Error(
+      'Production requires WORKFLOW_RUNTIME_MODE=temporal',
+    );
+  }
+
   return {
     nodeEnv,
 
@@ -124,6 +155,8 @@ export function loadConfig(
       'TEMPORAL_NAMESPACE',
       env.TEMPORAL_NAMESPACE,
     ),
+
+    workflowRuntimeMode,
 
     artifactBucket: required(
       'ARTIFACT_BUCKET',

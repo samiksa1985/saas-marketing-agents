@@ -911,7 +911,7 @@ export const PROJECT2_CAPABILITIES: CanonicalCapabilityRecord[] =[
         "name":  "Financial Forecasting",
         "ownerAgentId":  "cfo-intelligence",
         "type":  "DOMAIN",
-        "mission":  "Produce evidence-backed financial forecasts and scenarios.",
+        "mission":  "Builds evidence-backed deterministic period forecasts from canonical opportunities and actual revenue; scenario modeling remains a distinct CFO capability.",
         "inputs":  [
                        "revenue",
                        "costs",

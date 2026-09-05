@@ -44,23 +44,68 @@ export interface User {
   preferredLocale: Locale;
   status: EntityStatus;
 }
-export type Role =
-  | 'tenant_admin'
-  | 'engagement_owner'
-  | 'workstream_operator'
-  | 'reviewer'
-  | 'sales_operator'
-  | 'finance_operator'
-  | 'auditor';
-export type Permission =
-  | 'tenant:read'
-  | 'tenant:manage'
-  | 'workflow:read'
-  | 'workflow:execute'
-  | 'artifact:read'
-  | 'artifact:write'
-  | 'approval:decide'
-  | 'audit:read';
+export const CANONICAL_ROLES = [
+  'tenant_admin',
+  'engagement_owner',
+  'workstream_operator',
+  'reviewer',
+  'sales_operator',
+  'finance_operator',
+  'auditor',
+  'marketing_manager',
+  'sales_manager',
+  'finance_manager',
+  'customer_success_manager',
+  'operations_manager',
+  'client_admin',
+  'client_user',
+  'viewer',
+] as const;
+
+export type Role = (typeof CANONICAL_ROLES)[number];
+
+export const CANONICAL_PERMISSIONS = [
+  'tenant:read',
+  'tenant:manage',
+  'workflow:read',
+  'workflow:execute',
+  'artifact:read',
+  'artifact:write',
+  'approval:decide',
+  'audit:read',
+  'organization:read',
+  'organization:manage',
+  'member:read',
+  'member:manage',
+  'role:read',
+  'role:manage',
+  'marketing:admin',
+  'sales:admin',
+  'finance:admin',
+  'customer_success:admin',
+  'automation:admin',
+  'ai_agent:admin',
+  'ai_prompt:admin',
+  'ai_model:admin',
+  'integration:admin',
+  'billing:admin',
+  'entitlement:admin',
+  'feature_flag:read',
+  'feature_flag:manage',
+  'data_export:request',
+  'data_export:read',
+  'data_export:manage',
+  'data_deletion:request',
+  'data_deletion:read',
+  'data_deletion:manage',
+  'retention_policy:read',
+  'retention_policy:manage',
+  'security_policy:read',
+  'security_policy:manage',
+  'system_health:read',
+] as const;
+
+export type Permission = (typeof CANONICAL_PERMISSIONS)[number];
 export interface AgentDefinition {
   agentId: string;
   name: string;
@@ -242,13 +287,10 @@ export interface AuditEvent {
 }
 
 export * from './marketing.js';
+export * from './product-surface.js';
 export * from './marketing-agent-system.js';
 export type CanonicalAgentTier =
-  | 'CONTROL'
-  | 'DOMAIN_LEADER'
-  | 'SPECIALIST'
-  | 'ADVISORY'
-  | 'WORKFLOW';
+  'CONTROL' | 'DOMAIN_LEADER' | 'SPECIALIST' | 'ADVISORY' | 'WORKFLOW';
 
 export interface CanonicalAgentRecord {
   id: string;
@@ -285,3 +327,10 @@ export interface CanonicalCapabilityRecord {
   source: 'project1' | 'project2' | 'canonical';
 }
 
+export * from './automation.js';
+
+export * from './marketing-execution.js';
+
+export * from './business-mentor.js';
+
+export * from './governance.js';

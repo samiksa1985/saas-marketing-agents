@@ -1,2 +1,9 @@
-import test from 'node:test';import assert from 'node:assert/strict';import { MarketingOSExecutionService } from './index.js';
-test('blocks execution when readiness is blocked',async()=>{let called=false;const svc=new MarketingOSExecutionService({createWorkflow:async()=>{called=true;throw new Error('unexpected');},start:async()=>{throw 0},pause:async()=>{throw 0},resume:async()=>{throw 0},cancel:async()=>{throw 0}});const r=await svc.prepare({plan:{planId:'p',tenantId:'t',goal:'g',objective:'general_growth',assumptions:[],needsInput:['x'],domainLeaders:[],capabilities:[],workstreams:[{id:'01',reason:'',priority:1,approval:'NONE'}],specialistAgentIds:[],sequence:[],governance:{requiresHumanApproval:true,approvalReasons:[],externalExecutionBlockedUntilApproval:true}},context:{tenantId:'t',generatedAt:new Date().toISOString(),memories:[],knowledge:[],artifacts:[],sources:[]},acquisition:{tenantId:'t',nodes:[],edges:[],generatedAt:new Date().toISOString()},readiness:{blocked:true,reasons:['x']}},{engagementId:'e',locale:'en',idempotencyKey:'k'},{tenantId:'t',roles:[],permissions:[],locale:'en'});assert.equal(r.status,'blocked');assert.equal(called,false);});
+import * as assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { MarketingOSExecutionService as canonicalService } from '@platform/marketing-os-core';
+import { MarketingOSExecutionService as compatibilityService } from './index.js';
+
+test('compatibility package re-exports the canonical Marketing OS execution service', () => {
+  assert.equal(compatibilityService, canonicalService);
+});

@@ -16,5 +16,6 @@
     "isolatedModules": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "references": [{ "path": "../../packages/contracts" }],
   "exclude": ["node_modules"]
 }

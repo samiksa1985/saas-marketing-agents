@@ -18,6 +18,8 @@
                          "@nestjs/swagger":  "^11.0.0",
                          "@platform/auth":  "0.1.0",
                          "@platform/config":  "0.1.0",
+                         "@platform/contracts": "0.1.0",
+                         "@platform/db": "0.1.0",
                          "@platform/i18n":  "0.1.0",
                          "@platform/domain":  "0.1.0",
                          "@platform/registry":  "0.1.0",

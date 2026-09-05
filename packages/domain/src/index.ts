@@ -1,12 +1,6 @@
-import type { Id, Permission, Role } from '@platform/contracts';
+import type { Permission, TenantContext } from '@platform/contracts';
 
-export interface TenantContext {
-  tenantId: Id;
-  userId?: Id;
-  roles: Role[];
-  permissions: Permission[];
-  locale: string;
-}
+export type { TenantContext } from '@platform/contracts';
 
 export function requireTenantContext(context: TenantContext | undefined): TenantContext {
   if (!context?.tenantId) throw new Error('Tenant context is required');

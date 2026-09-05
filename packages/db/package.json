@@ -7,7 +7,7 @@
                     "build":  "tsc -b",
                     "typecheck":  "tsc -b --pretty false",
                     "lint":  "prettier --check src",
-                    "test":  "node --test",
+                    "test":  "tsx --test src/**/*.test.ts",
                     "generate":  "drizzle-kit generate",
                     "migrate":  "tsx src/migrate.ts",
                     "check":  "tsx src/check.ts"

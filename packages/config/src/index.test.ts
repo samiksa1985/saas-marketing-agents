@@ -66,6 +66,11 @@ test(
       config.oidcAudience,
       undefined,
     );
+
+    assert.equal(
+      config.workflowRuntimeMode,
+      'in-memory',
+    );
   },
 );
 
@@ -91,6 +96,47 @@ test(
     assert.equal(
       config.oidcAudience,
       'platform-api',
+    );
+
+    assert.equal(
+      config.workflowRuntimeMode,
+      'in-memory',
+    );
+  },
+);
+
+test(
+  'production rejects the in-memory workflow runtime',
+  () => {
+    assert.throws(
+      () =>
+        loadConfig({
+          ...baseEnv,
+          NODE_ENV:
+            'production',
+          OIDC_ISSUER_URL:
+            'https://issuer.example.com',
+          OIDC_AUDIENCE:
+            'platform-api',
+          WORKFLOW_RUNTIME_MODE:
+            'in-memory',
+        }),
+      /WORKFLOW_RUNTIME_MODE=temporal/i,
+    );
+  },
+);
+
+test(
+  'configuration rejects an unknown workflow runtime mode',
+  () => {
+    assert.throws(
+      () =>
+        loadConfig({
+          ...baseEnv,
+          WORKFLOW_RUNTIME_MODE:
+            'unsupported',
+        }),
+      /WORKFLOW_RUNTIME_MODE must be/i,
     );
   },
 );
@@ -158,6 +204,11 @@ test(
     assert.equal(
       config.oidcAudience,
       'platform-api',
+    );
+
+    assert.equal(
+      config.workflowRuntimeMode,
+      'temporal',
     );
   },
 );

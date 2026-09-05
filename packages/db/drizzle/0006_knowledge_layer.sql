@@ -102,3 +102,26 @@ ON "knowledge_document_citations" ("agent_run_id");
 
 CREATE INDEX "knowledge_citations_workflow_run_idx"
 ON "knowledge_document_citations" ("workflow_run_id");
+--> statement-breakpoint
+
+ALTER TABLE "knowledge_documents" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "knowledge_document_chunks" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "knowledge_document_citations" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+DO $$
+DECLARE
+  table_name text;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'knowledge_documents',
+    'knowledge_document_chunks',
+    'knowledge_document_citations'
+  ] LOOP
+    EXECUTE format(
+      'CREATE POLICY %I_tenant_policy ON %I USING (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid) WITH CHECK (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid)',
+      table_name,
+      table_name
+    );
+  END LOOP;
+END $$;

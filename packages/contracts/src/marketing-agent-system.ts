@@ -148,10 +148,10 @@ export const AI_MARKETING_OS_DOMAIN_AGENTS: readonly DomainAgentDefinition[] = [
   {
     id: "cfo-intelligence",
     name: "CFO Intelligence Agent",
-    mission: "Analyze revenue, costs, AI/tool/human delivery costs, margins, unit economics, pricing, cash implications, and forecasts.",
+    mission: "Analyze revenue, costs, AI/tool/human delivery costs, margins, unit economics, and approval-governed pricing scenarios.",
     defaultApproval: "CLIENT",
     handoffs: [],
-    capabilityIds: ["CAP-CFO-PROFITABILITY", "CAP-CFO-FORECASTING"],
+    capabilityIds: ["CAP-CFO-PROFITABILITY"],
     source: 'ai-marketing-os-project',
   },
   {
@@ -446,7 +446,7 @@ export const AI_MARKETING_OS_DOMAIN_CAPABILITIES: readonly DomainCapabilityDefin
     name: "Financial Forecasting",
     ownerAgentId: "cfo-intelligence",
     type: "DOMAIN",
-    mission: "Produce evidence-backed financial forecasts and scenarios.",
+    mission: "Builds evidence-backed deterministic period forecasts from canonical opportunities and actual revenue; scenario modeling remains a distinct CFO capability.",
     allowedTools: ["finance_reader", "billing_reader", "analytics_reader"],
     approval: "NONE",
     risk: "L1",

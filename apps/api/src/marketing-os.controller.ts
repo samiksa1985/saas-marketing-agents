@@ -1,8 +1,26 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { loadCanonicalAgentRegistry } from '@platform/registry';
-import { InMemoryKnowledgeRetriever, InMemoryMarketingMemoryRepository, MarketingContextBuilder } from '@platform/context-engine';
+import {
+  InMemoryKnowledgeRetriever,
+  InMemoryMarketingMemoryRepository,
+  MarketingContextBuilder,
+} from '@platform/context-engine';
 import { createAcquisitionGraph } from '@platform/acquisition-graph';
-import { buildMarketingOSPlan, MarketingOSExecutionService, type MarketingOSRequest, type ExecutionRecord } from '@platform/marketing-os-core';
+import {
+  buildMarketingOSPlan,
+  MarketingOSExecutionService,
+  type MarketingOSRequest,
+  type ExecutionRecord,
+} from '@platform/marketing-os-core';
 import { InMemoryWorkflowRuntime } from '@platform/workflow-runtime';
 import { ApiAuthGuard, getAuthContext, type AuthenticatedRequest } from './auth.guard.js';
 import { ApprovalApiService, type ApprovalRecord } from './approval.controller.js';
@@ -45,15 +63,15 @@ export class MarketingOsController {
   private readonly runtime = new InMemoryWorkflowRuntime();
   private readonly registryPromise = loadCanonicalAgentRegistry();
   private readonly graphs = new Map<string, ReturnType<typeof createAcquisitionGraph>>();
+  private readonly executionService: MarketingOSExecutionService;
 
-  constructor(private readonly approvals: ApprovalApiService) {}
-
-  private createExecutionService(): MarketingOSExecutionService {
-    return new MarketingOSExecutionService(this.runtime, {
-      create: (context, input) => this.approvals.create(context, {
-        artifactId: input.artifactId,
-        idempotencyKey: input.idempotencyKey,
-      }),
+  constructor(private readonly approvals: ApprovalApiService) {
+    this.executionService = new MarketingOSExecutionService(this.runtime, {
+      create: (context, input) =>
+        this.approvals.create(context, {
+          artifactId: input.artifactId,
+          idempotencyKey: input.idempotencyKey,
+        }),
       get: (approvalId, context) => this.approvals.get(approvalId, context),
     });
   }
@@ -97,7 +115,7 @@ export class MarketingOsController {
       throw new ForbiddenException('Cross-tenant access denied');
     }
 
-    const result = await this.createExecutionService().prepare({
+    const result = await this.executionService.prepare({
       plan: body.plan,
       engagementId: body.engagementId,
       locale: body.locale ?? 'en',
@@ -121,7 +139,7 @@ export class MarketingOsController {
     @Param('planId') planId: string,
   ): Promise<ExecuteResponse> {
     const auth = getAuthContext(request);
-    const result = await this.createExecutionService().start(planId, auth, {
+    const result = await this.executionService.start(planId, auth, {
       actor: auth.userId ?? 'api-user',
       reason: 'Marketing OS approved execution',
       timestamp: new Date().toISOString(),
@@ -144,8 +162,7 @@ export class MarketingOsController {
     @Param('planId') planId: string,
   ): Promise<RunResponse> {
     const auth = getAuthContext(request);
-    const service = this.createExecutionService();
-    const result = service.get(planId, auth);
+    const result = this.executionService.get(planId, auth);
     const approval: ApprovalRecord | null = result.approvalId
       ? this.approvals.get(result.approvalId, auth)
       : null;
