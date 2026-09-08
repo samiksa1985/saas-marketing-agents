@@ -36,6 +36,7 @@ $expected = [ordered]@{
   'Migration chain' = 'migrationChain'
   'Migration 0020' = 'migration0020'
   'Migration 0021' = 'migration0021'
+  'Migration 0022' = 'migration0022'
   'RLS' = 'rls'
   'FORCE RLS' = 'forceRls'
   'Tenant isolation' = 'tenantIsolation'
@@ -46,6 +47,12 @@ $expected = [ordered]@{
   'Billing idempotency' = 'billingIdempotency'
   'Billing rollback' = 'billingRollback'
   'Billing cross-tenant isolation' = 'billingCrossTenantIsolation'
+  'EPIC-03 policy persistence' = 'epic03PolicyPersistence'
+  'EPIC-03 policy audit' = 'epic03PolicyAudit'
+  'EPIC-03 RLS' = 'epic03Rls'
+  'EPIC-03 outbox' = 'epic03Outbox'
+  'EPIC-03 idempotency' = 'epic03Idempotency'
+  'EPIC-03 concurrency' = 'epic03Concurrency'
 }
 
 foreach ($label in $expected.Keys) {
@@ -55,6 +62,13 @@ foreach ($label in $expected.Keys) {
     throw "${label} is not verified as PASS: $value"
   }
   Write-Host "${label}: $value"
+}
+
+if ($result.migrationCount -ne 23 -or $result.latestMigration -ne '0022_governed_external_marketing_actions') {
+  throw "EPIC-03 evidence does not prove the canonical 23-migration chain through 0022. Count=$($result.migrationCount); latest=$($result.latestMigration)"
+}
+if (-not $result.epic03 -or $result.epic03.concurrency.successes -ne 1 -or $result.epic03.concurrency.conflicts -ne 1 -or $result.epic03.concurrency.unexpectedDuplicates -ne 0) {
+  throw 'EPIC-03 concurrency evidence is missing or does not prove one owner, one conflict, and no duplicate.'
 }
 
 Write-Host 'PHASE1_EVIDENCE_VERIFICATION=PASS'

@@ -17,6 +17,9 @@ Never copy real values, secrets, connection strings, or tokens into source contr
 | `AI_MODEL` | Required by configuration. | Approved model/version and evaluation record. | Non-secret identifier. |
 | `OIDC_ISSUER_URL` | Required in production. | HTTPS issuer with discovered JWKS and approved tenant/role claims. | Sensitive endpoint. |
 | `OIDC_AUDIENCE` | Required in production. | Exact API audience. | Sensitive identifier. |
+| `GOOGLE_ADS_EXECUTION_MODE` | Defaults to `DISABLED`; accepts `DISABLED`, `DRY_RUN`, `MOCK`, or `REAL`. | Keep `DISABLED` until the G9 provider gate is approved. Production rejects `MOCK`. | Non-secret control. |
+| `GOOGLE_ADS_EXECUTION_ENABLED` | Defaults to `false`; only has effect with `REAL`. | Requires a documented and approved enablement change. | Non-secret control. |
+| `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN`, `GOOGLE_ADS_CUSTOMER_ID`, `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | Resolved only inside the Google Ads provider boundary. | Required for a future real transport; validate only in managed secrets. | Secrets/sensitive identifiers; never log or persist values. |
 | `REPOSITORY_ROOT` | Optional API registry setting. | Set only when repository discovery is intentionally enabled. | Sensitive path metadata. |
 
 ## Startup validation

@@ -17,6 +17,9 @@
                            "path": "../../packages/approvals"
                        },
                        {
+                           "path": "../../packages/billing-entitlements"
+                       },
+                       {
                            "path":  "../../packages/db"
                        },
                        {
@@ -42,6 +45,9 @@
                        },
                        {
                            "path":  "../../packages/marketing-os-persistence"
+                       },
+                       {
+                           "path": "../../packages/tool-gateway"
                        }
                    ],
     "include":  [

@@ -104,16 +104,19 @@ fail-closed evidence without exposing a connection URL or password.
 
 Preserve the full terminal output and return it without credentials. A result is valid only when the final line contains `PHASE1_POSTGRES_RESULT=` with JSON `status` equal to `PASS`. A missing required assertion, failed migration, unavailable extension, or command failure is a blocker.
 
-The current journal includes `0020_persistent_marketing_os_runtime` and
-`0021_durable_marketing_os_approvals`. The harness applies `0019` after
-verifying the pre-repair state, then applies `0020` and `0021` before schema,
-RLS, pgvector, approval, and billing checks. It must not print a pass record
-after a failed migration or failed assertion.
+The current journal includes `0020_persistent_marketing_os_runtime`,
+`0021_durable_marketing_os_approvals`, and
+`0022_governed_external_marketing_actions`. The harness applies `0019` after
+verifying the pre-repair state, then applies `0020`, `0021`, and `0022` before
+schema, RLS, pgvector, approval, billing, and EPIC-03 policy/action/outbox
+checks. The verifier requires migration count 23, latest migration 0022, and
+one real concurrent action owner with one PostgreSQL conflict. It must not print
+a pass record after a failed migration or failed assertion.
 
-The final local disposable evidence passed the harness and verifier. Its
-complete bounded scope is recorded in `PHASE1_POSTGRES_FINAL_EVIDENCE.md`; the
-runbook remains for a future reproducible disposable rerun, not as a production
-deployment procedure.
+The prior Phase-1 closeout evidence through 0021 remains valid for its bounded
+scope. A fresh fail-closed result through 0022 has now passed for EPIC-03;
+see `EPIC03_POSTGRESQL_EVIDENCE.md`. The runbook remains a reproducible
+disposable rerun procedure, not a production deployment procedure.
 
 ## Disposal
 

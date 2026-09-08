@@ -71,6 +71,9 @@ test(
       config.workflowRuntimeMode,
       'in-memory',
     );
+
+    assert.equal(config.googleAdsExecutionMode, 'DISABLED');
+    assert.equal(config.googleAdsExecutionEnabled, false);
   },
 );
 
@@ -140,6 +143,27 @@ test(
     );
   },
 );
+
+test('configuration refuses MOCK Google Ads execution in production', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        NODE_ENV: 'production',
+        OIDC_ISSUER_URL: 'https://issuer.example.com',
+        OIDC_AUDIENCE: 'platform-api',
+        GOOGLE_ADS_EXECUTION_MODE: 'MOCK',
+      }),
+    /cannot use.*MOCK/i,
+  );
+});
+
+test('configuration validates explicit Google Ads enablement', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, GOOGLE_ADS_EXECUTION_ENABLED: 'yes' }),
+    /GOOGLE_ADS_EXECUTION_ENABLED must be true or false/i,
+  );
+});
 
 test(
   'production requires OIDC issuer',

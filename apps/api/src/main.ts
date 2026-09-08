@@ -27,6 +27,15 @@ import { AUTH_PROVIDER, ApiAuthGuard } from './auth.guard.js';
 import { ApiTenantDurableApprovalRepository } from './durable-approval.repository.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
+import { ExternalActionsController } from './external-actions.controller.js';
+import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
+import { ExternalActionApplicationService } from './external-actions.application.js';
+import {
+  EnvironmentGoogleAdsCredentialResolver,
+  GoogleAdsApiAdapter,
+  GoogleAdsProviderGateway,
+  MockGoogleAdsProvider,
+} from '@platform/tool-gateway';
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
 
@@ -63,17 +72,39 @@ const durableApprovals =
   config.nodeEnv === 'production' || workflowRuntime.durable
     ? new ApiTenantDurableApprovalRepository(tenantDatabase)
     : new InMemoryDurableApprovalRepository();
+// Provider configuration is composed here, never in a controller or agent.
+// MOCK is rejected by loadConfig in production; REAL remains disabled unless
+// explicitly enabled and its transport/credentials validate inside the gateway.
+const googleAdsProvider =
+  config.googleAdsExecutionMode === 'MOCK'
+    ? new MockGoogleAdsProvider()
+    : new GoogleAdsApiAdapter(new EnvironmentGoogleAdsCredentialResolver());
+const googleAdsGateway = new GoogleAdsProviderGateway(
+  googleAdsProvider,
+  config.googleAdsExecutionMode,
+  config.googleAdsExecutionEnabled,
+);
 const authProviderFactory=():AuthProvider=>{
   if(config.oidcIssuerUrl&&config.oidcAudience)return new OidcAuthProvider({issuerUrl:config.oidcIssuerUrl,audience:config.oidcAudience});
   return new RejectingAuthProvider();
 };
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController],
   providers:[
     AppService,RegistryService,ApprovalApiService,ProductSurfaceService,WorkflowApiService,
     {provide:WORKFLOW_RUNTIME_SELECTION,useValue:workflowRuntime},
     {provide:API_TENANT_DATABASE,useValue:tenantDatabase},
     {provide:DURABLE_APPROVAL_REPOSITORY,useValue:durableApprovals},
+    {
+      provide: ExternalActionApplicationService,
+      useFactory: (approvals: ApprovalApiService, databaseFacade: typeof tenantDatabase) =>
+        new ExternalActionApplicationService(
+          databaseFacade,
+          googleAdsGateway,
+          approvals,
+        ),
+      inject: [ApprovalApiService, API_TENANT_DATABASE],
+    },
     {
       provide: MarketingOsApplicationService,
       useFactory: (approvals: ApprovalApiService, databaseFacade: typeof tenantDatabase) =>

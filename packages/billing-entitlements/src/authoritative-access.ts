@@ -264,13 +264,13 @@ export class AuthoritativeEntitlementAccess {
 
     return {
       subscription,
-      usageLimit,
+      ...(usageLimit !== undefined ? { usageLimit } : {}),
       decision: resolveEntitlement({
         tenantId,
         key: entitlementKey,
         planEntitlements: planEntitlement ? [planEntitlement] : [],
         organizationOverrides: override ? [override] : [],
-        usage,
+        ...(usage ? { usage } : {}),
         now,
       }),
     };

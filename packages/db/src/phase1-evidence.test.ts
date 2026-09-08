@@ -125,6 +125,7 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
         migrationChain: 'PASS',
         migration0020: 'PASS',
         migration0021: 'PASS',
+        migration0022: 'PASS',
         rls: 'PASS',
         forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
         tenantIsolation: 'PASS',
@@ -155,4 +156,32 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
 
   assert.notEqual(result.status, 0);
   assert.match(`${result.stdout}\n${result.stderr}`, /Billing authority is not verified as PASS/);
+});
+
+test('verifier fails closed when a PASS result does not prove migration 0022 and EPIC-03 concurrency', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'phase1-verifier-epic03-'));
+  writeFileSync(
+    join(directory, 'phase1-20260908-000001.result.json'),
+    JSON.stringify({
+      status: 'PASS',
+      migrationCount: 22,
+      latestMigration: '0021_durable_marketing_os_approvals',
+      checks: {
+        migrationChain: 'PASS', migration0020: 'PASS', migration0021: 'PASS',
+        rls: 'PASS', forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE', tenantIsolation: 'PASS', poolingLeak: 'PASS',
+        pgvector: 'PASS', billingAuthority: 'PASS', billingConcurrency: 'PASS', billingIdempotency: 'PASS',
+        billingRollback: 'PASS', billingCrossTenantIsolation: 'PASS',
+        epic03PolicyPersistence: 'PASS', epic03PolicyAudit: 'PASS', epic03Rls: 'PASS', epic03Outbox: 'PASS',
+        epic03Idempotency: 'PASS', epic03Concurrency: 'PASS',
+      },
+    }),
+  );
+
+  const result = spawnSync(powerShell(), [
+    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', verifierPath,
+    '-EvidenceDirectory', directory,
+  ], { cwd: directory, encoding: 'utf8' });
+
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Migration 0022 is not verified as PASS/);
 });

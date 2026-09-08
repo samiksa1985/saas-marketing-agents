@@ -7,6 +7,12 @@ export type WorkflowRuntimeMode =
   | 'in-memory'
   | 'temporal';
 
+export type GoogleAdsExecutionMode =
+  | 'DISABLED'
+  | 'DRY_RUN'
+  | 'MOCK'
+  | 'REAL';
+
 export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
   apiPort: number;
@@ -15,6 +21,8 @@ export interface RuntimeConfig {
   temporalAddress: string;
   temporalNamespace: string;
   workflowRuntimeMode: WorkflowRuntimeMode;
+  googleAdsExecutionMode: GoogleAdsExecutionMode;
+  googleAdsExecutionEnabled: boolean;
   artifactBucket: string;
   artifactEndpoint?: string;
   aiProvider: string;
@@ -47,6 +55,13 @@ function optional(
   }
 
   return value.trim();
+}
+
+function optionalBoolean(name: string, value: string | undefined): boolean {
+  if (value === undefined || value.trim() === '') return false;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new Error(`${name} must be true or false`);
 }
 
 export function loadConfig(
@@ -131,6 +146,19 @@ export function loadConfig(
     );
   }
 
+  const googleAdsExecutionMode =
+    (env.GOOGLE_ADS_EXECUTION_MODE ?? 'DISABLED') as GoogleAdsExecutionMode;
+  if (!['DISABLED', 'DRY_RUN', 'MOCK', 'REAL'].includes(googleAdsExecutionMode)) {
+    throw new Error('GOOGLE_ADS_EXECUTION_MODE must be DISABLED, DRY_RUN, MOCK, or REAL');
+  }
+  const googleAdsExecutionEnabled = optionalBoolean(
+    'GOOGLE_ADS_EXECUTION_ENABLED',
+    env.GOOGLE_ADS_EXECUTION_ENABLED,
+  );
+  if (nodeEnv === 'production' && googleAdsExecutionMode === 'MOCK') {
+    throw new Error('Production cannot use GOOGLE_ADS_EXECUTION_MODE=MOCK');
+  }
+
   return {
     nodeEnv,
 
@@ -157,6 +185,10 @@ export function loadConfig(
     ),
 
     workflowRuntimeMode,
+
+    googleAdsExecutionMode,
+
+    googleAdsExecutionEnabled,
 
     artifactBucket: required(
       'ARTIFACT_BUCKET',

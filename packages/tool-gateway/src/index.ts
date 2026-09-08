@@ -166,3 +166,5 @@ export class InMemoryToolGateway
     return output;
   }
 }
+
+export * from './google-ads.js';

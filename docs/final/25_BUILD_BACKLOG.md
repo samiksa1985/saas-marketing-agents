@@ -9,7 +9,8 @@ This backlog contains release-enabling or production-hardening work that remains
 | P0 | Complete production identity validation. | OIDC discovery/JWKS, audience/issuer, role mapping, tenant-claim negative tests, and break-glass review. | Security/platform |
 | P0 | Establish secret management and rotation. | Vault/secret-manager references, no plaintext deployment secret, rotation drill, and access review. | Security/platform |
 | P0 | Perform backup and restore drill. | Restored tenant data, RPO/RTO measurement, and signed operational record. | Data platform |
-| P1 | Verify each external provider before enabling writes. | Contract test, sandbox test, webhook verification, approval/idempotency proof, rollback/disable procedure. | Integration owners |
+| P0 | Complete Google Ads real-provider readiness before enabling writes. | Managed-secret wiring, approved least-privilege account, adapter transport implementation, sandbox mutation/verification, provider idempotency/timeout proof, worker/outbox recovery, disable and rollback exercise. EPIC-03 mock/dry-run proof is not this evidence. | Integration owners |
+| P1 | Verify each other external provider before enabling writes. | Contract test, sandbox test, webhook verification, approval/idempotency proof, rollback/disable procedure. | Integration owners |
 | P1 | Operate dashboards and alerts. | SLOs, error/queue/approval/side-effect alerts, owner routing, and incident drill. | Observability |
 | P1 | Create a capability enablement ceremony. | Per-capability evidence, owner approval, feature/config state, and rollback owner. | Product/governance |
 | P1 | Run security release assessment. | Threat model, SAST/dependency/secrets reports, penetration findings disposition, and incident contacts. | Security |

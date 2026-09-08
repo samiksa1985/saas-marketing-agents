@@ -18,6 +18,13 @@ import postgres from 'postgres';
 import { AuthoritativeEntitlementAccess } from '../../billing-entitlements/src/authoritative-access.js';
 import { PersistentBillingAuthorityRepository } from '../../marketing-os-persistence/src/billing-authority.js';
 import { AtomicBillingUsageStore } from '../../marketing-os-persistence/src/billing-usage.js';
+import {
+  PersistentExternalActionOutcomeStore,
+  PersistentExternalActionPolicyStore,
+  PersistentExternalActionStore,
+} from '../../marketing-os-persistence/src/index.js';
+import type { GovernedExternalAction } from '../../marketing-os-core/src/governed-external-action.js';
+import type { TenantContext } from '../../contracts/src/index.js';
 import { KNOWLEDGE_EMBEDDING_DIMENSIONS } from '../src/schema.js';
 import {
   executePhase1Migration,
@@ -56,6 +63,12 @@ type PgvectorProof = {
   invalidDimensionRejected: true;
   invalidDimensionCode: string | null;
   tenantIsolation: 'PASS';
+};
+type Epic03Proof = {
+  policyVersion: number;
+  actionId: string;
+  outboxId: string;
+  concurrency: { workers: number; attempts: number; successes: number; conflicts: number; unexpectedDuplicates: number };
 };
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
@@ -344,11 +357,14 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'knowledge_documents', 'knowledge_document_chunks', 'knowledge_document_citations',
         'billing_plans', 'billing_plan_entitlements', 'billing_subscriptions',
         'billing_organization_entitlements', 'billing_usage_counters', 'billing_usage_events',
-        'billing_invoices', 'billing_payments', 'financial_forecast_snapshots'
+        'billing_invoices', 'billing_payments', 'financial_forecast_snapshots',
+        'external_action_policies', 'external_action_policy_audit',
+        'external_marketing_actions', 'external_marketing_action_evidence',
+        'external_action_workflow_outbox'
       )
   `, recordSql),
   );
-  assert.equal(tables.length, 20, 'required canonical tables are missing');
+  assert.equal(tables.length, 25, 'required canonical tables are missing');
   const minorUnits = rows(
     await validationUnsafe(owner, `
     SELECT table_name, column_name, data_type
@@ -405,11 +421,26 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'marketing_os_plan_snapshots'::regclass,
         'marketing_os_execution_records'::regclass,
         'marketing_os_approval_records'::regclass,
-        'marketing_outcome_events'::regclass
+        'marketing_outcome_events'::regclass,
+        'external_action_policies'::regclass,
+        'external_action_policy_audit'::regclass,
+        'external_marketing_actions'::regclass,
+        'external_marketing_action_evidence'::regclass,
+        'external_action_workflow_outbox'::regclass
       )
   `, recordSql),
   );
-  assert.equal(marketingForeignKeys.length, 5, 'Marketing OS tenant foreign keys are missing');
+  assert.equal(marketingForeignKeys.length, 10, 'Marketing OS tenant foreign keys are missing');
+  const governedIndexes = rows(
+    await validationUnsafe(owner, `
+      SELECT indexname FROM pg_indexes
+      WHERE schemaname = 'public' AND indexname IN (
+        'external_marketing_actions_active_target_uidx',
+        'external_action_workflow_outbox_tenant_idempotency_uidx'
+      )
+    `, recordSql),
+  );
+  assert.equal(governedIndexes.length, 2, 'governed action concurrency or outbox idempotency index is missing');
 }
 
 async function testDurableApprovalRlsLegacy(owner: SqlClient, databaseUrl: string): Promise<void> {
@@ -1844,6 +1875,269 @@ async function testBillingConcurrency(
   );
 }
 
+function epic03Context(tenantId: string): TenantContext {
+  return {
+    tenantId,
+    userId: `phase1-policy-admin-${tenantId}`,
+    roles: ['tenant_admin'],
+    permissions: ['security_policy:manage'],
+    locale: 'en',
+  };
+}
+
+function epic03Action(
+  id: string,
+  policyId: string,
+  policyVersion: number,
+): GovernedExternalAction {
+  const timestamp = '2026-09-08T00:00:00.000Z';
+  return {
+    id,
+    tenantId: tenantA,
+    planId: 'phase1-epic03-recommendation',
+    workflowId: 'phase1-epic03-workflow',
+    type: 'UPDATE_CAMPAIGN_BUDGET',
+    idempotencyKey: 'phase1-epic03-action-idempotency',
+    status: 'PROPOSED',
+    requestedAt: timestamp,
+    updatedAt: timestamp,
+    proposal: {
+      actionId: id,
+      tenantId: tenantA,
+      organizationId: 'phase1-org-a',
+      actor: 'phase1-operator-a',
+      agentIdentity: 'phase1-governed-agent',
+      workflowRunId: 'phase1-epic03-workflow',
+      recommendationId: 'phase1-epic03-recommendation',
+      provider: 'GOOGLE_ADS',
+      accountId: 'phase1-account-a',
+      campaignId: 'phase1-campaign-a',
+      actionType: 'UPDATE_CAMPAIGN_BUDGET',
+      requestedPayload: { dailyBudget: 120 },
+      reason: 'Phase 1 governed persistence proof.',
+      expectedOutcome: 'Controlled sandbox budget update.',
+      estimatedImpact: { conversions: 1 },
+      estimatedCost: 20,
+      currency: 'USD',
+      riskLevel: 'MEDIUM',
+      policyContext: { source: 'phase1-postgres-harness' },
+      approvalRequirement: 'REQUIRED',
+      idempotencyKey: 'phase1-epic03-action-idempotency',
+      requestedAt: timestamp,
+      metadata: { proof: true },
+      evidence: [{ id: 'phase1-epic03-reference', source: 'phase1', summary: 'durable evidence proof' }],
+      confidence: 0.9,
+      rollback: { strategy: 'restore daily budget', before: { dailyBudget: 100 } },
+    },
+    policyDecision: {
+      outcome: 'REQUIRE_APPROVAL',
+      reasons: [],
+      evaluatedAt: timestamp,
+      policyId,
+      policyVersion,
+      requiredApprovalRole: 'tenant_admin',
+      dryRunOnly: true,
+    },
+    evidence: [{ id: 'phase1-epic03-evidence', type: 'PROPOSAL_CREATED', occurredAt: timestamp, payload: { proof: true } }],
+    version: 0,
+  };
+}
+
+/** Real PostgreSQL proof for 0022 persistence, RLS, replay, and locking. */
+async function testEpic03GovernedExternalActions(
+  owner: SqlClient,
+  databaseUrl: string,
+  recordSql: SqlRecorder,
+  recordStep: (step: string) => void,
+  recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void,
+): Promise<Epic03Proof> {
+  const policyUpdate = {
+    organizationId: 'phase1-org-a',
+    enabled: true,
+    executionMode: 'DRY_RUN' as const,
+    allowedActionTypes: ['UPDATE_CAMPAIGN_BUDGET'],
+    allowedAccounts: ['phase1-account-a'],
+    deniedAccounts: [],
+    allowedCampaigns: ['phase1-campaign-a'],
+    deniedCampaigns: [],
+    maxAbsoluteBudgetDelta: 50,
+    maxPercentageBudgetDelta: 25,
+    monthlySpendCeiling: 1000,
+    minimumConfidence: 0.8,
+    requiredEvidence: true,
+    approvalMode: 'HUMAN' as const,
+    requiredApprovalRole: 'tenant_admin',
+    killSwitch: false,
+    dryRunOnly: true,
+  };
+  const contextA = epic03Context(tenantA);
+  const actionId = 'phase1-epic03-action-a';
+
+  recordStep('durable_policy_and_action');
+  const persisted = await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+    const policies = new PersistentExternalActionPolicyStore(transaction);
+    const createdPolicy = await policies.upsert(contextA, 'GOOGLE_ADS', policyUpdate);
+    const revisedPolicy = await policies.upsert(contextA, 'GOOGLE_ADS', {
+      ...policyUpdate,
+      monthlySpendCeiling: 900,
+    });
+    assert.equal(createdPolicy.version, 1, 'new durable policy must begin at version 1');
+    assert.equal(revisedPolicy.version, 2, 'policy update must create the next durable revision');
+
+    const actions = new PersistentExternalActionStore(transaction);
+    const created = await actions.create(contextA, epic03Action(actionId, revisedPolicy.id, revisedPolicy.version));
+    const replay = await actions.create(contextA, epic03Action(actionId, revisedPolicy.id, revisedPolicy.version));
+    assert.equal(replay.id, created.id, 'API proposal retry must resolve to the same durable action');
+    const verified = await actions.save(contextA, {
+      ...created,
+      status: 'VERIFIED',
+      updatedAt: '2026-09-08T00:00:01.000Z',
+      verification: {
+        status: 'VERIFIED',
+        observedState: { dailyBudget: 120 },
+        reasons: [],
+        verifiedAt: '2026-09-08T00:00:01.000Z',
+      },
+    });
+    const pending = await new PersistentExternalActionOutcomeStore(transaction).listPending(contextA);
+    assert.equal(pending.length, 1, 'terminal action must create exactly one durable workflow outcome');
+    assert.equal(pending[0]?.externalActionId, verified.id);
+    return { policy: revisedPolicy, action: verified, outboxId: pending[0]!.id };
+  });
+  recordDiagnostics({ policyVersion: persisted.policy.version, policyAuditExpected: 2, terminalOutboxExpected: 1 });
+
+  recordStep('policy_version_and_audit');
+  recordSql('SELECT external action policy version and policy audit count');
+  const policyEvidence = one(await owner.unsafe(
+    `
+      SELECT action.policy_version::int AS policy_version,
+             (SELECT count(*)::int FROM external_action_policy_audit WHERE policy_id = $1) AS audit_count
+      FROM external_marketing_actions action
+      WHERE action.id = $2
+    `,
+    [persisted.policy.id, actionId],
+  ));
+  // This query is owner-only evidence inspection; app-role checks below prove RLS.
+  assert.equal(Number(policyEvidence.policy_version), 2, 'action must retain the policy revision used for its decision');
+  assert.equal(Number(policyEvidence.audit_count), 2, 'each policy change must create an audit revision');
+
+  recordStep('restart_replay_safe_outbox');
+  await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+    const outcomes = new PersistentExternalActionOutcomeStore(transaction);
+    const pending = await outcomes.listPending(contextA, 'phase1-epic03-workflow');
+    assert.equal(pending.length, 1, 'a new worker connection must recover the pending durable outcome');
+    const delivered = await outcomes.markDelivered(contextA, persisted.outboxId);
+    assert.equal(delivered.deliveryStatus, 'DELIVERED');
+  });
+  await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+    const replay = await new PersistentExternalActionOutcomeStore(transaction).markDelivered(contextA, persisted.outboxId);
+    assert.equal(replay.deliveryStatus, 'DELIVERED', 'worker acknowledgement replay must not duplicate an outcome');
+    const restored = await new PersistentExternalActionStore(transaction).get(contextA, actionId);
+    assert.equal(restored?.id, actionId, 'a restarted API process must recover the same durable action identity');
+  });
+
+  recordStep('tenant_rls_and_missing_context');
+  await withAppTransaction(databaseUrl, tenantB, async (transaction) => {
+    const visible = rows(await validationTransactionUnsafe(
+      transaction,
+      `SELECT id FROM external_marketing_actions WHERE id = $1`,
+      [actionId],
+      recordSql,
+    ));
+    assert.equal(visible.length, 0, 'Tenant B must not read Tenant A action');
+    const policyRows = rows(await validationTransactionUnsafe(
+      transaction,
+      `SELECT id FROM external_action_policies WHERE provider = 'GOOGLE_ADS'`,
+      [],
+      recordSql,
+    ));
+    assert.equal(policyRows.length, 0, 'Tenant B must not read Tenant A policy');
+    const evidenceRows = rows(await validationTransactionUnsafe(
+      transaction,
+      `SELECT id FROM external_marketing_action_evidence WHERE action_id = $1`,
+      [actionId],
+      recordSql,
+    ));
+    assert.equal(evidenceRows.length, 0, 'Tenant B must not read Tenant A evidence');
+    const outboxRows = rows(await validationTransactionUnsafe(
+      transaction,
+      `SELECT id FROM external_action_workflow_outbox WHERE external_action_id = $1`,
+      [actionId],
+      recordSql,
+    ));
+    assert.equal(outboxRows.length, 0, 'Tenant B must not read Tenant A workflow outcome');
+    const mutations = rows(await validationTransactionUnsafe(
+      transaction,
+      `UPDATE external_marketing_actions SET status = 'APPROVED' WHERE id = $1 RETURNING id`,
+      [actionId],
+      recordSql,
+    ));
+    assert.equal(mutations.length, 0, 'Tenant B must not approve or execute Tenant A action');
+  });
+  await withAppTransaction(databaseUrl, undefined, async (transaction) => {
+    const visible = rows(await validationTransactionUnsafe(
+      transaction,
+      `SELECT id FROM external_marketing_actions WHERE id = $1`,
+      [actionId],
+      recordSql,
+    ));
+    assert.equal(visible.length, 0, 'missing tenant context must not read governed actions');
+  });
+  await expectRlsDenied(() =>
+    withAppTransaction(databaseUrl, undefined, (transaction) =>
+      validationTransactionUnsafe(
+        transaction,
+        `INSERT INTO external_action_policies
+          (id, tenant_id, organization_id, provider, max_absolute_budget_delta, max_percentage_budget_delta,
+           monthly_spend_ceiling, minimum_confidence, created_by, updated_by)
+         VALUES ('phase1-epic03-no-context', $1::uuid, 'org-a', 'GOOGLE_ADS', 1, 1, 1, 0.5, 'test', 'test')`,
+        [tenantA],
+        recordSql,
+      ),
+    ),
+  );
+
+  recordStep('real_concurrency');
+  const attempts = await Promise.allSettled(
+    ['phase1-epic03-concurrent-a', 'phase1-epic03-concurrent-b'].map((id) =>
+      withAppTransaction(databaseUrl, tenantA, (transaction) =>
+        validationTransactionUnsafe(
+          transaction,
+          `INSERT INTO external_marketing_actions
+            (id, tenant_id, organization_id, actor, agent_identity, workflow_run_id, recommendation_id,
+             provider, account_id, campaign_id, action_type, target_lock_key, proposal, status,
+             idempotency_key, requested_at)
+           VALUES ($1, $2::uuid, 'phase1-org-a', 'operator-a', 'agent-a', 'workflow-a', 'recommendation-a',
+             'GOOGLE_ADS', 'phase1-account-a', 'phase1-campaign-concurrent', 'UPDATE_CAMPAIGN_BUDGET',
+             'phase1-epic03-concurrency-lock', '{}'::jsonb, 'PROPOSED', $1, now())`,
+          [id, tenantA],
+          recordSql,
+        ),
+      ),
+    ),
+  );
+  const successes = attempts.filter((result) => result.status === 'fulfilled').length;
+  const conflicts = attempts.filter((result) =>
+    result.status === 'rejected' && (result.reason as { code?: string }).code === '23505',
+  ).length;
+  const unexpectedDuplicates = attempts.length - successes - conflicts;
+  assert.equal(successes, 1, 'exactly one concurrent active target mutation may acquire the lock');
+  assert.equal(conflicts, 1, 'the competing target mutation must conflict at PostgreSQL');
+  assert.equal(unexpectedDuplicates, 0, 'no unexpected concurrent result is acceptable');
+  const owned = one(await owner.unsafe(
+    `SELECT count(*)::int AS count FROM external_marketing_actions
+     WHERE target_lock_key = 'phase1-epic03-concurrency-lock' AND status = 'PROPOSED'`,
+  ));
+  assert.equal(Number(owned.count), 1, 'database must contain one active mutation owner after concurrency race');
+
+  return {
+    policyVersion: persisted.policy.version,
+    actionId,
+    outboxId: persisted.outboxId,
+    concurrency: { workers: 2, attempts: attempts.length, successes, conflicts, unexpectedDuplicates },
+  };
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -1856,9 +2150,11 @@ async function main(): Promise<void> {
   const index0019 = journal.findIndex((entry) => entry.tag === '0019_marketing_os_rls_repairs');
   const index0020 = journal.findIndex((entry) => entry.tag === '0020_persistent_marketing_os_runtime');
   const index0021 = journal.findIndex((entry) => entry.tag === '0021_durable_marketing_os_approvals');
+  const index0022 = journal.findIndex((entry) => entry.tag === '0022_governed_external_marketing_actions');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
+  assert.equal(index0022, index0021 + 1, '0022 must directly follow 0021 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -1876,6 +2172,7 @@ async function main(): Promise<void> {
     );
     await applyJournal(owner, journal.slice(index0020, index0020 + 1));
     await applyJournal(owner, journal.slice(index0021, index0021 + 1));
+    await applyJournal(owner, journal.slice(index0022, index0022 + 1));
     await prepareApplicationRole(owner);
     await seedBillingAuthority(owner);
     await executePhase1ValidationCheck(
@@ -1930,6 +2227,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_BILLING_STEP' },
     );
+    const epic03Proof = await executePhase1ValidationCheck(
+      'epic03_governed_external_actions',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic03GovernedExternalActions(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC03_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -1941,6 +2245,7 @@ async function main(): Promise<void> {
           migrationChain: 'PASS',
           migration0020: 'PASS',
           migration0021: 'PASS',
+          migration0022: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -1952,9 +2257,16 @@ async function main(): Promise<void> {
           billingIdempotency: 'PASS',
           billingRollback: 'PASS',
           billingCrossTenantIsolation: 'PASS',
+          epic03PolicyPersistence: 'PASS',
+          epic03PolicyAudit: 'PASS',
+          epic03Rls: 'PASS',
+          epic03Outbox: 'PASS',
+          epic03Idempotency: 'PASS',
+          epic03Concurrency: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
+        epic03: epic03Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

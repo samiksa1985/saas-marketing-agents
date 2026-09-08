@@ -860,6 +860,187 @@ export const marketingOsApprovalRecords = pgTable(
     index('marketing_os_approval_tenant_status_idx').on(table.tenantId, table.status),
   ],
 );
+/**
+ * Provider-neutral durable intent for governed external side effects. Google
+ * Ads is the first adapter, not a special database model.
+ */
+export const externalMarketingActions = pgTable(
+  'external_marketing_actions',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    organizationId: varchar('organization_id', { length: 255 }).notNull(),
+    actor: varchar('actor', { length: 255 }).notNull(),
+    agentIdentity: varchar('agent_identity', { length: 255 }).notNull(),
+    workflowRunId: varchar('workflow_run_id', { length: 255 }).notNull(),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    accountId: varchar('account_id', { length: 255 }).notNull(),
+    campaignId: varchar('campaign_id', { length: 255 }),
+    actionType: varchar('action_type', { length: 96 }).notNull(),
+    targetLockKey: varchar('target_lock_key', { length: 640 }).notNull(),
+    proposal: jsonb('proposal').notNull(),
+    status: varchar('status', { length: 48 }).notNull(),
+    approvalId: varchar('approval_id', { length: 255 }),
+    simulation: jsonb('simulation'),
+    budgetDecision: jsonb('budget_decision'),
+    policyDecision: jsonb('policy_decision'),
+    // Denormalized for evidence queries; the full decision remains immutable
+    // JSON so its reasons and evaluated policy identity are retained together.
+    policyVersion: integer('policy_version'),
+    execution: jsonb('execution'),
+    verification: jsonb('verification'),
+    beforeState: jsonb('before_state'),
+    failureCode: varchar('failure_code', { length: 128 }),
+    failureMessage: text('failure_message'),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    version: integer('version').notNull().default(0),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_marketing_actions_tenant_provider_action_idempotency_uidx').on(
+      table.tenantId,
+      table.provider,
+      table.id,
+      table.idempotencyKey,
+    ),
+    index('external_marketing_actions_tenant_status_idx').on(table.tenantId, table.status),
+    index('external_marketing_actions_tenant_target_idx').on(
+      table.tenantId,
+      table.provider,
+      table.targetLockKey,
+    ),
+  ],
+);
+
+/** Append-only sanitized evidence for every governed decision and provider result. */
+export const externalMarketingActionEvidence = pgTable(
+  'external_marketing_action_evidence',
+  {
+    // Evidence identifiers originate with the canonical action executor and
+    // are opaque strings, so PostgreSQL must not impose a UUID-only contract.
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    actionId: varchar('action_id', { length: 255 })
+      .notNull()
+      .references(() => externalMarketingActions.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 128 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('external_marketing_action_evidence_tenant_action_idx').on(
+      table.tenantId,
+      table.actionId,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/**
+ * Tenant-owned source of truth for whether a provider side effect may occur.
+ * Credentials deliberately do not appear here; they resolve only in adapters.
+ */
+export const externalActionPolicies = pgTable(
+  'external_action_policies',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    organizationId: varchar('organization_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    enabled: boolean('enabled').notNull().default(false),
+    executionMode: varchar('execution_mode', { length: 16 }).notNull().default('DISABLED'),
+    allowedActionTypes: jsonb('allowed_action_types').notNull().default([]),
+    allowedAccounts: jsonb('allowed_accounts').notNull().default([]),
+    deniedAccounts: jsonb('denied_accounts').notNull().default([]),
+    allowedCampaigns: jsonb('allowed_campaigns').notNull().default([]),
+    deniedCampaigns: jsonb('denied_campaigns').notNull().default([]),
+    maxAbsoluteBudgetDelta: real('max_absolute_budget_delta').notNull(),
+    maxPercentageBudgetDelta: real('max_percentage_budget_delta').notNull(),
+    monthlySpendCeiling: real('monthly_spend_ceiling').notNull(),
+    minimumConfidence: real('minimum_confidence').notNull(),
+    requiredEvidence: boolean('required_evidence').notNull().default(true),
+    approvalMode: varchar('approval_mode', { length: 16 }).notNull().default('HUMAN'),
+    requiredApprovalRole: varchar('required_approval_role', { length: 128 }),
+    killSwitch: boolean('kill_switch').notNull().default(true),
+    dryRunOnly: boolean('dry_run_only').notNull().default(true),
+    executionHours: jsonb('execution_hours'),
+    version: integer('version').notNull().default(1),
+    createdBy: varchar('created_by', { length: 255 }).notNull(),
+    updatedBy: varchar('updated_by', { length: 255 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_action_policies_tenant_provider_uidx').on(table.tenantId, table.provider),
+    index('external_action_policies_tenant_provider_idx').on(table.tenantId, table.provider),
+  ],
+);
+
+/** Append-only policy revisions: administrators can be held accountable without retaining secrets. */
+export const externalActionPolicyAudit = pgTable(
+  'external_action_policy_audit',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    policyId: varchar('policy_id', { length: 255 })
+      .notNull()
+      .references(() => externalActionPolicies.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    actor: varchar('actor', { length: 255 }).notNull(),
+    eventType: varchar('event_type', { length: 64 }).notNull(),
+    snapshot: jsonb('snapshot').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('external_action_policy_audit_tenant_policy_idx').on(table.tenantId, table.policyId, table.version),
+  ],
+);
+
+/**
+ * Durable, tenant-scoped handoff from a terminal governed action to the
+ * existing workflow layer. Delivery workers can safely replay PENDING rows.
+ */
+export const externalActionWorkflowOutbox = pgTable(
+  'external_action_workflow_outbox',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    workflowRunId: varchar('workflow_run_id', { length: 255 }).notNull(),
+    externalActionId: varchar('external_action_id', { length: 255 })
+      .notNull()
+      .references(() => externalMarketingActions.id, { onDelete: 'cascade' }),
+    eventType: varchar('event_type', { length: 128 }).notNull(),
+    state: varchar('state', { length: 48 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    accountId: varchar('account_id', { length: 255 }).notNull(),
+    campaignId: varchar('campaign_id', { length: 255 }),
+    verificationStatus: varchar('verification_status', { length: 32 }),
+    correlationId: varchar('correlation_id', { length: 255 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 320 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    deliveryStatus: varchar('delivery_status', { length: 16 }).notNull().default('PENDING'),
+    deliveryAttempts: integer('delivery_attempts').notNull().default(0),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_action_workflow_outbox_tenant_idempotency_uidx').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index('external_action_workflow_outbox_tenant_delivery_idx').on(
+      table.tenantId,
+      table.deliveryStatus,
+      table.occurredAt,
+    ),
+  ],
+);
 export const marketingOutcomeEvents = pgTable(
   'marketing_outcome_events',
   {

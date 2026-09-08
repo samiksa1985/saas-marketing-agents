@@ -61,6 +61,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0019_marketing_os_rls_repairs',
     '0020_persistent_marketing_os_runtime',
     '0021_durable_marketing_os_approvals',
+    '0022_governed_external_marketing_actions',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -98,6 +99,27 @@ test('0021 extends canonical approvals and records embedding provenance without 
   assert.match(schema, /embeddingProvider: varchar\('embedding_provider'/);
   assert.match(schema, /knowledge_chunks_tenant_embedding_provenance_idx/);
   assert.match(schema, /uniqueIndex\('knowledge_documents_tenant_id_id_uidx'\)/);
+});
+
+test('0022 persists provider-neutral governed external actions with RLS, idempotency, and target conflict control', () => {
+  const migration = source('0022_governed_external_marketing_actions.sql');
+  const schema = source('../src/schema.ts');
+
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_marketing_actions/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_marketing_action_evidence/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_action_policies/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_action_policy_audit/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_action_workflow_outbox/);
+  assert.match(migration, /external_marketing_actions_active_target_uidx/);
+  assert.match(migration, /external_action_workflow_outbox_tenant_idempotency_uidx/);
+  assert.match(migration, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(migration, /WITH CHECK \(tenant_id = NULLIF\(current_setting/);
+  assert.doesNotMatch(migration, /refresh_token|client_secret|developer_token/i);
+  assert.match(schema, /export const externalMarketingActions = pgTable/);
+  assert.match(schema, /export const externalMarketingActionEvidence = pgTable/);
+  assert.match(schema, /export const externalActionPolicies = pgTable/);
+  assert.match(schema, /export const externalActionPolicyAudit = pgTable/);
+  assert.match(schema, /export const externalActionWorkflowOutbox = pgTable/);
 });
 
 test('knowledge embedding dimensions use the canonical 1536 database contract', () => {
