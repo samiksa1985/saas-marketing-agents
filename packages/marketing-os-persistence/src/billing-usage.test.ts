@@ -1,5 +1,7 @@
 ﻿import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
 
 import {
   AtomicBillingUsageStore,
@@ -177,6 +179,46 @@ test(
     assert.equal(
       result.consumed,
       false,
+    );
+  },
+);
+
+test(
+  'atomic usage binds timestamp boundaries through the canonical Drizzle date columns',
+  async () => {
+    let captured: SQL | undefined;
+    const periodStart = '2026-09-01T00:00:00.000Z';
+    const periodEnd = '2026-10-01T00:00:00.000Z';
+    const store = new AtomicBillingUsageStore({
+      execute: async (statement: unknown) => {
+        captured = statement as SQL;
+        return [{ duplicate: false, consumed: true, used: 1 }];
+      },
+    });
+
+    await store.consume({
+      tenantId: 'tenant-a',
+      key: 'ai.requests.monthly',
+      amount: 1,
+      limit: 10,
+      periodStart,
+      periodEnd,
+      idempotencyKey: 'date-serialization',
+      source: 'agent-runtime',
+    });
+
+    assert.ok(captured, 'usage store must execute its atomic statement');
+    const query = new PgDialect().sqlToQuery(captured);
+    const dateParams = query.params.filter(
+      (parameter) => parameter === periodStart || parameter === periodEnd,
+    );
+
+    assert.equal(dateParams.length, 6, 'each period boundary must be encoded at every SQL bind site');
+    assert.ok(dateParams.every((parameter) => typeof parameter === 'string'));
+    assert.equal(
+      query.params.some((parameter) => parameter instanceof Date),
+      false,
+      'raw SQL must never pass a Date object to postgres.js binding',
     );
   },
 );

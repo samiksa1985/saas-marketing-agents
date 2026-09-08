@@ -10,10 +10,21 @@ import { OidcAuthProvider } from '@platform/auth/oidc';
 import { AuthenticationError, type AuthProvider } from '@platform/auth';
 import type { TenantContext } from '@platform/contracts';
 import { RegistryController, RegistryService } from './registry.controller.js';
-import { WorkflowApiService, WorkflowController } from './workflow.controller.js';
+import {
+  WORKFLOW_RUNTIME_SELECTION,
+  WorkflowApiService,
+  WorkflowController,
+} from './workflow.controller.js';
 import { MarketingOsController } from './marketing-os.controller.js';
+import {
+  createMarketingOsApplicationService,
+  MarketingOsApplicationService,
+} from './marketing-os.application.js';
 import { ApprovalApiService, ApprovalController } from './approval.controller.js';
+import { DURABLE_APPROVAL_REPOSITORY } from './approval.controller.js';
+import { InMemoryDurableApprovalRepository } from '@platform/approvals';
 import { AUTH_PROVIDER, ApiAuthGuard } from './auth.guard.js';
+import { ApiTenantDurableApprovalRepository } from './durable-approval.repository.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
 
@@ -36,11 +47,22 @@ class RejectingAuthProvider implements AuthProvider {
   }
 }
 const config=loadConfig();
+// Build the single workflow provider before Nest composition. Temporal mode is
+// deliberately fail-closed until deployment injects both command and read adapters.
+const workflowRuntime = createWorkflowRuntime({
+  mode: config.workflowRuntimeMode,
+});
 // This factory only creates a client; a connection is opened by an actual query.
 // Tenant-bound persistence code receives the scoped transaction through the
 // API_TENANT_DATABASE façade instead of using this client directly.
 const database = createDb(config.databaseUrl);
 const tenantDatabase = new ApiTenantDatabase(database);
+// Production and durable-workflow composition recover approvals after an API
+// restart. The in-memory repository remains an explicit local/dev fallback.
+const durableApprovals =
+  config.nodeEnv === 'production' || workflowRuntime.durable
+    ? new ApiTenantDurableApprovalRepository(tenantDatabase)
+    : new InMemoryDurableApprovalRepository();
 const authProviderFactory=():AuthProvider=>{
   if(config.oidcIssuerUrl&&config.oidcAudience)return new OidcAuthProvider({issuerUrl:config.oidcIssuerUrl,audience:config.oidcAudience});
   return new RejectingAuthProvider();
@@ -48,20 +70,27 @@ const authProviderFactory=():AuthProvider=>{
 @Module({
   controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController],
   providers:[
-    AppService,RegistryService,WorkflowApiService,ApprovalApiService,ProductSurfaceService,
+    AppService,RegistryService,ApprovalApiService,ProductSurfaceService,WorkflowApiService,
+    {provide:WORKFLOW_RUNTIME_SELECTION,useValue:workflowRuntime},
     {provide:API_TENANT_DATABASE,useValue:tenantDatabase},
+    {provide:DURABLE_APPROVAL_REPOSITORY,useValue:durableApprovals},
+    {
+      provide: MarketingOsApplicationService,
+      useFactory: (approvals: ApprovalApiService, databaseFacade: typeof tenantDatabase) =>
+        createMarketingOsApplicationService({
+          config,
+          tenantDatabase: databaseFacade,
+          workflow: workflowRuntime,
+          approvals,
+        }),
+      inject: [ApprovalApiService, API_TENANT_DATABASE],
+    },
     {provide:AUTH_PROVIDER,useFactory:authProviderFactory},
     {provide:ApiAuthGuard,useFactory(provider:AuthProvider){return new ApiAuthGuard(provider);},inject:[AUTH_PROVIDER]}
   ]
 })
 class AppModule {}
 const app=await NestFactory.create(AppModule);
-// Temporal mode is deliberately fail-closed until the deployment injects both
-// the Temporal command adapter and its durable read model.
-const workflowRuntime = createWorkflowRuntime({
-  mode: config.workflowRuntimeMode,
-});
-app.get(WorkflowApiService).configureRuntime(workflowRuntime);
 const swagger=new DocumentBuilder().setTitle('AI Marketing OS API').setVersion('1.0').build();
 SwaggerModule.setup('openapi',app,SwaggerModule.createDocument(app,swagger));
 await app.listen(config.apiPort);

@@ -70,7 +70,12 @@ export class ProductSurfaceService {
     }
 
     if (surface === 'approvals') {
-      return { surface, state: 'ready', source: rule.source, data: this.approvals.list(context) };
+      return {
+        surface,
+        state: 'ready',
+        source: rule.source,
+        data: await this.approvals.list(context),
+      };
     }
 
     if (surface === 'billing-usage') {

@@ -9,10 +9,16 @@
                            "path":  "../contracts"
                        },
                        {
+                           "path": "../approvals"
+                       },
+                       {
                            "path":  "../context-engine"
                        },
                        {
                            "path":  "../db"
+                       },
+                       {
+                           "path":  "../marketing-os-core"
                        }
                    ],
     "include":  [

@@ -20,6 +20,7 @@
     "@platform/contracts": "0.1.0",
     "@platform/marketing-commander": "0.1.0",
     "@platform/context-engine": "0.1.0",
-    "@platform/acquisition-graph": "0.1.0"
+    "@platform/acquisition-graph": "0.1.0",
+    "@platform/workflow-runtime": "0.1.0"
   }
 }

@@ -1,4 +1,8 @@
 import { sql } from 'drizzle-orm';
+import {
+  billingUsageCounters,
+  billingUsageEvents,
+} from '@platform/db';
 
 export interface AtomicUsageDatabase {
   execute: (query: unknown) => Promise<unknown>;
@@ -79,8 +83,30 @@ export class AtomicBillingUsageStore {
   async consume(request: ConsumeUsageRequest): Promise<ConsumeUsageResult> {
     validate(request);
 
-    const periodStart = new Date(request.periodStart);
-    const periodEnd = new Date(request.periodEnd);
+    /**
+     * This statement intentionally uses raw SQL for its single-statement
+     * reservation/upsert semantics. Bind timestamp values through their
+     * canonical Drizzle column encoders, rather than interpolating Date
+     * objects directly. The postgres.js adapter receives ISO strings while
+     * the schema remains the authoritative `timestamp with time zone` /
+     * Drizzle `date` contract.
+     */
+    const eventPeriodStart = sql.param(
+      new Date(request.periodStart),
+      billingUsageEvents.periodStart,
+    );
+    const eventPeriodEnd = sql.param(
+      new Date(request.periodEnd),
+      billingUsageEvents.periodEnd,
+    );
+    const counterPeriodStart = sql.param(
+      new Date(request.periodStart),
+      billingUsageCounters.periodStart,
+    );
+    const counterPeriodEnd = sql.param(
+      new Date(request.periodEnd),
+      billingUsageCounters.periodEnd,
+    );
 
     const result = await this.db.execute(sql`
       WITH reserved_event AS (
@@ -103,8 +129,8 @@ export class AtomicBillingUsageStore {
           ${request.source},
           ${request.agentRunId ?? null},
           ${request.workflowRunId ?? null},
-          ${periodStart},
-          ${periodEnd}
+          ${eventPeriodStart},
+          ${eventPeriodEnd}
         )
         ON CONFLICT ("tenant_id", "idempotency_key")
         DO NOTHING
@@ -123,8 +149,8 @@ export class AtomicBillingUsageStore {
         SELECT
           ${request.tenantId}::uuid,
           ${request.key},
-          ${periodStart},
-          ${periodEnd},
+          ${counterPeriodStart},
+          ${counterPeriodEnd},
           ${request.amount},
           ${request.limit}
         FROM reserved_event
@@ -199,9 +225,9 @@ export class AtomicBillingUsageStore {
               AND "key" =
                 ${request.key}
               AND "period_start" =
-                ${periodStart}
+                ${counterPeriodStart}
               AND "period_end" =
-                ${periodEnd}
+                ${counterPeriodEnd}
             LIMIT 1
           ),
           0

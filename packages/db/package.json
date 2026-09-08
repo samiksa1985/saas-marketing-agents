@@ -1,31 +1,32 @@
 ﻿{
-    "name":  "@platform/db",
-    "private":  true,
-    "version":  "0.1.0",
-    "type":  "module",
-    "scripts":  {
-                    "build":  "tsc -b",
-                    "typecheck":  "tsc -b --pretty false",
-                    "lint":  "prettier --check src",
-                    "test":  "tsx --test src/**/*.test.ts",
-                    "generate":  "drizzle-kit generate",
-                    "migrate":  "tsx src/migrate.ts",
-                    "check":  "tsx src/check.ts"
-                },
-    "dependencies":  {
-                         "drizzle-orm":  "^0.36.4",
-                         "postgres":  "^3.4.5"
-                     },
-    "devDependencies":  {
-                            "drizzle-kit":  "^0.27.1",
-                            "@types/node":  "^22.10.0"
-                        },
-    "exports":  {
-                    ".":  {
-                              "types":  "./dist/index.d.ts",
-                              "import":  "./dist/index.js"
-                          }
-                },
-    "main":  "./dist/index.js",
-    "types":  "./dist/index.d.ts"
+  "name": "@platform/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "prettier --check src",
+    "test": "tsx --test src/**/*.test.ts",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "phase1:postgres": "tsx scripts/phase1-postgres.ts",
+    "check": "tsx src/check.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.27.1",
+    "@types/node": "^22.10.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
 }

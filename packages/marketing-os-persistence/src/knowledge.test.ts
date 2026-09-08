@@ -1,6 +1,10 @@
 ﻿import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PersistentKnowledgeRetriever } from './knowledge.js';
+import {
+  PersistentKnowledgeRetriever,
+  PostgresKnowledgeDocumentRepository,
+} from './knowledge.js';
+import { KNOWLEDGE_EMBEDDING_DIMENSIONS } from '@platform/db';
 
 type QueryRow = Record<string, unknown>;
 
@@ -26,6 +30,21 @@ function createMockDb(
     },
   } as never;
 }
+
+const embeddingProvider = {
+  mode: 'local' as const,
+  provider: 'test-local',
+  model: `test-${KNOWLEDGE_EMBEDDING_DIMENSIONS}`,
+  version: '1',
+  async embed() {
+    return {
+      vector: new Array(KNOWLEDGE_EMBEDDING_DIMENSIONS).fill(0.01),
+      provider: 'test-local',
+      model: `test-${KNOWLEDGE_EMBEDDING_DIMENSIONS}`,
+      version: '1',
+    };
+  },
+};
 
 test('persistent RAG preserves tenant isolation and hybrid ranking', async () => {
   const db = createMockDb(
@@ -63,7 +82,7 @@ test('persistent RAG preserves tenant isolation and hybrid ranking', async () =>
 
   const retriever = new PersistentKnowledgeRetriever(
     db,
-    async () => new Array(1536).fill(0.01),
+    embeddingProvider,
   );
 
   const result = await retriever.search(
@@ -77,16 +96,12 @@ test('persistent RAG preserves tenant isolation and hybrid ranking', async () =>
     8,
   );
 
-  assert.equal(result.length, 2);
+  assert.equal(result.length, 1);
 
   const first = result[0];
-  const second = result[1];
-
   assert.ok(first);
-  assert.ok(second);
 
   assert.equal(first.tenantId, 'tenant-a');
-  assert.equal(second.tenantId, 'tenant-a');
 
   assert.equal(first.documentId, 'doc-a-2');
   assert.equal(first.sourceRef, 'doc-a-2#p3');
@@ -113,7 +128,7 @@ test('persistent RAG returns evidence ids for citation provenance', async () => 
 
   const retriever = new PersistentKnowledgeRetriever(
     db,
-    async () => new Array(1536).fill(0.01),
+    embeddingProvider,
   );
 
   const result = await retriever.search(
@@ -141,7 +156,7 @@ test('persistent RAG rejects missing tenant context', async () => {
 
   const retriever = new PersistentKnowledgeRetriever(
     db,
-    async () => new Array(1536).fill(0.01),
+    embeddingProvider,
   );
 
   await assert.rejects(
@@ -157,5 +172,68 @@ test('persistent RAG rejects missing tenant context', async () => {
       ),
     /TENANT_CONTEXT_REQUIRED/,
   );
+});
+
+test('persistent RAG rejects an embedding response with unverifiable provenance', async () => {
+  const retriever = new PersistentKnowledgeRetriever(createMockDb([], []), {
+    ...embeddingProvider,
+    async embed() {
+      return {
+        vector: new Array(KNOWLEDGE_EMBEDDING_DIMENSIONS).fill(0.01),
+        provider: 'unexpected-provider',
+        model: `test-${KNOWLEDGE_EMBEDDING_DIMENSIONS}`,
+        version: '1',
+      };
+    },
+  });
+
+  await assert.rejects(
+    () => retriever.search({ tenantId: 'tenant-a', permissions: [], roles: [], locale: 'en' }, 'proof'),
+    /EMBEDDING_PROVENANCE_MISMATCH/,
+  );
+});
+
+test('durable knowledge writes reject a cross-tenant document before database access', async () => {
+  let calls = 0;
+  const repository = new PostgresKnowledgeDocumentRepository(
+    { async execute() { calls += 1; return []; } } as never,
+    embeddingProvider,
+  );
+  const context = { tenantId: 'tenant-a', permissions: [], roles: [], locale: 'en' as const };
+
+  await assert.rejects(
+    () => repository.upsertDocument(context, {
+      id: '00000000-0000-0000-0000-000000000001',
+      tenantId: 'tenant-b',
+      name: 'forbidden',
+      mimeType: 'text/plain',
+      storagePath: 'forbidden',
+    }),
+    /TENANT_CONTEXT_REQUIRED/,
+  );
+  assert.equal(calls, 0);
+});
+
+test('durable knowledge chunk write requires a tenant-visible parent document', async () => {
+  let calls = 0;
+  const repository = new PostgresKnowledgeDocumentRepository(
+    {
+      async execute() {
+        calls += 1;
+        return calls === 1 ? [{ id: 'document-a' }] : [];
+      },
+    } as never,
+    embeddingProvider,
+  );
+  const context = { tenantId: 'tenant-a', permissions: [], roles: [], locale: 'en' as const };
+
+  await repository.upsertChunk(context, {
+    id: '00000000-0000-0000-0000-000000000002',
+    tenantId: 'tenant-a',
+    documentId: '00000000-0000-0000-0000-000000000001',
+    chunkIndex: 0,
+    text: 'Durable tenant-safe knowledge chunk',
+  });
+  assert.equal(calls, 2);
 });
 

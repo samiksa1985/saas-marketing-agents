@@ -1,9 +1,11 @@
 # Migration readiness report
 
-No migration was executed for this reconciliation. The classifications below are
-source-readiness assessments only. A `BLOCKED` item needs a new, controlled
-forward migration for databases that have already recorded the historical file;
-editing a historical source file does not alter an existing database.
+The complete journal through `0021` was executed and verified against the
+repository-owned disposable PostgreSQL Phase 1 baseline. The classifications
+below remain source and production-change-readiness assessments: a `BLOCKED`
+item needs a new, controlled forward migration for databases that have already
+recorded the historical file; editing a historical source file does not alter
+an existing database.
 
 | Migration | Status | Source review | Required controlled production action |
 | --- | --- | --- | --- |
@@ -30,9 +32,10 @@ editing a historical source file does not alter an existing database.
 - The canonical source has RLS policy expressions based on
   `current_setting('app.tenant_id', true)`. Application transactions must call
   `withTenantScope` on the same database connection before tenant-bound work.
-- The reconciled source has not been applied or run against PostgreSQL, so this
-  report is not evidence of live schema state, data validity, RLS enforcement or
-  concurrent locking behavior.
+- The reconciled source passed the isolated disposable PostgreSQL chain, RLS,
+  and concurrency proof. This report is still not evidence of a production
+  environment's schema/data state, production change approval, or backup and
+  restore readiness.
 
 ## Forward-only reconciliation update (0018)
 

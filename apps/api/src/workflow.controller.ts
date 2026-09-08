@@ -10,6 +10,7 @@ import {
   Headers,
   Inject,
   Injectable,
+  Optional,
   NotFoundException,
   Param,
   Post,
@@ -43,6 +44,9 @@ import {
   getAuthContext,
   type AuthenticatedRequest,
 } from './auth.guard.js';
+
+/** Nest composition token for the one application-selected workflow provider. */
+export const WORKFLOW_RUNTIME_SELECTION = Symbol('WORKFLOW_RUNTIME_SELECTION');
 
 interface WorkflowBody {
   engagementId:
@@ -130,13 +134,17 @@ export class WorkflowApiService {
 
   private taskCommands: WorkflowTaskCommandRuntime | undefined;
 
-  constructor() {
-    const selection = createWorkflowRuntime({
+  constructor(
+    @Optional()
+    @Inject(WORKFLOW_RUNTIME_SELECTION)
+    selection?: WorkflowRuntimeSelection,
+  ) {
+    const configuredSelection = selection ?? createWorkflowRuntime({
       mode: 'in-memory',
     });
-    this.runtime = selection.runtime;
-    this.query = selection.query;
-    this.taskCommands = selection.taskCommands;
+    this.runtime = configuredSelection.runtime;
+    this.query = configuredSelection.query;
+    this.taskCommands = configuredSelection.taskCommands;
   }
 
   configureRuntime(selection: WorkflowRuntimeSelection): void {

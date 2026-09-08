@@ -1,13 +1,16 @@
 # Production Readiness Gates
 
-Passing source tests is necessary but not sufficient for a production release. Gate outcomes below are deliberately conservative: no target production environment was deployed or inspected during this documentation freeze.
+Passing source tests is necessary but not sufficient for a production release.
+The repository-owned disposable PostgreSQL Phase 1 baseline is now PASS; no
+target production environment was deployed or inspected, so production gates
+remain deliberately conservative.
 
 | Gate | Evidence required | Freeze status |
 | --- | --- | --- |
 | G1 Repository regression | Root typecheck, root tests, API/frontend tests, frontend build, focused regressions, clean diff check. | PASS |
 | G2 Release artifact provenance | Immutable build artifact, SBOM, source/commit attestation, and approved release record. | NOT VERIFIED |
-| G3 PostgreSQL migration | Isolated migration execution, schema checks, rollback plan, and production change approval. | NOT VERIFIED |
-| G4 PostgreSQL tenant isolation | RLS/policy and cross-tenant negative tests on deployed PostgreSQL. | NOT VERIFIED |
+| G3 PostgreSQL migration | Disposable Phase 1 chain through `0021` is PASS; production change approval and target-environment rehearsal remain required. | PHASE 1 PASS / PRODUCTION NOT VERIFIED |
+| G4 PostgreSQL tenant isolation | Disposable RLS and cross-tenant negative tests are PASS; deployed-environment verification remains required. | PHASE 1 PASS / PRODUCTION NOT VERIFIED |
 | G5 Backup and recovery | Encrypted backup policy and successful restore drill with RPO/RTO evidence. | NOT VERIFIED |
 | G6 Temporal | Namespace, workers, retries, cancellation, persistence, and recovery/failover proof. | NOT VERIFIED |
 | G7 Identity and authorization | OIDC discovery/JWKS, issuer/audience, roles, tenant claims, and negative authorization tests. | NOT VERIFIED |

@@ -14,6 +14,9 @@
                            "path":  "../../packages/contracts"
                        },
                        {
+                           "path": "../../packages/approvals"
+                       },
+                       {
                            "path":  "../../packages/db"
                        },
                        {
@@ -36,6 +39,9 @@
                        },
                        {
                            "path":  "../../packages/marketing-os-core"
+                       },
+                       {
+                           "path":  "../../packages/marketing-os-persistence"
                        }
                    ],
     "include":  [

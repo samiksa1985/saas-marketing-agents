@@ -16,6 +16,8 @@
 } from 'drizzle-orm/pg-core';
 
 const id = () => uuid('id').defaultRandom().primaryKey();
+/** Canonical pgvector contract for durable knowledge chunks. */
+export const KNOWLEDGE_EMBEDDING_DIMENSIONS = 1536;
 const times = {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -690,6 +692,7 @@ export const knowledgeDocuments = pgTable(
     index('knowledge_documents_tenant_status_idx').on(table.tenantId, table.status),
     index('knowledge_documents_tenant_source_idx').on(table.tenantId, table.sourceType),
     index('knowledge_documents_tenant_checksum_idx').on(table.tenantId, table.checksum),
+    uniqueIndex('knowledge_documents_tenant_id_id_uidx').on(table.tenantId, table.id),
   ],
 );
 
@@ -704,7 +707,11 @@ export const knowledgeDocumentChunks = pgTable(
     chunkIndex: integer('chunk_index').notNull(),
     text: text('text').notNull(),
     embedding: jsonb('embedding'),
-    embeddingVector: vector('embedding_vector', { dimensions: 1536 }),
+    embeddingVector: vector('embedding_vector', { dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS }),
+    embeddingProvider: varchar('embedding_provider', { length: 64 }),
+    embeddingModel: varchar('embedding_model', { length: 255 }),
+    embeddingVersion: varchar('embedding_version', { length: 255 }),
+    embeddedAt: timestamp('embedded_at', { withTimezone: true }),
     pageNumber: integer('page_number'),
     slideNumber: integer('slide_number'),
     sheetName: text('sheet_name'),
@@ -717,6 +724,12 @@ export const knowledgeDocumentChunks = pgTable(
     index('knowledge_chunks_tenant_idx').on(table.tenantId),
     index('knowledge_chunks_document_idx').on(table.documentId, table.chunkIndex),
     index('knowledge_chunks_document_page_idx').on(table.documentId, table.pageNumber),
+    index('knowledge_chunks_tenant_embedding_provenance_idx').on(
+      table.tenantId,
+      table.embeddingProvider,
+      table.embeddingModel,
+      table.embeddingVersion,
+    ),
   ],
 );
 
@@ -767,14 +780,85 @@ export const marketingOsPlanSnapshots = pgTable(
   {
     id: id(),
     tenantId: tenant(() => tenants.id),
+    // Commander plan IDs are application-level deterministic identifiers, not UUIDs.
+    planId: varchar('plan_id', { length: 255 }).notNull(),
     goal: text('goal').notNull(),
     objective: varchar('objective', { length: 80 }).notNull(),
     plan: jsonb('plan').notNull(),
     context: jsonb('context').notNull(),
+    acquisition: jsonb('acquisition').notNull().default({}),
     readiness: jsonb('readiness').notNull(),
     ...times,
   },
-  (table) => [index('marketing_os_plan_tenant_updated_idx').on(table.tenantId, table.updatedAt)],
+  (table) => [
+    uniqueIndex('marketing_os_plan_tenant_plan_uidx').on(table.tenantId, table.planId),
+    index('marketing_os_plan_tenant_updated_idx').on(table.tenantId, table.updatedAt),
+  ],
+);
+export const marketingOsExecutionRecords = pgTable(
+  'marketing_os_execution_records',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    planId: varchar('plan_id', { length: 255 }).notNull(),
+    engagementId: varchar('engagement_id', { length: 255 }).notNull(),
+    locale: varchar('locale', { length: 16 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    workflowId: varchar('workflow_id', { length: 255 }),
+    approvalId: varchar('approval_id', { length: 255 }),
+    status: varchar('status', { length: 32 }).notNull(),
+    approved: boolean('approved').notNull().default(false),
+    reasons: jsonb('reasons').notNull().default([]),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('marketing_os_execution_tenant_plan_uidx').on(table.tenantId, table.planId),
+    uniqueIndex('marketing_os_execution_tenant_idempotency_uidx').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index('marketing_os_execution_tenant_updated_idx').on(table.tenantId, table.updatedAt),
+  ],
+);
+/** Durable backing store for the canonical ApprovalApiService. */
+export const marketingOsApprovalRecords = pgTable(
+  'marketing_os_approval_records',
+  {
+    // API approval identifiers are deterministic strings, not UUIDs.
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    artifactId: varchar('artifact_id', { length: 255 }).notNull(),
+    planId: varchar('plan_id', { length: 255 }),
+    workflowId: varchar('workflow_id', { length: 255 }),
+    executionBindingId: uuid('execution_binding_id').references(
+      () => marketingOsExecutionRecords.id,
+      { onDelete: 'set null' },
+    ),
+    requestedByUserId: varchar('requested_by_user_id', { length: 255 }),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('PENDING'),
+    decision: varchar('decision', { length: 32 }),
+    approverUserId: varchar('approver_user_id', { length: 255 }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    conditions: jsonb('conditions').notNull().default([]),
+    reason: text('reason'),
+    policyReference: varchar('policy_reference', { length: 255 }),
+    riskLevel: varchar('risk_level', { length: 64 }),
+    actionSummary: text('action_summary'),
+    creationIdempotencyKey: varchar('creation_idempotency_key', { length: 255 }).notNull(),
+    decisionIdempotencyKey: varchar('decision_idempotency_key', { length: 255 }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('marketing_os_approval_tenant_creation_idempotency_uidx').on(
+      table.tenantId,
+      table.creationIdempotencyKey,
+    ),
+    index('marketing_os_approval_tenant_plan_idx').on(table.tenantId, table.planId),
+    index('marketing_os_approval_tenant_workflow_idx').on(table.tenantId, table.workflowId),
+    index('marketing_os_approval_tenant_status_idx').on(table.tenantId, table.status),
+  ],
 );
 export const marketingOutcomeEvents = pgTable(
   'marketing_outcome_events',
@@ -1355,47 +1439,51 @@ export const financialScenarioSnapshots = pgTable('financial_scenario_snapshots'
  * scenarios so their recorded opportunity and actual-revenue provenance remains
  * auditable.
  */
-export const financialForecastSnapshots = pgTable('financial_forecast_snapshots', {
-  id: uuid('id').defaultRandom().primaryKey(),
+export const financialForecastSnapshots = pgTable(
+  'financial_forecast_snapshots',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
 
-  tenantId: tenant(() => tenants.id),
+    tenantId: tenant(() => tenants.id),
 
-  customerId: text('customer_id'),
+    customerId: text('customer_id'),
 
-  period: salesForecastPeriodEnum('period').notNull(),
+    period: salesForecastPeriodEnum('period').notNull(),
 
-  periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
 
-  periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
 
-  actualRevenue: jsonb('actual_revenue').notNull(),
+    actualRevenue: jsonb('actual_revenue').notNull(),
 
-  pipelineAmount: jsonb('pipeline_amount').notNull(),
+    pipelineAmount: jsonb('pipeline_amount').notNull(),
 
-  weightedPipelineAmount: jsonb('weighted_pipeline_amount').notNull(),
+    weightedPipelineAmount: jsonb('weighted_pipeline_amount').notNull(),
 
-  forecastRevenue: jsonb('forecast_revenue').notNull(),
+    forecastRevenue: jsonb('forecast_revenue').notNull(),
 
-  opportunityCount: integer('opportunity_count').notNull(),
+    opportunityCount: integer('opportunity_count').notNull(),
 
-  stageSummaries: jsonb('stage_summaries').notNull(),
+    stageSummaries: jsonb('stage_summaries').notNull(),
 
-  confidence: integer('confidence').notNull(),
+    confidence: integer('confidence').notNull(),
 
-  evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+    evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
 
-  model: text('model').notNull(),
+    model: text('model').notNull(),
 
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index('financial_forecast_tenant_period_idx').on(
-    table.tenantId,
-    table.period,
-    table.periodStart,
-    table.periodEnd,
-  ),
-  index('financial_forecast_tenant_created_idx').on(table.tenantId, table.createdAt),
-]);
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('financial_forecast_tenant_period_idx').on(
+      table.tenantId,
+      table.period,
+      table.periodStart,
+      table.periodEnd,
+    ),
+    index('financial_forecast_tenant_created_idx').on(table.tenantId, table.createdAt),
+  ],
+);
 
 export const cfoRecommendations = pgTable('cfo_recommendations', {
   id: text('id').primaryKey(),
@@ -1557,8 +1645,8 @@ export const billingPlans = pgTable(
     currency: varchar('currency', {
       length: 12,
     }).notNull(),
-    priceMonthly: real('price_monthly'),
-    priceYearly: real('price_yearly'),
+    priceMonthlyMinor: integer('price_monthly_minor'),
+    priceYearlyMinor: integer('price_yearly_minor'),
     active: boolean('active').notNull().default(true),
     ...times,
   },

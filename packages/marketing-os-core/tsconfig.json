@@ -16,6 +16,9 @@
                        },
                        {
                            "path":  "../acquisition-graph"
+                       },
+                       {
+                           "path":  "../workflow-runtime"
                        }
                    ],
     "include":  [

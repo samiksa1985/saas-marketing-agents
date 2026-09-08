@@ -10,3 +10,5 @@ export function isApprovalTerminal(decision: ApprovalDecision | undefined): bool
     decision === 'approved' || decision === 'approved_with_conditions' || decision === 'rejected'
   );
 }
+
+export * from './durable.js';

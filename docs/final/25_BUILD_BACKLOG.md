@@ -4,7 +4,7 @@ This backlog contains release-enabling or production-hardening work that remains
 
 | Priority | Item | Acceptance evidence | Owner area |
 | --- | --- | --- | --- |
-| P0 | Execute PostgreSQL verification on an isolated database. | Forward migrations, rollback path, RLS negative tests, concurrency tests, and restore evidence. | Data platform |
+| P0 | Complete production-like PostgreSQL rehearsal and change approval. | Phase 1 disposable migration/RLS/concurrency baseline is PASS; add approved target-environment rehearsal, backup/restore, and change record. | Data platform |
 | P0 | Deploy and prove Temporal workers. | Namespace, worker registration, workflow execution/retry/cancel, alerting, and recovery evidence. | Platform |
 | P0 | Complete production identity validation. | OIDC discovery/JWKS, audience/issuer, role mapping, tenant-claim negative tests, and break-glass review. | Security/platform |
 | P0 | Establish secret management and rotation. | Vault/secret-manager references, no plaintext deployment secret, rotation drill, and access review. | Security/platform |

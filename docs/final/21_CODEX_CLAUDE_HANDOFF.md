@@ -35,7 +35,11 @@ This handoff preserves the release-frozen source of truth for a successor agent.
 
 ## Current handoff risks
 
-- PostgreSQL migrations, RLS behaviour, and migration rollback have not been executed or verified in this freeze.
+- The disposable Phase 1 PostgreSQL baseline is verified: migrations through
+  `0021`, RLS, tenant isolation, pgvector, billing authority, and concurrency
+  are PASS. Production migration approval, target-environment rehearsal, and
+  backup/restore remain separate requirements; see
+  `../production/PHASE1_POSTGRES_FINAL_EVIDENCE.md`.
 - Temporal has an adapter/runtime plan but no deployment verification.
 - OIDC, provider credentials, external webhooks, payment, CRM, publishing, and observability operations need environment-specific verification.
 - Existing merge-era documents can be historical input only; these `docs/final` documents describe the current implementation baseline.

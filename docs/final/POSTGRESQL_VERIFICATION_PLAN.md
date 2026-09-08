@@ -2,7 +2,12 @@
 
 ## Status and scope
 
-This is an executable verification plan only. No migration, data mutation, or database connection was performed for the documentation freeze. The migration source is `packages/db/drizzle` through `0018_reconciliation_forward_repairs.sql`.
+The repository-owned disposable Phase 1 baseline has passed all 22 journal
+entries through `0021_durable_marketing_os_approvals`, including RLS, pgvector,
+and billing concurrency. See `../production/PHASE1_POSTGRES_FINAL_EVIDENCE.md`.
+This remaining plan is for production-like and target-environment verification;
+it does not claim a production migration, data mutation, or database
+connection has been performed.
 
 ## Preconditions
 

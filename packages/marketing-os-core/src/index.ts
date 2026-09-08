@@ -27,6 +27,33 @@ export interface MarketingOSPlan {
   };
 }
 
+/** Tenant-scoped authoritative storage for generated Marketing OS plans. */
+export interface MarketingOSPlanRepository {
+  save(context: TenantContext, plan: MarketingOSPlan): Promise<MarketingOSPlan>;
+  get(context: TenantContext, planId: string): Promise<MarketingOSPlan | undefined>;
+}
+
+/** Explicit development/test plan storage. Production composes a database adapter. */
+export class InMemoryMarketingOSPlanRepository implements MarketingOSPlanRepository {
+  private readonly plans = new Map<string, MarketingOSPlan>();
+  private readonly tenantByPlanId = new Map<string, string>();
+
+  async save(context: TenantContext, plan: MarketingOSPlan): Promise<MarketingOSPlan> {
+    assertPlanTenant(context, plan);
+    this.plans.set(planKey(context.tenantId, plan.plan.planId), plan);
+    this.tenantByPlanId.set(plan.plan.planId, context.tenantId);
+    return plan;
+  }
+
+  async get(context: TenantContext, planId: string): Promise<MarketingOSPlan | undefined> {
+    const owner = this.tenantByPlanId.get(planId);
+    if (owner && owner !== context.tenantId) {
+      throw new Error('Cross-tenant access denied');
+    }
+    return this.plans.get(planKey(context.tenantId, planId));
+  }
+}
+
 export interface MarketingOSDependencies {
   contextBuilder: MarketingContextBuilder;
   registry: Parameters<
@@ -131,4 +158,15 @@ export async function buildMarketingOSPlan(
     },
   };
 }
+
+function assertPlanTenant(context: TenantContext, plan: MarketingOSPlan): void {
+  if (!context.tenantId || plan.plan.tenantId !== context.tenantId) {
+    throw new Error('Cross-tenant access denied');
+  }
+}
+
+function planKey(tenantId: string, planId: string): string {
+  return `${tenantId}\u0000${planId}`;
+}
 export * from './execution.js';
+export * from './external-marketing-action.js';
