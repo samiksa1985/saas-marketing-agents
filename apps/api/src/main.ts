@@ -33,6 +33,7 @@ import { ExternalActionApplicationService } from './external-actions.application
 import {
   EnvironmentGoogleAdsCredentialResolver,
   GoogleAdsApiAdapter,
+  GoogleAdsRestTransport,
   GoogleAdsProviderGateway,
   MockGoogleAdsProvider,
 } from '@platform/tool-gateway';
@@ -78,11 +79,19 @@ const durableApprovals =
 const googleAdsProvider =
   config.googleAdsExecutionMode === 'MOCK'
     ? new MockGoogleAdsProvider()
-    : new GoogleAdsApiAdapter(new EnvironmentGoogleAdsCredentialResolver());
+    : new GoogleAdsApiAdapter(
+      new EnvironmentGoogleAdsCredentialResolver(),
+      new GoogleAdsRestTransport({ apiVersion: config.googleAdsApiVersion }),
+    );
 const googleAdsGateway = new GoogleAdsProviderGateway(
   googleAdsProvider,
   config.googleAdsExecutionMode,
   config.googleAdsExecutionEnabled,
+  undefined,
+  {
+    ...(config.googleAdsApprovedCustomerId ? { approvedCustomerId: config.googleAdsApprovedCustomerId } : {}),
+    sandboxCustomerIds: config.googleAdsSandboxCustomerIds,
+  },
 );
 const authProviderFactory=():AuthProvider=>{
   if(config.oidcIssuerUrl&&config.oidcAudience)return new OidcAuthProvider({issuerUrl:config.oidcIssuerUrl,audience:config.oidcAudience});

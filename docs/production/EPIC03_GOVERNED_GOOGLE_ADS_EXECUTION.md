@@ -64,7 +64,7 @@ registry/trust gateway.
 | `DISABLED` (default) | Simulation and execution fail closed. |
 | `DRY_RUN` | Executes the governed lifecycle without a provider mutation; verification records the dry-run result. |
 | `MOCK` | Deterministic test-only campaign reads, mutations, retries/timeouts, and read-back verification. Production configuration rejects this mode. |
-| `REAL` | Requires `GOOGLE_ADS_EXECUTION_ENABLED=true` and valid secret resolution, then fails closed because a real Google Ads transport is intentionally not yet wired. |
+| `REAL` | Uses the EPIC-04 REST provider adapter. It remains fail-closed unless valid secret resolution, an approved numeric customer ID, and an explicit numeric sandbox allowlist are present; mutation additionally requires `GOOGLE_ADS_EXECUTION_ENABLED=true`. |
 
 Credential names are documented in `.env.example` and
 `docs/final/ENVIRONMENT_VARIABLES.md`. The resolver is inside the provider
@@ -149,10 +149,9 @@ when that occurs, compiled Node test output is used and reported explicitly.
 
 ## Remaining real-provider gates
 
-Before enabling `REAL`, implement a real Google Ads transport behind this exact
-gateway, inject credentials from a managed secret store, approve least-privilege
-scopes/accounts, run an isolated provider sandbox rehearsal, and connect
-outbox delivery to the deployed workflow runtime with observability, rate
-handling, and an exercised disable/rollback runbook. Completing EPIC-03 does
-not claim cloud deployment, payment-provider, Google Ads live, or full
-commercial production readiness.
+Before enabling a sandbox mutation, inject credentials from a managed secret
+store, approve least-privilege test accounts, complete the isolated read-only
+and mutation rehearsal, and connect outbox delivery to the deployed workflow
+runtime with observability, rate handling, and an exercised disable/rollback
+runbook. Completing EPIC-03/04 code readiness does not claim cloud deployment,
+payment-provider, Google Ads live, or full commercial production readiness.

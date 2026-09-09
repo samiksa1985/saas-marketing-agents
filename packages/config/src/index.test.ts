@@ -165,6 +165,34 @@ test('configuration validates explicit Google Ads enablement', () => {
   );
 });
 
+test('REAL Google Ads mode requires an explicit numeric sandbox allowlist containing the approved account', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, GOOGLE_ADS_EXECUTION_MODE: 'REAL', GOOGLE_ADS_CUSTOMER_ID: '1234567890' }),
+    /GOOGLE_ADS_SANDBOX_CUSTOMER_IDS/i,
+  );
+  const config = loadConfig({
+    ...baseEnv,
+    GOOGLE_ADS_EXECUTION_MODE: 'REAL',
+    GOOGLE_ADS_CUSTOMER_ID: '123-456-7890',
+    GOOGLE_ADS_SANDBOX_CUSTOMER_IDS: '1234567890, 222-222-2222',
+  });
+  assert.equal(config.googleAdsApprovedCustomerId, '1234567890');
+  assert.deepEqual(config.googleAdsSandboxCustomerIds, ['1234567890', '2222222222']);
+  assert.equal(config.googleAdsApiVersion, 'v25');
+});
+
+test('REAL Google Ads mode rejects an approved account outside its sandbox allowlist', () => {
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      GOOGLE_ADS_EXECUTION_MODE: 'REAL',
+      GOOGLE_ADS_CUSTOMER_ID: '1234567890',
+      GOOGLE_ADS_SANDBOX_CUSTOMER_IDS: '2222222222',
+    }),
+    /must be included/i,
+  );
+});
+
 test(
   'production requires OIDC issuer',
   () => {

@@ -23,6 +23,9 @@ export interface RuntimeConfig {
   workflowRuntimeMode: WorkflowRuntimeMode;
   googleAdsExecutionMode: GoogleAdsExecutionMode;
   googleAdsExecutionEnabled: boolean;
+  googleAdsApiVersion: string;
+  googleAdsApprovedCustomerId?: string;
+  googleAdsSandboxCustomerIds: string[];
   artifactBucket: string;
   artifactEndpoint?: string;
   aiProvider: string;
@@ -62,6 +65,19 @@ function optionalBoolean(name: string, value: string | undefined): boolean {
   if (value === 'true') return true;
   if (value === 'false') return false;
   throw new Error(`${name} must be true or false`);
+}
+
+function googleAdsCustomerId(name: string, value: string | undefined): string | undefined {
+  const normalized = optional(value)?.replace(/-/g, '');
+  if (normalized !== undefined && !/^\d{1,20}$/.test(normalized)) {
+    throw new Error(`${name} must contain only a Google Ads numeric customer ID`);
+  }
+  return normalized;
+}
+
+function googleAdsCustomerIdList(name: string, value: string | undefined): string[] {
+  if (!optional(value)) return [];
+  return [...new Set(value!.split(',').map((entry) => googleAdsCustomerId(name, entry.trim())).filter((entry): entry is string => entry !== undefined))];
 }
 
 export function loadConfig(
@@ -158,6 +174,26 @@ export function loadConfig(
   if (nodeEnv === 'production' && googleAdsExecutionMode === 'MOCK') {
     throw new Error('Production cannot use GOOGLE_ADS_EXECUTION_MODE=MOCK');
   }
+  const googleAdsApiVersion = optional(env.GOOGLE_ADS_API_VERSION) ?? 'v25';
+  if (!/^v\d+$/.test(googleAdsApiVersion)) {
+    throw new Error('GOOGLE_ADS_API_VERSION must be a version such as v25');
+  }
+  const googleAdsApprovedCustomerId = googleAdsCustomerId('GOOGLE_ADS_CUSTOMER_ID', env.GOOGLE_ADS_CUSTOMER_ID);
+  const googleAdsSandboxCustomerIds = googleAdsCustomerIdList(
+    'GOOGLE_ADS_SANDBOX_CUSTOMER_IDS',
+    env.GOOGLE_ADS_SANDBOX_CUSTOMER_IDS,
+  );
+  if (googleAdsExecutionMode === 'REAL') {
+    if (!googleAdsApprovedCustomerId) {
+      throw new Error('GOOGLE_ADS_EXECUTION_MODE=REAL requires GOOGLE_ADS_CUSTOMER_ID');
+    }
+    if (googleAdsSandboxCustomerIds.length === 0) {
+      throw new Error('GOOGLE_ADS_EXECUTION_MODE=REAL requires GOOGLE_ADS_SANDBOX_CUSTOMER_IDS');
+    }
+    if (!googleAdsSandboxCustomerIds.includes(googleAdsApprovedCustomerId)) {
+      throw new Error('GOOGLE_ADS_CUSTOMER_ID must be included in GOOGLE_ADS_SANDBOX_CUSTOMER_IDS');
+    }
+  }
 
   return {
     nodeEnv,
@@ -189,6 +225,12 @@ export function loadConfig(
     googleAdsExecutionMode,
 
     googleAdsExecutionEnabled,
+
+    googleAdsApiVersion,
+
+    ...(googleAdsApprovedCustomerId ? { googleAdsApprovedCustomerId } : {}),
+
+    googleAdsSandboxCustomerIds,
 
     artifactBucket: required(
       'ARTIFACT_BUCKET',
