@@ -16,6 +16,31 @@ REAL_SANDBOX_MUTATION=NOT_RUN
 LIVE_PRODUCTION_MUTATION=NO
 ```
 
+## Rollback code-readiness evidence (2026-09-10)
+
+Rollback derivation is explicit at the provider boundary. The provider uses
+only the original durable action and its durable `rollback.before` state; it
+does not read current remote state to infer restoration intent. The executor
+then persists a new, idempotent governed proposal and requires the entire
+simulation, budget/entitlement, policy, durable approval, opaque dispatch,
+independent read-back, and evidence chain again.
+
+The deterministic mock-provider suite proves these restoration mappings:
+
+| Original action and durable before-state | Derived rollback action |
+| --- | --- |
+| `ENABLE_CAMPAIGN`, `{ enabled: false }` | `PAUSE_CAMPAIGN` |
+| `PAUSE_CAMPAIGN`, `{ enabled: true }` | `ENABLE_CAMPAIGN` |
+| `UPDATE_CAMPAIGN_BUDGET` | `UPDATE_CAMPAIGN_BUDGET` with previous durable budget |
+| `UPDATE_TARGET_CPA` | `UPDATE_TARGET_CPA` with previous durable CPA |
+| `UPDATE_TARGET_ROAS` | `UPDATE_TARGET_ROAS` with previous durable ROAS |
+
+An absent or invalid durable before-state fails closed before a rollback
+proposal is created. The regression suite also proves that rollback remains
+tenant-bound, policy- and approval-gated, target-lock compatible, and
+idempotent under concurrent proposal requests. This is code evidence only; it
+does not constitute a real Google Ads sandbox mutation.
+
 ## Preconditions
 
 1. Create a separate Google Ads test manager and test customer hierarchy. It
@@ -45,8 +70,10 @@ recommendation -> simulation -> budget -> policy -> durable approval
 -> governed dispatch -> Google Ads -> independent read-back -> evidence
 ```
 
-If and only if read-back is `VERIFIED`, a separately proposed and approved
-`ENABLE_CAMPAIGN` rollback follows the same chain. A timeout is reconciled by
+If and only if read-back is `VERIFIED`, the governed rollback endpoint derives
+the explicit restoration action from durable before-state, then creates a
+separately proposed and approved rollback. For this initial pause test, the
+derived rollback action is `ENABLE_CAMPAIGN`. A timeout is reconciled by
 read-back before retry; mismatch or uncertainty never triggers a blind retry.
 
 ## Production-enablement gates

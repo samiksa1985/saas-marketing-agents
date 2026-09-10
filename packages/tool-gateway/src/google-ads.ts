@@ -8,6 +8,7 @@ import type {
   ExternalActionProviderReconciliation,
   ExternalActionProviderSimulation,
   ExternalActionProviderVerification,
+  ExternalActionRollbackDerivation,
   ExternalMarketingActionProposal,
   ExternalMarketingProviderGateway,
   GovernedExternalAction,
@@ -763,6 +764,37 @@ export class GoogleAdsProviderGateway implements ExternalMarketingProviderGatewa
     });
   }
 
+  /**
+   * Maps the durable before-state to an explicit Google Ads restoration
+   * operation. This performs no remote read: the original durable before-state
+   * is authoritative, and invalid state is rejected before a proposal exists.
+   */
+  async deriveRollbackProposal(
+    context: TenantContext,
+    original: GovernedExternalAction,
+  ): Promise<ExternalActionRollbackDerivation> {
+    this.assertTenant(context, original.proposal);
+    this.assertGoogleProposal(original.proposal);
+    const before = original.proposal.rollback.before;
+    switch (original.proposal.actionType) {
+      case 'ENABLE_CAMPAIGN':
+        if (before.enabled !== false) break;
+        return { actionType: 'PAUSE_CAMPAIGN', requestedPayload: { enabled: false } };
+      case 'PAUSE_CAMPAIGN':
+        if (before.enabled !== true) break;
+        return { actionType: 'ENABLE_CAMPAIGN', requestedPayload: { enabled: true } };
+      case 'UPDATE_CAMPAIGN_BUDGET':
+        return { actionType: 'UPDATE_CAMPAIGN_BUDGET', requestedPayload: { dailyBudget: rollbackNumber(before, 'dailyBudget', 'budget') } };
+      case 'UPDATE_TARGET_CPA':
+        return { actionType: 'UPDATE_TARGET_CPA', requestedPayload: { targetCpa: rollbackNumber(before, 'targetCpa') } };
+      case 'UPDATE_TARGET_ROAS':
+        return { actionType: 'UPDATE_TARGET_ROAS', requestedPayload: { targetRoas: rollbackNumber(before, 'targetRoas') } };
+      default:
+        break;
+    }
+    throw new GoogleAdsProviderError('GOOGLE_ADS_ROLLBACK_BEFORE_STATE_INVALID', false, false, 'GOVERNANCE');
+  }
+
   async execute(
     context: TenantContext,
     dispatch: GovernedExternalActionDispatch,
@@ -951,6 +983,14 @@ function numberPayload(proposal: ExternalMarketingActionProposal, ...keys: strin
     if (typeof value === 'number' && Number.isFinite(value)) return value;
   }
   throw new GoogleAdsProviderError('GOOGLE_ADS_NUMERIC_PAYLOAD_REQUIRED', false);
+}
+
+function rollbackNumber(before: Record<string, unknown>, ...keys: string[]): number {
+  for (const key of keys) {
+    const value = before[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  throw new GoogleAdsProviderError('GOOGLE_ADS_ROLLBACK_BEFORE_STATE_INVALID', false, false, 'GOVERNANCE');
 }
 
 function expectedMatches(campaign: GoogleAdsCampaign, proposal: ExternalMarketingActionProposal): boolean {

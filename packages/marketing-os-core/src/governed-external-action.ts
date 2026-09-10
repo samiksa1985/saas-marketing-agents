@@ -158,6 +158,17 @@ export interface ExternalMarketingProviderGateway {
    * when a policy is dry-run only. This keeps that policy fail-closed.
    */
   readonly executionMode?: 'DRY_RUN' | 'LIVE';
+  /**
+   * Derives a new restoration operation from a durable original action. The
+   * executor deliberately does not infer provider semantics from a payload:
+   * a state-setting provider may need a different action type to undo a
+   * previous action. Providers must fail closed when the durable before-state
+   * is not sufficient to derive a safe rollback.
+   */
+  deriveRollbackProposal?(
+    context: TenantContext,
+    original: GovernedExternalAction,
+  ): Promise<ExternalActionRollbackDerivation>;
   simulate(
     context: TenantContext,
     proposal: ExternalMarketingActionProposal,
@@ -175,6 +186,13 @@ export interface ExternalMarketingProviderGateway {
     context: TenantContext,
     action: GovernedExternalAction,
   ): Promise<ExternalActionProviderReconciliation>;
+}
+
+/** Provider-neutral restoration intent returned by a provider gateway. */
+export interface ExternalActionRollbackDerivation {
+  actionType: string;
+  requestedPayload: Record<string, unknown>;
+  reason?: string;
 }
 
 export interface ExternalActionApprovalRecord {
@@ -684,18 +702,29 @@ export class GovernedExternalActionExecutor {
     if (original.status !== 'ROLLBACK_REQUIRED' && original.status !== 'VERIFIED') {
       throw new Error('EXTERNAL_ACTION_ROLLBACK_NOT_AVAILABLE');
     }
+    if (!this.provider.deriveRollbackProposal) {
+      throw new Error('EXTERNAL_ACTION_ROLLBACK_DERIVATION_UNSUPPORTED');
+    }
+    const derived = await this.provider.deriveRollbackProposal(context, clone(original));
+    assertRollbackDerivation(derived);
+    const rollbackIdentity = rollbackIdentityFor(original);
     const proposal: ExternalMarketingActionProposal = {
       ...clone(original.proposal),
-      actionId: `${original.id}:rollback:${this.createId()}`,
+      actionId: `rollback-action:${rollbackIdentity}`,
       recommendationId: `${original.proposal.recommendationId}:rollback`,
-      idempotencyKey: `${original.idempotencyKey}:rollback`,
-      requestedPayload: clone(original.proposal.rollback.before),
-      reason: `Rollback of ${original.id}: ${original.proposal.rollback.strategy}`,
+      idempotencyKey: `rollback:${rollbackIdentity}`,
+      actionType: derived.actionType,
+      requestedPayload: clone(derived.requestedPayload),
+      reason: derived.reason ?? `Rollback of ${original.id}: ${original.proposal.rollback.strategy}`,
       requestedAt: this.now(),
-      metadata: { ...original.proposal.metadata, rollbackOf: original.id },
+      metadata: { ...original.proposal.metadata, rollbackOf: original.id, rollbackActionType: derived.actionType },
       evidence: [
         ...original.proposal.evidence,
-        { id: original.id, source: 'external-action', summary: 'Rollback proposal derived from durable before-state.' },
+        {
+          id: original.id,
+          source: 'external-action',
+          summary: `Rollback proposal derived from durable before-state as ${derived.actionType}.`,
+        },
       ],
     };
     return this.propose(context, proposal);
@@ -847,6 +876,33 @@ function isActive(status: ExternalMarketingActionStatus): boolean {
 
 function key(tenantId: string, actionId: string): string {
   return `${tenantId}\u0000${actionId}`;
+}
+
+function rollbackIdentityFor(original: GovernedExternalAction): string {
+  // A rollback replay is the same logical operation. Keep both the action ID
+  // and idempotency key stable so the in-memory and durable stores converge on
+  // one proposal even when two callers request the rollback concurrently.
+  return createHash('sha256')
+    .update(JSON.stringify([
+      original.tenantId,
+      original.proposal.provider,
+      original.id,
+      original.idempotencyKey,
+    ]))
+    .digest('hex');
+}
+
+function assertRollbackDerivation(value: ExternalActionRollbackDerivation): void {
+  if (
+    !value ||
+    typeof value.actionType !== 'string' ||
+    !value.actionType.trim() ||
+    !value.requestedPayload ||
+    typeof value.requestedPayload !== 'object' ||
+    Array.isArray(value.requestedPayload)
+  ) {
+    throw new Error('EXTERNAL_ACTION_ROLLBACK_DERIVATION_INVALID');
+  }
 }
 
 function isExpired(expiresAt: string | undefined, now: string): boolean {

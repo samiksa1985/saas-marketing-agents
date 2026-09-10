@@ -25,9 +25,15 @@ headers. The transport supports:
 - independent campaign read-back for verification and timeout reconciliation.
 
 There is intentionally no `CREATE_CAMPAIGN` implementation. Rollback is never
-a direct transport operation: it is a new governed enable/update proposal with a
-new durable approval, policy check, budget check, dispatch, read-back, and
-evidence chain.
+a direct transport operation. A provider-neutral rollback-derivation contract
+receives the original durable action and its durable before-state, and returns
+the explicit restoration action/payload before a new governed proposal is
+persisted. Google Ads maps enable-with-previously-paused to
+`PAUSE_CAMPAIGN`, pause-with-previously-enabled to `ENABLE_CAMPAIGN`, and
+budget/CPA/ROAS updates to the same update type with the corresponding durable
+prior value. Missing or invalid before-state fails closed. The derived proposal
+then requires a new durable approval, policy and budget check, dispatch,
+read-back, and evidence chain; it cannot bypass governance.
 
 ## REAL-mode safety
 

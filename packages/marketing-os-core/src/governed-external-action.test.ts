@@ -13,6 +13,7 @@ import {
   type ExternalActionPolicy,
   type ExternalMarketingActionProposal,
   type ExternalMarketingProviderGateway,
+  type GovernedExternalAction,
   type GovernedExternalActionDispatch,
 } from './index.js';
 
@@ -115,6 +116,13 @@ class Provider implements ExternalMarketingProviderGateway {
       currentValue: 2_000,
       currentState: { dailyBudget: 2_000 },
       assumptions: ['Current budget is read from the provider.'],
+    };
+  }
+
+  async deriveRollbackProposal(_context: TenantContext, original: GovernedExternalAction) {
+    return {
+      actionType: original.proposal.actionType,
+      requestedPayload: { ...original.proposal.rollback.before },
     };
   }
 
@@ -326,6 +334,7 @@ test('rollback is a new governed proposal rather than a privileged provider bypa
   const rollback = await setup.executor.proposeRollback(context(), verified.id);
   assert.equal(rollback.status, 'PROPOSED');
   assert.equal(rollback.proposal.metadata.rollbackOf, verified.id);
+  assert.equal(rollback.proposal.actionType, verified.proposal.actionType);
   assert.equal(rollback.proposal.requestedPayload.dailyBudget, 2_000);
 
   const mismatchSetup = executor();
