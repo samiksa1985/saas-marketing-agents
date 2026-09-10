@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   loadConfig,
@@ -30,6 +34,18 @@ const baseEnv = {
   AI_MODEL:
     'test',
 };
+
+function withTokenFile(callback: (tokenFile: string, token: string) => void): void {
+  const directory = mkdtempSync(join(tmpdir(), 'nawa-local-acceptance-'));
+  const tokenFile = join(directory, 'token.txt');
+  const token = randomBytes(48).toString('base64url');
+  try {
+    writeFileSync(tokenFile, token, { encoding: 'utf8' });
+    callback(tokenFile, token);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
 
 test(
   'configuration rejects missing required infrastructure secrets',
@@ -74,6 +90,8 @@ test(
 
     assert.equal(config.googleAdsExecutionMode, 'DISABLED');
     assert.equal(config.googleAdsExecutionEnabled, false);
+    assert.equal(config.localAcceptanceAuthEnabled, false);
+    assert.equal(config.localAcceptanceAuthTokenFile, undefined);
   },
 );
 
@@ -163,6 +181,90 @@ test('configuration validates explicit Google Ads enablement', () => {
     () => loadConfig({ ...baseEnv, GOOGLE_ADS_EXECUTION_ENABLED: 'yes' }),
     /GOOGLE_ADS_EXECUTION_ENABLED must be true or false/i,
   );
+});
+
+test('local acceptance auth is disabled by default and rejects incomplete configuration', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true' }),
+    /LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE/i,
+  );
+  withTokenFile((tokenFile) => {
+    assert.throws(
+      () => loadConfig({
+        ...baseEnv,
+        LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+        LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+      }),
+      /LOCAL_ACCEPTANCE_AUTH_TENANT_ID/i,
+    );
+    assert.throws(
+      () => loadConfig({
+        ...baseEnv,
+        LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+        LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+        LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      }),
+      /LOCAL_ACCEPTANCE_AUTH_USER_ID/i,
+    );
+  });
+});
+
+test('local acceptance auth rejects production and unreadable or empty token files', () => {
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      OIDC_ISSUER_URL: 'https://issuer.example.com',
+      OIDC_AUDIENCE: 'platform-api',
+      WORKFLOW_RUNTIME_MODE: 'temporal',
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+    }),
+    /LOCAL_ACCEPTANCE_AUTH_ENABLED is forbidden in production/i,
+  );
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+      LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: join(tmpdir(), 'does-not-exist-local-acceptance-token.txt'),
+      LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+    }),
+    /readable non-empty high-entropy token file/i,
+  );
+  const directory = mkdtempSync(join(tmpdir(), 'nawa-empty-local-acceptance-'));
+  const emptyTokenFile = join(directory, 'token.txt');
+  try {
+    writeFileSync(emptyTokenFile, '', { encoding: 'utf8' });
+    assert.throws(
+      () => loadConfig({
+        ...baseEnv,
+        LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+        LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: emptyTokenFile,
+        LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+        LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+      }),
+      /readable non-empty high-entropy token file/i,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('local acceptance auth exposes only its non-secret local configuration', () => {
+  withTokenFile((tokenFile, token) => {
+    const config = loadConfig({
+      ...baseEnv,
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+      LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+      LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+    });
+    assert.equal(config.localAcceptanceAuthEnabled, true);
+    assert.equal(config.localAcceptanceAuthTokenFile, tokenFile);
+    assert.equal(config.localAcceptanceAuthTenantId, 'tenant-a');
+    assert.equal(config.localAcceptanceAuthUserId, 'user-a');
+    assert.equal(JSON.stringify(config).includes(token), false);
+  });
 });
 
 test('REAL Google Ads mode requires an explicit numeric sandbox allowlist containing the approved account', () => {

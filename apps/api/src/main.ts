@@ -6,9 +6,7 @@ import { loadConfig } from '@platform/config';
 import { createDb } from '@platform/db';
 import { createWorkflowRuntime } from '@platform/workflow-runtime';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
-import { OidcAuthProvider } from '@platform/auth/oidc';
-import { AuthenticationError, type AuthProvider } from '@platform/auth';
-import type { TenantContext } from '@platform/contracts';
+import type { AuthProvider } from '@platform/auth';
 import { RegistryController, RegistryService } from './registry.controller.js';
 import {
   WORKFLOW_RUNTIME_SELECTION,
@@ -30,6 +28,7 @@ import { ProductSurfaceController, ProductSurfaceService } from './product-surfa
 import { ExternalActionsController } from './external-actions.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
 import { ExternalActionApplicationService } from './external-actions.application.js';
+import { createApiAuthProvider } from './auth-provider.factory.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
   GoogleAdsApiAdapter,
@@ -40,9 +39,6 @@ import {
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
 
-class RejectingAuthProvider implements AuthProvider {
-  async verifyAccessToken(_token:string):Promise<TenantContext>{ throw new AuthenticationError('OIDC authentication is not configured'); }
-}
 @Injectable() class AppService {
   health(){return {status:'ok',service:'api'};}
   readiness(){return {status:'ready',database:'configured',workflow:'configured'};}
@@ -93,10 +89,7 @@ const googleAdsGateway = new GoogleAdsProviderGateway(
     sandboxCustomerIds: config.googleAdsSandboxCustomerIds,
   },
 );
-const authProviderFactory=():AuthProvider=>{
-  if(config.oidcIssuerUrl&&config.oidcAudience)return new OidcAuthProvider({issuerUrl:config.oidcIssuerUrl,audience:config.oidcAudience});
-  return new RejectingAuthProvider();
-};
+const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
   controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController],
   providers:[

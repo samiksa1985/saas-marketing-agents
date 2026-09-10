@@ -17,6 +17,7 @@ Never copy real values, secrets, connection strings, or tokens into source contr
 | `AI_MODEL` | Required by configuration. | Approved model/version and evaluation record. | Non-secret identifier. |
 | `OIDC_ISSUER_URL` | Required in production. | HTTPS issuer with discovered JWKS and approved tenant/role claims. | Sensitive endpoint. |
 | `OIDC_AUDIENCE` | Required in production. | Exact API audience. | Sensitive identifier. |
+| `LOCAL_ACCEPTANCE_AUTH_ENABLED`, `LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE`, `LOCAL_ACCEPTANCE_AUTH_TENANT_ID`, `LOCAL_ACCEPTANCE_AUTH_USER_ID` | Disabled by default. When explicitly enabled outside production, configuration requires an external, readable, non-empty high-entropy token file and a fixed tenant/user identity. | Forbidden in production; OIDC remains mandatory. | Local acceptance only. Never put the bearer token in `.env`, source control, logs, or an API response. |
 | `GOOGLE_ADS_EXECUTION_MODE` | Defaults to `DISABLED`; accepts `DISABLED`, `DRY_RUN`, `MOCK`, or `REAL`. | Keep `DISABLED` until the G9 provider gate is approved. Production rejects `MOCK`. | Non-secret control. |
 | `GOOGLE_ADS_EXECUTION_ENABLED` | Defaults to `false`; only has effect with `REAL`. | Requires a documented and approved enablement change. | Non-secret control. |
 | `GOOGLE_ADS_API_VERSION` | Defaults to `v25`; must be a Google Ads version identifier. | Pin an approved supported version. | Non-secret control. |
@@ -28,7 +29,7 @@ Never copy real values, secrets, connection strings, or tokens into source contr
 
 1. Resolve variables from the managed secret/configuration provider.
 2. Validate required values with the shared configuration package before accepting traffic.
-3. Reject production startup when OIDC issuer/audience are absent or workflow mode is not Temporal.
+3. Reject production startup when OIDC issuer/audience are absent, workflow mode is not Temporal, or local acceptance auth is enabled.
 4. Confirm `WEB_URL`, OIDC issuer, artifact endpoint, and provider endpoints use approved HTTPS origins.
 5. Emit only variable names and validation outcomes to logs; never values.
 

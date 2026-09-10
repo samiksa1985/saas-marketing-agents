@@ -53,6 +53,41 @@ does not constitute a real Google Ads sandbox mutation.
    `GOOGLE_ADS_SANDBOX_CUSTOMER_IDS`; keep production IDs absent.
 5. Keep `GOOGLE_ADS_EXECUTION_ENABLED=false` for initial read-only acceptance.
 
+## Local acceptance authentication (development/acceptance only)
+
+This optional mechanism exists only to exercise the existing API guard and
+controller authorization locally while OIDC is unavailable. It is disabled by
+default, forbidden when `NODE_ENV=production`, and never replaces OIDC in
+production. It accepts one bearer token from an external local file and returns
+only the fixed tenant context below:
+
+```text
+role: tenant_admin
+permissions: marketing:admin, workflow:execute, approval:decide,
+             integration:admin, artifact:read, audit:read
+locale: ar-SA
+```
+
+Generate the token directly into the external default path without printing it:
+
+```powershell
+$secretDirectory = 'C:\Users\MBUZZ\.nawa-secrets'
+$tokenFile = Join-Path $secretDirectory 'local-acceptance-auth-token.txt'
+New-Item -ItemType Directory -Force -Path $secretDirectory | Out-Null
+$tokenBytes = [byte[]]::new(48)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($tokenBytes)
+[System.IO.File]::WriteAllText($tokenFile, [Convert]::ToBase64String($tokenBytes), [System.Text.UTF8Encoding]::new($false))
+```
+
+Set only the file path and fixed identity through local process configuration:
+`LOCAL_ACCEPTANCE_AUTH_ENABLED=true`, `LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE`,
+`LOCAL_ACCEPTANCE_AUTH_TENANT_ID`, and `LOCAL_ACCEPTANCE_AUTH_USER_ID`. Keep
+the token outside the repository and never put it in `.env`, a request log, or
+release evidence. OIDC takes precedence whenever it is configured in a
+non-production environment. This local authentication path does not change
+Google Ads execution settings; `GOOGLE_ADS_EXECUTION_ENABLED` remains `false`
+for read-only acceptance.
+
 ## Read-only acceptance
 
 An approved operator first validates OAuth/access, reads the configured account

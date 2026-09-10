@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { isAbsolute, relative, resolve } from 'node:path';
+
 export type NodeEnvironment =
   | 'development'
   | 'test'
@@ -32,6 +35,10 @@ export interface RuntimeConfig {
   aiModel: string;
   oidcIssuerUrl?: string;
   oidcAudience?: string;
+  localAcceptanceAuthEnabled: boolean;
+  localAcceptanceAuthTokenFile?: string;
+  localAcceptanceAuthTenantId?: string;
+  localAcceptanceAuthUserId?: string;
 }
 
 function required(
@@ -78,6 +85,24 @@ function googleAdsCustomerId(name: string, value: string | undefined): string | 
 function googleAdsCustomerIdList(name: string, value: string | undefined): string[] {
   if (!optional(value)) return [];
   return [...new Set(value!.split(',').map((entry) => googleAdsCustomerId(name, entry.trim())).filter((entry): entry is string => entry !== undefined))];
+}
+
+function validateLocalAcceptanceTokenFile(tokenFile: string): void {
+  if (!isAbsolute(tokenFile)) {
+    throw new Error('LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE must be an absolute path outside the repository');
+  }
+  const workingDirectory = resolve(process.cwd());
+  const relativePath = relative(workingDirectory, resolve(tokenFile));
+  if (relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath))) {
+    throw new Error('LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE must be outside the repository');
+  }
+  try {
+    if (readFileSync(tokenFile, 'utf8').trim().length < 32) {
+      throw new Error('LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE_TOO_SHORT');
+    }
+  } catch {
+    throw new Error('LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE must reference a readable non-empty high-entropy token file');
+  }
 }
 
 export function loadConfig(
@@ -151,6 +176,29 @@ export function loadConfig(
     throw new Error(
       'WORKFLOW_RUNTIME_MODE must be in-memory or temporal',
     );
+  }
+
+  const localAcceptanceAuthEnabled = optionalBoolean(
+    'LOCAL_ACCEPTANCE_AUTH_ENABLED',
+    env.LOCAL_ACCEPTANCE_AUTH_ENABLED,
+  );
+  if (nodeEnv === 'production' && localAcceptanceAuthEnabled) {
+    throw new Error('LOCAL_ACCEPTANCE_AUTH_ENABLED is forbidden in production');
+  }
+  const localAcceptanceAuthTokenFile = optional(env.LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE);
+  const localAcceptanceAuthTenantId = optional(env.LOCAL_ACCEPTANCE_AUTH_TENANT_ID);
+  const localAcceptanceAuthUserId = optional(env.LOCAL_ACCEPTANCE_AUTH_USER_ID);
+  if (localAcceptanceAuthEnabled) {
+    if (!localAcceptanceAuthTokenFile) {
+      throw new Error('LOCAL_ACCEPTANCE_AUTH_ENABLED requires LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE');
+    }
+    if (!localAcceptanceAuthTenantId) {
+      throw new Error('LOCAL_ACCEPTANCE_AUTH_ENABLED requires LOCAL_ACCEPTANCE_AUTH_TENANT_ID');
+    }
+    if (!localAcceptanceAuthUserId) {
+      throw new Error('LOCAL_ACCEPTANCE_AUTH_ENABLED requires LOCAL_ACCEPTANCE_AUTH_USER_ID');
+    }
+    validateLocalAcceptanceTokenFile(localAcceptanceAuthTokenFile);
   }
 
   if (
@@ -263,6 +311,16 @@ export function loadConfig(
     ...(oidcAudience
       ? {
           oidcAudience,
+        }
+      : {}),
+
+    localAcceptanceAuthEnabled,
+
+    ...(localAcceptanceAuthEnabled
+      ? {
+          localAcceptanceAuthTokenFile: localAcceptanceAuthTokenFile!,
+          localAcceptanceAuthTenantId: localAcceptanceAuthTenantId!,
+          localAcceptanceAuthUserId: localAcceptanceAuthUserId!,
         }
       : {}),
   };
