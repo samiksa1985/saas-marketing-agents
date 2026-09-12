@@ -36,6 +36,11 @@ export interface RuntimeConfig {
   oidcIssuerUrl?: string;
   oidcAudience?: string;
   localAcceptanceAuthEnabled: boolean;
+  /**
+   * Explicit local-only switch used to rehearse durable approval recovery
+   * without pretending an unavailable Temporal adapter is configured.
+   */
+  localAcceptanceDurableApprovals: boolean;
   localAcceptanceAuthTokenFile?: string;
   localAcceptanceAuthTenantId?: string;
   localAcceptanceAuthUserId?: string;
@@ -182,8 +187,15 @@ export function loadConfig(
     'LOCAL_ACCEPTANCE_AUTH_ENABLED',
     env.LOCAL_ACCEPTANCE_AUTH_ENABLED,
   );
+  const localAcceptanceDurableApprovals = optionalBoolean(
+    'LOCAL_ACCEPTANCE_DURABLE_APPROVALS',
+    env.LOCAL_ACCEPTANCE_DURABLE_APPROVALS,
+  );
   if (nodeEnv === 'production' && localAcceptanceAuthEnabled) {
     throw new Error('LOCAL_ACCEPTANCE_AUTH_ENABLED is forbidden in production');
+  }
+  if (localAcceptanceDurableApprovals && !localAcceptanceAuthEnabled) {
+    throw new Error('LOCAL_ACCEPTANCE_DURABLE_APPROVALS requires LOCAL_ACCEPTANCE_AUTH_ENABLED');
   }
   const localAcceptanceAuthTokenFile = optional(env.LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE);
   const localAcceptanceAuthTenantId = optional(env.LOCAL_ACCEPTANCE_AUTH_TENANT_ID);
@@ -315,6 +327,8 @@ export function loadConfig(
       : {}),
 
     localAcceptanceAuthEnabled,
+
+    localAcceptanceDurableApprovals,
 
     ...(localAcceptanceAuthEnabled
       ? {

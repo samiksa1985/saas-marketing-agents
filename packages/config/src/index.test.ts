@@ -91,6 +91,7 @@ test(
     assert.equal(config.googleAdsExecutionMode, 'DISABLED');
     assert.equal(config.googleAdsExecutionEnabled, false);
     assert.equal(config.localAcceptanceAuthEnabled, false);
+    assert.equal(config.localAcceptanceDurableApprovals, false);
     assert.equal(config.localAcceptanceAuthTokenFile, undefined);
   },
 );
@@ -185,6 +186,10 @@ test('configuration validates explicit Google Ads enablement', () => {
 
 test('local acceptance auth is disabled by default and rejects incomplete configuration', () => {
   assert.throws(
+    () => loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_DURABLE_APPROVALS: 'true' }),
+    /LOCAL_ACCEPTANCE_DURABLE_APPROVALS requires LOCAL_ACCEPTANCE_AUTH_ENABLED/i,
+  );
+  assert.throws(
     () => loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true' }),
     /LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE/i,
   );
@@ -260,10 +265,26 @@ test('local acceptance auth exposes only its non-secret local configuration', ()
       LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
     });
     assert.equal(config.localAcceptanceAuthEnabled, true);
+    assert.equal(config.localAcceptanceDurableApprovals, false);
     assert.equal(config.localAcceptanceAuthTokenFile, tokenFile);
     assert.equal(config.localAcceptanceAuthTenantId, 'tenant-a');
     assert.equal(config.localAcceptanceAuthUserId, 'user-a');
     assert.equal(JSON.stringify(config).includes(token), false);
+  });
+});
+
+test('local acceptance can explicitly require durable approvals without changing workflow mode', () => {
+  withTokenFile((tokenFile) => {
+    const config = loadConfig({
+      ...baseEnv,
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+      LOCAL_ACCEPTANCE_DURABLE_APPROVALS: 'true',
+      LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+      LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+    });
+    assert.equal(config.workflowRuntimeMode, 'in-memory');
+    assert.equal(config.localAcceptanceDurableApprovals, true);
   });
 });
 

@@ -294,7 +294,18 @@ export class GoogleAdsRestTransport implements GoogleAdsApiTransport {
     const accessible = arrayOfStrings(recordOf(response.body).resourceNames)
       .map((resourceName) => resourceName.replace(/^customers\//, ''));
     const configuredCustomer = normalizeGoogleId(credentials.customerId, 'GOOGLE_ADS_CUSTOMER_ID_INVALID');
-    if (!accessible.includes(configuredCustomer)) {
+    // A delegated test client is often reachable through its configured
+    // login-customer manager while only that manager appears in
+    // listAccessibleCustomers. The subsequent scoped account/campaign read is
+    // still required and fails closed if the configured customer is not
+    // actually accessible through that manager.
+    const configuredLoginCustomer = credentials.loginCustomerId
+      ? normalizeGoogleId(credentials.loginCustomerId, 'GOOGLE_ADS_LOGIN_CUSTOMER_ID_INVALID')
+      : undefined;
+    if (
+      !accessible.includes(configuredCustomer) &&
+      (!configuredLoginCustomer || !accessible.includes(configuredLoginCustomer))
+    ) {
       throw new GoogleAdsProviderError('GOOGLE_ADS_ACCOUNT_INACCESSIBLE', false, false, 'ACCOUNT_ACCESS');
     }
   }

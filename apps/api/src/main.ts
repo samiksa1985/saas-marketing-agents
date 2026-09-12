@@ -70,10 +70,13 @@ const workflowRuntime = createWorkflowRuntime({
 // API_TENANT_DATABASE façade instead of using this client directly.
 const database = createDb(config.databaseUrl);
 const tenantDatabase = new ApiTenantDatabase(database);
-// Production and durable-workflow composition recover approvals after an API
-// restart. The in-memory repository remains an explicit local/dev fallback.
+// Production, durable-workflow composition, and explicit local acceptance
+// rehearsal recover approvals after an API restart. The in-memory repository
+// remains the default local/dev fallback.
 const durableApprovals =
-  config.nodeEnv === 'production' || workflowRuntime.durable
+  config.nodeEnv === 'production' ||
+  workflowRuntime.durable ||
+  config.localAcceptanceDurableApprovals
     ? new ApiTenantDurableApprovalRepository(tenantDatabase)
     : new InMemoryDurableApprovalRepository();
 // Provider configuration is composed here, never in a controller or agent.

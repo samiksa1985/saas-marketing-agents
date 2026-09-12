@@ -138,6 +138,33 @@ test('REST transport authenticates, reads sandbox account/campaign metadata, and
   assert.equal(calls.some((call) => call.url.includes('customers/1234567890/googleAds:searchStream')), true);
 });
 
+test('REST transport accepts an accessible login-customer manager, then requires the scoped customer read', async () => {
+  const calls: Array<{ url: string; body?: Record<string, unknown> }> = [];
+  const base = restFetch(calls);
+  const transport = new GoogleAdsRestTransport({
+    fetcher: async (url, request) => {
+      if (url.includes('listAccessibleCustomers')) {
+        return response(200, { resourceNames: [`customers/${credentials.loginCustomerId}`] });
+      }
+      return base(url, request);
+    },
+  });
+
+  await transport.validateConnection(credentials);
+  const campaign = await transport.getCampaign(
+    credentials,
+    credentials.customerId,
+    proposal.campaignId!,
+  );
+
+  assert.equal(campaign.accountId, credentials.customerId);
+  assert.equal(campaign.campaignId, proposal.campaignId);
+  assert.equal(
+    calls.some((call) => call.url.includes('customers/1234567890/googleAds:searchStream')),
+    true,
+  );
+});
+
 test('REST transport maps each supported governed mutation to one narrow Google Ads REST update', async () => {
   const cases: Array<{ actionType: ExternalMarketingActionProposal['actionType']; requestedPayload: Record<string, unknown>; path: string; mask: string }> = [
     { actionType: 'PAUSE_CAMPAIGN', requestedPayload: {}, path: 'campaigns:mutate', mask: 'status' },
