@@ -1,4 +1,5 @@
 import {
+  Inject,
   Body,
   Controller,
   ForbiddenException,
@@ -13,7 +14,10 @@ import type { Permission, TenantContext } from '@platform/contracts';
 import type { ExternalActionPolicyUpdate } from '@platform/marketing-os-persistence';
 
 import { ApiAuthGuard, getAuthContext, type AuthenticatedRequest } from './auth.guard.js';
-import { ExternalActionApplicationService } from './external-actions.application.js';
+import {
+  EXTERNAL_ACTION_APPLICATION_SERVICE,
+  ExternalActionApplicationService,
+} from './external-actions.application.js';
 
 /**
  * Security-policy administration is intentionally separate from marketing
@@ -23,7 +27,10 @@ import { ExternalActionApplicationService } from './external-actions.application
 @UseGuards(ApiAuthGuard)
 @Controller('marketing-os/external-action-policies')
 export class ExternalActionPoliciesController {
-  constructor(private readonly actions: ExternalActionApplicationService<any>) {}
+  constructor(
+    @Inject(EXTERNAL_ACTION_APPLICATION_SERVICE)
+    private readonly actions: ExternalActionApplicationService<any>,
+  ) {}
 
   @Get()
   list(@Req() request: AuthenticatedRequest) {

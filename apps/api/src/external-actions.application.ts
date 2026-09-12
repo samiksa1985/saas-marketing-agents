@@ -28,6 +28,10 @@ import { ApiTenantDatabase } from './tenant-database.js';
 
 type ExternalActionTransaction = TenantScopedTransaction & MarketingOSPersistenceDatabase;
 
+/** Nest token for the single canonical external-action application instance. */
+export const EXTERNAL_ACTION_APPLICATION_SERVICE =
+  'PLATFORM_EXTERNAL_ACTION_APPLICATION_SERVICE';
+
 class ApiTenantExternalActionStore<TTransaction extends ExternalActionTransaction>
   implements ExternalActionStore
 {

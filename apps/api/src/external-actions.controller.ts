@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Get,
   Headers,
+  Inject,
   Param,
   Post,
   Req,
@@ -15,12 +16,16 @@ import type { ExternalMarketingActionProposal } from '@platform/marketing-os-cor
 
 import { ApprovalApiService } from './approval.controller.js';
 import { ApiAuthGuard, getAuthContext, type AuthenticatedRequest } from './auth.guard.js';
-import { ExternalActionApplicationService } from './external-actions.application.js';
+import {
+  EXTERNAL_ACTION_APPLICATION_SERVICE,
+  ExternalActionApplicationService,
+} from './external-actions.application.js';
 
 @UseGuards(ApiAuthGuard)
 @Controller('marketing-os/external-actions')
 export class ExternalActionsController {
   constructor(
+    @Inject(EXTERNAL_ACTION_APPLICATION_SERVICE)
     private readonly actions: ExternalActionApplicationService<any>,
     private readonly approvals: ApprovalApiService,
   ) {}

@@ -9,7 +9,7 @@ Run only against a disposable local PostgreSQL database. The harness requires bo
 | Variable                    | Purpose                                             | Secret |
 | --------------------------- | --------------------------------------------------- | ------ |
 | `PHASE1_POSTGRES_PASSWORD`  | Compose-only local database password                | Yes    |
-| `PHASE1_POSTGRES_PORT`      | Optional host port; default 55432                   | No     |
+| `PHASE1_POSTGRES_PORT`      | Optional loopback host port; default `127.0.0.1:55432` | No     |
 | `PHASE1_DATABASE_URL`       | Disposable target database                          | Yes    |
 | `PHASE1_ADMIN_DATABASE_URL` | Same local server, connected to `postgres` database | Yes    |
 | `PHASE1_CONFIRM_DISPOSABLE` | Must equal `YES`                                    | No     |
@@ -23,7 +23,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-phase1-pos
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-phase1-postgres-evidence.ps1
 ```
 
-It uses `infra/docker/docker-compose.phase1.yml`, waits for health, uses a
+It uses `infra/docker/docker-compose.phase1.yml`, binds PostgreSQL only to
+`127.0.0.1:55432` by default, waits for health, uses a
 fresh password generated only in shell memory, does not create an `.env` file,
 and writes sanitized result evidence under `artifacts/phase1-postgres/`.
 It removes exactly one leading UTF-8 BOM (`U+FEFF`) from each migration before

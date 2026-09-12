@@ -7,7 +7,11 @@ import { createDb } from '@platform/db';
 import { createWorkflowRuntime } from '@platform/workflow-runtime';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
 import type { AuthProvider } from '@platform/auth';
-import { RegistryController, RegistryService } from './registry.controller.js';
+import {
+  REGISTRY_SERVICE,
+  RegistryController,
+  RegistryService,
+} from './registry.controller.js';
 import {
   WORKFLOW_RUNTIME_SELECTION,
   WorkflowApiService,
@@ -27,7 +31,10 @@ import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
 import { ExternalActionsController } from './external-actions.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
-import { ExternalActionApplicationService } from './external-actions.application.js';
+import {
+  EXTERNAL_ACTION_APPLICATION_SERVICE,
+  ExternalActionApplicationService,
+} from './external-actions.application.js';
 import { createApiAuthProvider } from './auth-provider.factory.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
@@ -93,7 +100,13 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
   controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController],
   providers:[
-    AppService,RegistryService,ApprovalApiService,ProductSurfaceService,WorkflowApiService,
+    AppService,
+    RegistryService,
+    {
+      provide: REGISTRY_SERVICE,
+      useExisting: RegistryService,
+    },
+    ApprovalApiService,ProductSurfaceService,WorkflowApiService,
     {provide:WORKFLOW_RUNTIME_SELECTION,useValue:workflowRuntime},
     {provide:API_TENANT_DATABASE,useValue:tenantDatabase},
     {provide:DURABLE_APPROVAL_REPOSITORY,useValue:durableApprovals},
@@ -106,6 +119,10 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
           approvals,
         ),
       inject: [ApprovalApiService, API_TENANT_DATABASE],
+    },
+    {
+      provide: EXTERNAL_ACTION_APPLICATION_SERVICE,
+      useExisting: ExternalActionApplicationService,
     },
     {
       provide: MarketingOsApplicationService,

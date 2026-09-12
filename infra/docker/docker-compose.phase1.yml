@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ${PHASE1_POSTGRES_PASSWORD:?Set PHASE1_POSTGRES_PASSWORD before starting Phase 1}
       POSTGRES_DB: ${PHASE1_POSTGRES_DB:-ai_marketing_phase1}
     ports:
-      - '${PHASE1_POSTGRES_PORT:-55432}:5432'
+      - '127.0.0.1:${PHASE1_POSTGRES_PORT:-55432}:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
       interval: 3s

@@ -31,11 +31,14 @@ export class LocalAcceptanceAuthProvider implements AuthProvider {
       roles: ['tenant_admin'],
       permissions: [
         'marketing:admin',
+        'workflow:read',
         'workflow:execute',
         'approval:decide',
         'integration:admin',
         'artifact:read',
         'audit:read',
+        'security_policy:read',
+        'security_policy:manage',
       ],
       locale: 'ar-SA',
     };

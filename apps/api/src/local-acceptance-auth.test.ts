@@ -29,11 +29,14 @@ test('local acceptance provider returns only the fixed canonical acceptance cont
       roles: ['tenant_admin'],
       permissions: [
         'marketing:admin',
+        'workflow:read',
         'workflow:execute',
         'approval:decide',
         'integration:admin',
         'artifact:read',
         'audit:read',
+        'security_policy:read',
+        'security_policy:manage',
       ],
       locale: 'ar-SA',
     });
