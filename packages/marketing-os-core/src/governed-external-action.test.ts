@@ -105,10 +105,11 @@ class Provider implements ExternalMarketingProviderGateway {
   verificationStatus: 'VERIFIED' | 'MISMATCH' = 'VERIFIED';
   private failure: Error | undefined;
 
-  failNext(code: string, retryable: boolean): void {
-    const failure = new Error(code) as Error & { code: string; retryable: boolean };
+  failNext(code: string, retryable: boolean, retryAfterMs?: number): void {
+    const failure = new Error(code) as Error & { code: string; retryable: boolean; retryAfterMs?: number };
     failure.code = code;
     failure.retryable = retryable;
+    if (retryAfterMs !== undefined) failure.retryAfterMs = retryAfterMs;
     this.failure = failure;
   }
 
@@ -261,6 +262,23 @@ test('provider health circuit gate blocks governed mutation without a provider b
   assert.equal(gateCalls, 1);
   assert.equal(setup.provider.executions, 0);
   assert.ok(blocked.evidence.some((item) => item.type === 'PROVIDER_HEALTH_MUTATION_BLOCKED'));
+});
+
+test('provider retry hints reach the provider-neutral health gate without exposing provider payloads', async () => {
+  let recorded: { code: string; retryAfterMs?: number } | undefined;
+  const setup = executor({
+    mutationSafetyGate: {
+      async allowMutation() { return { allowed: true }; },
+      async recordFailure(_context, _proposal, code, retryAfterMs) { recorded = { code, ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) }; },
+    },
+  });
+  const action = await setup.executor.propose(context(), proposal({ actionId: 'rate-limited-action', idempotencyKey: 'rate-limited-key' }));
+  const awaiting = await setup.executor.requestApproval(context(), action.id);
+  setup.approvals.approve(awaiting.approvalId!);
+  setup.provider.failNext('META_ADS_RATE_LIMITED', true, 12_000);
+  const failed = await setup.executor.execute(context(), action.id);
+  assert.equal(failed.failureCode, 'META_ADS_RATE_LIMITED');
+  assert.deepEqual(recorded, { code: 'META_ADS_RATE_LIMITED', retryAfterMs: 12_000 });
 });
 
 test('an inconclusive timeout blocks automated replay until read-back can reconcile it', async () => {

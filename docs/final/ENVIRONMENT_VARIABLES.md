@@ -23,6 +23,11 @@ Never copy real values, secrets, connection strings, or tokens into source contr
 | `GOOGLE_ADS_API_VERSION` | Defaults to `v25`; must be a Google Ads version identifier. | Pin an approved supported version. | Non-secret control. |
 | `GOOGLE_ADS_SANDBOX_CUSTOMER_IDS` | Comma-separated numeric test-account allowlist. | Required for REAL mode and must contain the approved customer. | Sensitive account identifiers; never use names as a safety control. |
 | `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN`, `GOOGLE_ADS_CUSTOMER_ID`, `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | Resolved only inside the Google Ads provider boundary. | Required for REAL transport; `GOOGLE_ADS_CUSTOMER_ID` must be an allowlisted test account. | Secrets/sensitive identifiers; never log or persist values. |
+| `META_ADS_EXECUTION_MODE` | Defaults to `DISABLED`; accepts `DISABLED`, `DRY_RUN`, `MOCK`, or `REAL`. | Keep `DISABLED` until the separate Meta sandbox gate is approved. Production rejects `MOCK`. | Non-secret control. |
+| `META_ADS_EXECUTION_ENABLED` | Defaults to `false`; only has effect with `REAL`. | Requires explicit approved enablement. | Non-secret control. |
+| `META_ADS_API_VERSION` | Defaults to `v21.0`; must be a pinned Graph API version. | Pin a currently supported approved version. | Non-secret control. |
+| `META_ADS_SANDBOX_AD_ACCOUNT_IDS` | Comma-separated `act_<numeric>` sandbox/test ad-account allowlist. | Required for REAL mode and must contain the approved account. | Sensitive account identifiers; names are never a safety control. |
+| `META_ADS_ACCESS_TOKEN`, `META_ADS_AD_ACCOUNT_ID`, `META_ADS_BUSINESS_ID`, `META_ADS_APP_ID`, `META_ADS_APP_SECRET` | Meta access token and optional integration identifiers are resolved only inside the Meta provider boundary. | REAL transport requires the token and approved allowlisted ad account. | Secrets/sensitive identifiers; never log or persist values. |
 | `REPOSITORY_ROOT` | Optional API registry setting. | Set only when repository discovery is intentionally enabled. | Sensitive path metadata. |
 
 ## Startup validation

@@ -3,8 +3,11 @@ import test from 'node:test';
 import {
   assertExternalMarketingActionTransition,
   canTransitionExternalMarketingAction,
+  CANONICAL_CAMPAIGN_MUTATION_TYPES,
+  META_ADS_MUTATION_TYPES,
   type ExternalMarketingAction,
 } from './external-marketing-action.js';
+import { externalActionEntitlementKey } from './governed-external-action.js';
 
 function action(status: ExternalMarketingAction['status']): ExternalMarketingAction {
   return {
@@ -40,4 +43,10 @@ test('external marketing action contract does not permit dispatch before approva
     () => assertExternalMarketingActionTransition(action('DRAFT'), 'DISPATCHING'),
     /EXTERNAL_ACTION_INVALID_TRANSITION/,
   );
+});
+
+test('canonical campaign actions and entitlement keys remain provider-neutral', () => {
+  assert.deepEqual(META_ADS_MUTATION_TYPES, CANONICAL_CAMPAIGN_MUTATION_TYPES);
+  assert.equal(externalActionEntitlementKey('GOOGLE_ADS'), 'marketing.external_action.google_ads');
+  assert.equal(externalActionEntitlementKey('META_ADS'), 'marketing.external_action.meta_ads');
 });

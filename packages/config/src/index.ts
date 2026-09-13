@@ -16,6 +16,9 @@ export type GoogleAdsExecutionMode =
   | 'MOCK'
   | 'REAL';
 
+/** Meta follows the same opt-in execution contract as every governed provider. */
+export type MetaAdsExecutionMode = GoogleAdsExecutionMode;
+
 export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
   apiPort: number;
@@ -29,6 +32,11 @@ export interface RuntimeConfig {
   googleAdsApiVersion: string;
   googleAdsApprovedCustomerId?: string;
   googleAdsSandboxCustomerIds: string[];
+  metaAdsExecutionMode: MetaAdsExecutionMode;
+  metaAdsExecutionEnabled: boolean;
+  metaAdsApiVersion: string;
+  metaAdsApprovedAdAccountId?: string;
+  metaAdsSandboxAdAccountIds: string[];
   artifactBucket: string;
   artifactEndpoint?: string;
   aiProvider: string;
@@ -90,6 +98,24 @@ function googleAdsCustomerId(name: string, value: string | undefined): string | 
 function googleAdsCustomerIdList(name: string, value: string | undefined): string[] {
   if (!optional(value)) return [];
   return [...new Set(value!.split(',').map((entry) => googleAdsCustomerId(name, entry.trim())).filter((entry): entry is string => entry !== undefined))];
+}
+
+/** Meta Graph accepts the `act_` resource prefix; normalize it at the config boundary. */
+function metaAdsAccountId(name: string, value: string | undefined): string | undefined {
+  const raw = optional(value);
+  if (!raw) return undefined;
+  const digits = raw.replace(/^act_/i, '');
+  if (!/^\d{1,20}$/.test(digits)) {
+    throw new Error(`${name} must contain a Meta ad account ID such as act_123456789`);
+  }
+  return `act_${digits}`;
+}
+
+function metaAdsAccountIdList(name: string, value: string | undefined): string[] {
+  if (!optional(value)) return [];
+  return [...new Set(value!.split(',')
+    .map((entry) => metaAdsAccountId(name, entry.trim()))
+    .filter((entry): entry is string => entry !== undefined))];
 }
 
 function validateLocalAcceptanceTokenFile(tokenFile: string): void {
@@ -255,6 +281,42 @@ export function loadConfig(
     }
   }
 
+  const metaAdsExecutionMode =
+    (env.META_ADS_EXECUTION_MODE ?? 'DISABLED') as MetaAdsExecutionMode;
+  if (!['DISABLED', 'DRY_RUN', 'MOCK', 'REAL'].includes(metaAdsExecutionMode)) {
+    throw new Error('META_ADS_EXECUTION_MODE must be DISABLED, DRY_RUN, MOCK, or REAL');
+  }
+  const metaAdsExecutionEnabled = optionalBoolean(
+    'META_ADS_EXECUTION_ENABLED',
+    env.META_ADS_EXECUTION_ENABLED,
+  );
+  if (nodeEnv === 'production' && metaAdsExecutionMode === 'MOCK') {
+    throw new Error('Production cannot use META_ADS_EXECUTION_MODE=MOCK');
+  }
+  const metaAdsApiVersion = optional(env.META_ADS_API_VERSION) ?? 'v21.0';
+  if (!/^v\d+\.\d+$/.test(metaAdsApiVersion)) {
+    throw new Error('META_ADS_API_VERSION must be a version such as v21.0');
+  }
+  const metaAdsApprovedAdAccountId = metaAdsAccountId(
+    'META_ADS_AD_ACCOUNT_ID',
+    env.META_ADS_AD_ACCOUNT_ID,
+  );
+  const metaAdsSandboxAdAccountIds = metaAdsAccountIdList(
+    'META_ADS_SANDBOX_AD_ACCOUNT_IDS',
+    env.META_ADS_SANDBOX_AD_ACCOUNT_IDS,
+  );
+  if (metaAdsExecutionMode === 'REAL') {
+    if (!metaAdsApprovedAdAccountId) {
+      throw new Error('META_ADS_EXECUTION_MODE=REAL requires META_ADS_AD_ACCOUNT_ID');
+    }
+    if (metaAdsSandboxAdAccountIds.length === 0) {
+      throw new Error('META_ADS_EXECUTION_MODE=REAL requires META_ADS_SANDBOX_AD_ACCOUNT_IDS');
+    }
+    if (!metaAdsSandboxAdAccountIds.includes(metaAdsApprovedAdAccountId)) {
+      throw new Error('META_ADS_AD_ACCOUNT_ID must be included in META_ADS_SANDBOX_AD_ACCOUNT_IDS');
+    }
+  }
+
   return {
     nodeEnv,
 
@@ -291,6 +353,16 @@ export function loadConfig(
     ...(googleAdsApprovedCustomerId ? { googleAdsApprovedCustomerId } : {}),
 
     googleAdsSandboxCustomerIds,
+
+    metaAdsExecutionMode,
+
+    metaAdsExecutionEnabled,
+
+    metaAdsApiVersion,
+
+    ...(metaAdsApprovedAdAccountId ? { metaAdsApprovedAdAccountId } : {}),
+
+    metaAdsSandboxAdAccountIds,
 
     artifactBucket: required(
       'ARTIFACT_BUCKET',

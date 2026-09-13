@@ -23,7 +23,7 @@ import {
   type ExternalActionPolicyUpdate,
   type MarketingOSPersistenceDatabase,
 } from '@platform/marketing-os-persistence';
-import type { ExternalMarketingProviderGateway } from '@platform/marketing-os-core';
+import type { ExternalActionProviderRegistry } from '@platform/tool-gateway';
 
 import type { ApprovalApiService } from './approval.controller.js';
 import { ApiTenantDatabase } from './tenant-database.js';
@@ -153,11 +153,16 @@ class ApiTenantExternalActionSafetyGate<TTransaction extends ExternalActionTrans
     );
   }
 
-  async recordFailure(context: TenantContext, proposal: { provider: string }, code: string): Promise<void> {
+  async recordFailure(
+    context: TenantContext,
+    proposal: { provider: string },
+    code: string,
+    retryAfterMs?: number,
+  ): Promise<void> {
     await this.tenantDatabase.execute(context, (transaction) =>
       new PersistentProviderHealthMutationGate(
         new PersistentExternalActionReliabilityStore(transaction),
-      ).recordFailure(context, proposal, code),
+      ).recordFailure(context, proposal, code, retryAfterMs),
     );
   }
 }
@@ -175,7 +180,7 @@ export class ExternalActionApplicationService<TTransaction extends ExternalActio
 
   constructor(
     tenantDatabase: ApiTenantDatabase<TTransaction>,
-    private readonly provider: ExternalMarketingProviderGateway,
+    private readonly providers: ExternalActionProviderRegistry,
     private readonly approvals: ApprovalApiService,
   ) {
     this.tenantDatabase = tenantDatabase;
@@ -283,7 +288,7 @@ export class ExternalActionApplicationService<TTransaction extends ExternalActio
     );
     return new GovernedExternalActionExecutor(
       this.store,
-      this.provider,
+      this.providers.get(provider),
       budget,
       new ExternalActionPolicyEngine(),
       policy,

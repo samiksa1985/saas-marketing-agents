@@ -27,18 +27,27 @@ export const EXTERNAL_MARKETING_ACTION_STATUSES = [
 
 export type ExternalMarketingActionStatus = (typeof EXTERNAL_MARKETING_ACTION_STATUSES)[number];
 
-/** The first provider is Google Ads; this value deliberately remains extensible. */
+/** Provider values are persisted domain identifiers, not vendor SDK types. */
 export type ExternalMarketingProvider = 'GOOGLE_ADS' | (string & {});
 
-export const GOOGLE_ADS_MUTATION_TYPES = [
+/** Canonical campaign actions shared by providers; adapters own vendor translation. */
+export const CANONICAL_CAMPAIGN_MUTATION_TYPES = [
   'PAUSE_CAMPAIGN',
   'ENABLE_CAMPAIGN',
   'UPDATE_CAMPAIGN_BUDGET',
+] as const;
+
+export const GOOGLE_ADS_MUTATION_TYPES = [
+  ...CANONICAL_CAMPAIGN_MUTATION_TYPES,
   'UPDATE_TARGET_CPA',
   'UPDATE_TARGET_ROAS',
 ] as const;
 
 export type GoogleAdsMutationType = (typeof GOOGLE_ADS_MUTATION_TYPES)[number];
+
+/** EPIC06 deliberately reuses canonical names rather than Meta-native verbs. */
+export const META_ADS_MUTATION_TYPES = CANONICAL_CAMPAIGN_MUTATION_TYPES;
+export type MetaAdsMutationType = (typeof META_ADS_MUTATION_TYPES)[number];
 
 export interface ExternalActionEvidenceReference {
   id: string;

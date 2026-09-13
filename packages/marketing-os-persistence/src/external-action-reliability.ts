@@ -236,6 +236,15 @@ export function classifyProviderFailure(code: string): {
   cooldownMs: number;
 } {
   const normalized = code.toUpperCase();
+  if (normalized.includes('META_ADS_CREDENTIALS_MISSING')) {
+    return { health: 'AUTH_FAILURE', credential: 'MISSING', event: 'PROVIDER_AUTH_FAILURE', cooldownMs: 30 * 60_000 };
+  }
+  if (normalized.includes('META_ADS_ACCOUNT_ID_INVALID') || normalized.includes('META_ADS_API_VERSION_INVALID')) {
+    return { health: 'AUTH_FAILURE', credential: 'INVALID', event: 'PROVIDER_AUTH_FAILURE', cooldownMs: 30 * 60_000 };
+  }
+  if (normalized.includes('EXPIRED')) {
+    return { health: 'AUTH_FAILURE', credential: 'EXPIRED', event: 'PROVIDER_AUTH_FAILURE', cooldownMs: 30 * 60_000 };
+  }
   if (normalized.includes('INVALID_GRANT') || normalized.includes('REVOKED')) {
     return { health: 'AUTH_FAILURE', credential: 'REVOKED', event: 'PROVIDER_AUTH_FAILURE', cooldownMs: 30 * 60_000 };
   }
@@ -791,8 +800,13 @@ export class PersistentProviderHealthMutationGate implements ExternalActionMutat
     return this.store.recordProviderSuccess(context, proposal.provider);
   }
 
-  recordFailure(context: TenantContext, proposal: { provider: string }, code: string): Promise<void> {
-    return this.store.recordProviderFailure(context, proposal.provider, code).then(() => undefined);
+  recordFailure(
+    context: TenantContext,
+    proposal: { provider: string },
+    code: string,
+    retryAfterMs?: number,
+  ): Promise<void> {
+    return this.store.recordProviderFailure(context, proposal.provider, code, retryAfterMs).then(() => undefined);
   }
 }
 

@@ -90,6 +90,10 @@ test(
 
     assert.equal(config.googleAdsExecutionMode, 'DISABLED');
     assert.equal(config.googleAdsExecutionEnabled, false);
+    assert.equal(config.metaAdsExecutionMode, 'DISABLED');
+    assert.equal(config.metaAdsExecutionEnabled, false);
+    assert.equal(config.metaAdsApiVersion, 'v21.0');
+    assert.deepEqual(config.metaAdsSandboxAdAccountIds, []);
     assert.equal(config.localAcceptanceAuthEnabled, false);
     assert.equal(config.localAcceptanceDurableApprovals, false);
     assert.equal(config.localAcceptanceAuthTokenFile, undefined);
@@ -313,6 +317,40 @@ test('REAL Google Ads mode rejects an approved account outside its sandbox allow
       GOOGLE_ADS_SANDBOX_CUSTOMER_IDS: '2222222222',
     }),
     /must be included/i,
+  );
+});
+
+test('Meta Ads defaults are disabled and explicit REAL mode requires an allowlisted ad account', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, META_ADS_EXECUTION_MODE: 'REAL' }),
+    /META_ADS_AD_ACCOUNT_ID/i,
+  );
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      META_ADS_EXECUTION_MODE: 'REAL',
+      META_ADS_AD_ACCOUNT_ID: 'act_123456789',
+    }),
+    /META_ADS_SANDBOX_AD_ACCOUNT_IDS/i,
+  );
+  const config = loadConfig({
+    ...baseEnv,
+    META_ADS_EXECUTION_MODE: 'REAL',
+    META_ADS_AD_ACCOUNT_ID: '123456789',
+    META_ADS_SANDBOX_AD_ACCOUNT_IDS: 'act_123456789, act_987654321',
+  });
+  assert.equal(config.metaAdsApprovedAdAccountId, 'act_123456789');
+  assert.deepEqual(config.metaAdsSandboxAdAccountIds, ['act_123456789', 'act_987654321']);
+});
+
+test('Meta Ads rejects malformed execution enablement and API version', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, META_ADS_EXECUTION_ENABLED: 'yes' }),
+    /META_ADS_EXECUTION_ENABLED must be true or false/i,
+  );
+  assert.throws(
+    () => loadConfig({ ...baseEnv, META_ADS_API_VERSION: 'latest' }),
+    /META_ADS_API_VERSION/i,
   );
 });
 

@@ -113,6 +113,9 @@ test('credential lifecycle and provider classifications are provider-neutral and
   assert.equal(credentialHealthForExpiry(new Date('2025-12-31T23:59:00.000Z'), now), 'EXPIRED');
   assert.equal(credentialHealthForExpiry(new Date('2026-01-03T00:00:00.000Z'), now), 'EXPIRING');
   assert.equal(classifyProviderFailure('oauth invalid_grant').credential, 'REVOKED');
+  assert.equal(classifyProviderFailure('META_ADS_TOKEN_EXPIRED').credential, 'EXPIRED');
+  assert.equal(classifyProviderFailure('META_ADS_TOKEN_REVOKED').credential, 'REVOKED');
+  assert.equal(classifyProviderFailure('META_ADS_CREDENTIALS_MISSING').credential, 'MISSING');
   assert.equal(classifyProviderFailure('GOOGLE_ADS_QUOTA_RATE_LIMITED').health, 'RATE_LIMITED');
   assert.equal(sanitizeOperationalDiagnostic('Authorization: Bearer not-a-real-token')?.includes('not-a-real-token'), false);
   assert.equal(sanitizeOperationalCode('Authorization: Bearer not-a-real-token').includes('not-a-real-token'), false);

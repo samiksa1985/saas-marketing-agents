@@ -253,7 +253,10 @@ export class CanonicalExternalActionBudgetAuthority {
     }
     let entitlement: EntitlementDecision;
     try {
-      entitlement = await this.entitlements.authorize(context.tenantId, 'marketing.external_action.google_ads');
+      entitlement = await this.entitlements.authorize(
+        context.tenantId,
+        externalActionEntitlementKey(proposal.provider),
+      );
     } catch {
       return { assessment: 'BLOCK', reasons: ['BILLING_AUTHORITY_UNAVAILABLE'], checkedAt };
     }
@@ -476,6 +479,7 @@ export interface ExternalActionMutationSafetyGate {
     context: TenantContext,
     proposal: Pick<ExternalMarketingActionProposal, 'provider'>,
     code: string,
+    retryAfterMs?: number,
   ): Promise<void>;
 }
 
@@ -689,7 +693,7 @@ export class GovernedExternalActionExecutor {
       return verified;
     } catch (error) {
       const details = providerErrorDetails(error);
-      await this.recordProviderHealthFailure(context, action.proposal, details.code);
+      await this.recordProviderHealthFailure(context, action.proposal, details.code, details.retryAfterMs);
       if (details.unknownOutcome) {
         const recovery = await this.reconcileUnknownExecution(context, action);
         if (recovery.status === 'APPLIED' && recovery.execution) {
@@ -813,9 +817,10 @@ export class GovernedExternalActionExecutor {
     context: TenantContext,
     proposal: ExternalMarketingActionProposal,
     code: string,
+    retryAfterMs?: number,
   ): Promise<void> {
     try {
-      await this.mutationSafetyGate?.recordFailure?.(context, proposal, code);
+      await this.mutationSafetyGate?.recordFailure?.(context, proposal, code, retryAfterMs);
     } catch {
       // The original provider failure remains authoritative if metrics fail.
     }
@@ -902,6 +907,13 @@ function numericPayload(payload: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
+/** Provider-neutral billing authority namespace; GOOGLE_ADS remains unchanged. */
+export function externalActionEntitlementKey(provider: ExternalMarketingProvider): string {
+  const normalized = provider.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!normalized) throw new Error('EXTERNAL_ACTION_PROVIDER_REQUIRED');
+  return `marketing.external_action.${normalized}`;
+}
+
 function deny(reasons: string[], evaluatedAt: string): ExternalActionPolicyDecision {
   return { outcome: 'DENY', reasons, evaluatedAt, dryRunOnly: false };
 }
@@ -972,14 +984,17 @@ function isExpired(expiresAt: string | undefined, now: string): boolean {
   return expiresAt !== undefined && Date.parse(expiresAt) <= Date.parse(now);
 }
 
-function providerErrorDetails(error: unknown): { code: string; message?: string; retryable?: boolean; unknownOutcome?: boolean } {
+function providerErrorDetails(error: unknown): { code: string; message?: string; retryable?: boolean; unknownOutcome?: boolean; retryAfterMs?: number } {
   if (error && typeof error === 'object') {
-    const details = error as { name?: unknown; message?: unknown; code?: unknown; retryable?: unknown; unknownOutcome?: unknown };
+    const details = error as { name?: unknown; message?: unknown; code?: unknown; retryable?: unknown; unknownOutcome?: unknown; retryAfterMs?: unknown };
     return {
       code: typeof details.code === 'string' ? details.code : typeof details.name === 'string' ? details.name : 'UNKNOWN',
       ...(typeof details.message === 'string' ? { message: details.message } : {}),
       ...(typeof details.retryable === 'boolean' ? { retryable: details.retryable } : {}),
       ...(typeof details.unknownOutcome === 'boolean' ? { unknownOutcome: details.unknownOutcome } : {}),
+      ...(typeof details.retryAfterMs === 'number' && Number.isFinite(details.retryAfterMs) && details.retryAfterMs >= 0
+        ? { retryAfterMs: details.retryAfterMs }
+        : {}),
     };
   }
   return { code: 'UNKNOWN' };

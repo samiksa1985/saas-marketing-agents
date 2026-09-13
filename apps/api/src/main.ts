@@ -47,6 +47,12 @@ import {
   GoogleAdsRestTransport,
   GoogleAdsProviderGateway,
   MockGoogleAdsProvider,
+  EnvironmentMetaAdsCredentialResolver,
+  MetaAdsApiAdapter,
+  MetaAdsRestTransport,
+  MetaAdsProviderGateway,
+  MockMetaAdsProvider,
+  ExternalActionProviderRegistry,
 } from '@platform/tool-gateway';
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
@@ -104,6 +110,27 @@ const googleAdsGateway = new GoogleAdsProviderGateway(
     sandboxCustomerIds: config.googleAdsSandboxCustomerIds,
   },
 );
+const metaAdsProvider =
+  config.metaAdsExecutionMode === 'MOCK'
+    ? new MockMetaAdsProvider()
+    : new MetaAdsApiAdapter(
+      new EnvironmentMetaAdsCredentialResolver(),
+      new MetaAdsRestTransport({ apiVersion: config.metaAdsApiVersion }),
+    );
+const metaAdsGateway = new MetaAdsProviderGateway(
+  metaAdsProvider,
+  config.metaAdsExecutionMode,
+  config.metaAdsExecutionEnabled,
+  undefined,
+  {
+    ...(config.metaAdsApprovedAdAccountId ? { approvedAdAccountId: config.metaAdsApprovedAdAccountId } : {}),
+    sandboxAdAccountIds: config.metaAdsSandboxAdAccountIds,
+  },
+);
+const externalActionProviders = new ExternalActionProviderRegistry({
+  GOOGLE_ADS: googleAdsGateway,
+  META_ADS: metaAdsGateway,
+});
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
   controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController,ExternalActionOperationsController],
@@ -123,7 +150,7 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
       useFactory: (approvals: ApprovalApiService, databaseFacade: typeof tenantDatabase) =>
         new ExternalActionApplicationService(
           databaseFacade,
-          googleAdsGateway,
+          externalActionProviders,
           approvals,
         ),
       inject: [ApprovalApiService, API_TENANT_DATABASE],
