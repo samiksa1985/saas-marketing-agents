@@ -660,6 +660,9 @@ function mapGoogleAdsHttpError(
 ): GoogleAdsProviderError {
   const signature = JSON.stringify(body).toUpperCase();
   if (authentication || status === 401) {
+    if (signature.includes('INVALID_GRANT')) {
+      return new GoogleAdsProviderError('GOOGLE_ADS_CREDENTIAL_REVOKED', false, false, 'AUTHENTICATION');
+    }
     return new GoogleAdsProviderError('GOOGLE_ADS_AUTHENTICATION_FAILED', false, false, 'AUTHENTICATION');
   }
   if (status === 429 || signature.includes('QUOTA')) {

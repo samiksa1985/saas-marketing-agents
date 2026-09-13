@@ -64,7 +64,7 @@ only the fixed tenant context below:
 ```text
 role: tenant_admin
 permissions: marketing:admin, workflow:execute, approval:decide,
-             integration:admin, artifact:read, audit:read
+             integration:admin, artifact:read, audit:read, system_health:read
 locale: ar-SA
 ```
 

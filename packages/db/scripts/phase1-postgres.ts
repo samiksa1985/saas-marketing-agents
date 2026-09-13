@@ -19,6 +19,9 @@ import { AuthoritativeEntitlementAccess } from '../../billing-entitlements/src/a
 import { PersistentBillingAuthorityRepository } from '../../marketing-os-persistence/src/billing-authority.js';
 import { AtomicBillingUsageStore } from '../../marketing-os-persistence/src/billing-usage.js';
 import {
+  ExternalActionOutboxWorker,
+  PersistentExternalActionReliabilityStore,
+  PersistentProviderHealthMutationGate,
   PersistentExternalActionOutcomeStore,
   PersistentExternalActionPolicyStore,
   PersistentExternalActionStore,
@@ -35,6 +38,11 @@ import {
   executePhase1ValidationCheck,
   Phase1ValidationExecutionError,
 } from '../src/phase1-validation-diagnostics.js';
+import {
+  applyJournalMigrations,
+  loadJournalMigrations,
+  type JournalMigrationClient,
+} from '../src/journal-migration-runner.js';
 
 type Row = Record<string, unknown>;
 type SqlClient = ReturnType<typeof postgres>;
@@ -69,6 +77,19 @@ type Epic03Proof = {
   actionId: string;
   outboxId: string;
   concurrency: { workers: number; attempts: number; successes: number; conflicts: number; unexpectedDuplicates: number };
+};
+type Epic05Proof = {
+  migrationLedgerEntries: number;
+  concurrentClaim: { workers: number; attempts: number; successfulClaims: number; skips: number; duplicateClaims: number };
+  leaseRecovery: 'PASS';
+  retry: 'PASS';
+  deadLetter: 'PASS';
+  replay: 'PASS';
+  providerHealth: 'PASS';
+  credentialHealth: 'PASS';
+  operatorRecovery: 'PASS';
+  workerBoundary: 'PASS';
+  cleanup: 'PASS';
 };
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
@@ -360,11 +381,12 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'billing_invoices', 'billing_payments', 'financial_forecast_snapshots',
         'external_action_policies', 'external_action_policy_audit',
         'external_marketing_actions', 'external_marketing_action_evidence',
-        'external_action_workflow_outbox'
+        'external_action_workflow_outbox', 'external_provider_health',
+        'external_provider_credential_health', 'external_action_operational_events'
       )
   `, recordSql),
   );
-  assert.equal(tables.length, 25, 'required canonical tables are missing');
+  assert.equal(tables.length, 28, 'required canonical tables are missing');
   const minorUnits = rows(
     await validationUnsafe(owner, `
     SELECT table_name, column_name, data_type
@@ -426,21 +448,25 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'external_action_policy_audit'::regclass,
         'external_marketing_actions'::regclass,
         'external_marketing_action_evidence'::regclass,
-        'external_action_workflow_outbox'::regclass
+        'external_action_workflow_outbox'::regclass,
+        'external_provider_health'::regclass,
+        'external_provider_credential_health'::regclass,
+        'external_action_operational_events'::regclass
       )
   `, recordSql),
   );
-  assert.equal(marketingForeignKeys.length, 10, 'Marketing OS tenant foreign keys are missing');
+  assert.equal(marketingForeignKeys.length, 13, 'Marketing OS tenant foreign keys are missing');
   const governedIndexes = rows(
     await validationUnsafe(owner, `
       SELECT indexname FROM pg_indexes
       WHERE schemaname = 'public' AND indexname IN (
         'external_marketing_actions_active_target_uidx',
-        'external_action_workflow_outbox_tenant_idempotency_uidx'
+        'external_action_workflow_outbox_tenant_idempotency_uidx',
+        'external_action_workflow_outbox_tenant_ready_idx'
       )
     `, recordSql),
   );
-  assert.equal(governedIndexes.length, 2, 'governed action concurrency or outbox idempotency index is missing');
+  assert.equal(governedIndexes.length, 3, 'governed action concurrency or outbox idempotency index is missing');
 }
 
 async function testDurableApprovalRlsLegacy(owner: SqlClient, databaseUrl: string): Promise<void> {
@@ -2138,6 +2164,361 @@ async function testEpic03GovernedExternalActions(
   };
 }
 
+function epic05Context(tenantId: string): TenantContext {
+  return {
+    tenantId,
+    userId: `epic05-operator-${tenantId}`,
+    roles: ['operations_manager'],
+    permissions: ['system_health:read', 'security_policy:manage', 'integration:admin'],
+    locale: 'en',
+  };
+}
+
+async function seedEpic05Outbox(
+  owner: SqlClient,
+  tenantId: string,
+  suffix: string,
+  availableAt: Date,
+): Promise<{ actionId: string; outboxId: string }> {
+  const actionId = `epic05-acceptance-action-${suffix}`;
+  const outboxId = `epic05-acceptance-outbox-${suffix}`;
+  await owner.unsafe(
+    `INSERT INTO external_marketing_actions
+      (id, tenant_id, organization_id, actor, agent_identity, workflow_run_id, recommendation_id,
+       provider, account_id, campaign_id, action_type, target_lock_key, proposal, status,
+       idempotency_key, requested_at)
+     VALUES ($1, $2::uuid, 'epic05-org', 'epic05-harness', 'epic05-worker', 'epic05-workflow',
+       'epic05-recommendation', 'EPIC05_TEST', 'epic05-account', 'epic05-campaign',
+       'TEST_WORKFLOW_CONTINUATION', $3, '{}'::jsonb, 'VERIFIED', $4, $5::timestamptz)`,
+    [actionId, tenantId, `epic05-target-${suffix}`, `epic05-idempotency-${suffix}`, availableAt],
+  );
+  await owner.unsafe(
+    `INSERT INTO external_action_workflow_outbox
+     (id, tenant_id, workflow_run_id, external_action_id, event_type, state, provider, account_id,
+       campaign_id, correlation_id, idempotency_key, payload, delivery_status, delivery_attempts,
+       occurred_at, next_attempt_at)
+     VALUES ($1, $2::uuid, 'epic05-workflow', $3, 'EXTERNAL_ACTION_VERIFIED', 'VERIFIED',
+       'EPIC05_TEST', 'epic05-account', 'epic05-campaign', $3, $4, '{}'::jsonb, 'PENDING', 0,
+       $5::timestamptz, $5::timestamptz)`,
+    [outboxId, tenantId, actionId, `epic05-outbox-idempotency-${suffix}`, availableAt],
+  );
+  return { actionId, outboxId };
+}
+
+async function bootstrapMigrationLedger(
+  client: SqlClient,
+  migrations: Awaited<ReturnType<typeof loadJournalMigrations>>,
+): Promise<void> {
+  await client.unsafe('CREATE SCHEMA IF NOT EXISTS "drizzle"');
+  await client.unsafe(
+    `CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+      id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint
+    )`,
+  );
+  for (const migration of migrations) {
+    await client.unsafe(
+      `INSERT INTO "drizzle"."__drizzle_migrations" (hash, created_at)
+       SELECT $1, $2 WHERE NOT EXISTS (
+         SELECT 1 FROM "drizzle"."__drizzle_migrations" WHERE created_at = $2
+       )`,
+      [migration.hash, migration.entry.when],
+    );
+  }
+}
+
+async function assertEpic05Schema(owner: SqlClient): Promise<void> {
+  const tables = rows(await owner.unsafe(`
+    SELECT c.relname AS table_name, c.relrowsecurity AS rls_enabled,
+           EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polcmd = '*') AS has_all_policy
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname IN (
+      'external_action_workflow_outbox', 'external_provider_health',
+      'external_provider_credential_health', 'external_action_operational_events'
+    ) ORDER BY c.relname
+  `));
+  assert.equal(tables.length, 4, 'EPIC05 tables must exist');
+  assert.ok(tables.every((row) => row.rls_enabled === true && row.has_all_policy === true), 'EPIC05 tables require RLS ALL policies');
+  const indexes = rows(await owner.unsafe(`
+    SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname IN (
+      'external_action_workflow_outbox_tenant_ready_idx',
+      'external_provider_health_tenant_provider_uidx',
+      'external_provider_credential_health_tenant_provider_uidx',
+      'external_action_operational_events_tenant_provider_occurred_idx'
+    )
+  `));
+  assert.equal(indexes.length, 4, 'EPIC05 indexes are missing');
+  const constraint = one(await owner.unsafe(`
+    SELECT pg_get_constraintdef(oid) AS definition
+    FROM pg_constraint
+    WHERE conrelid = 'external_action_workflow_outbox'::regclass
+      AND conname = 'external_action_workflow_outbox_delivery_status_check'
+  `));
+  assert.match(String(constraint.definition), /PROCESSING.*DEAD_LETTER/i, 'outbox state constraint is incomplete');
+  const role = one(await owner.unsafe(`
+    SELECT rolsuper, rolcreatedb, rolcreaterole, rolbypassrls
+    FROM pg_roles WHERE rolname = $1
+  `, [appRole]));
+  assert.deepEqual(role, { rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolbypassrls: false });
+}
+
+/** Real PostgreSQL acceptance for the EPIC05 persistence and worker boundary. */
+async function testEpic05ExternalActionReliability(
+  owner: SqlClient,
+  databaseUrl: string,
+  recordSql: SqlRecorder,
+  recordStep: (step: string) => void,
+  recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void,
+): Promise<Epic05Proof> {
+  const contextA = epic05Context(tenantA);
+  const contextB = epic05Context(tenantB);
+  const base = new Date('2026-09-12T00:00:00.000Z');
+  const fixturePrefix = 'epic05-acceptance-';
+  const tx = <T>(context: TenantContext, operation: (store: PersistentExternalActionReliabilityStore) => Promise<T>) =>
+    withAppDrizzleTransaction(databaseUrl, context.tenantId, recordSql, (transaction) =>
+      operation(new PersistentExternalActionReliabilityStore(transaction)),
+    );
+  let cleanup = false;
+  try {
+    recordStep('schema_and_migration_ledger');
+    await assertEpic05Schema(owner);
+    const ledger = one(await owner.unsafe(`
+      SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations"
+      WHERE created_at = 1788629864178
+    `));
+    assert.equal(Number(ledger.count), 1, 'migration 0023 must have exactly one ledger record');
+
+    recordStep('concurrent_claim');
+    const concurrent = await seedEpic05Outbox(owner, tenantA, 'concurrent', base);
+    const claimResults = await Promise.all(
+      ['epic05-worker-a', 'epic05-worker-b'].map((leaseOwner) =>
+        tx(contextA, (store) => store.claimNext(contextA, { leaseOwner, now: base })),
+      ),
+    );
+    const claimed = claimResults.filter((item) => item !== undefined);
+    assert.equal(claimed.length, 1, 'exactly one concurrent worker may own an eligible lease');
+    assert.ok(claimed[0]?.leaseId);
+    await tx(contextA, (store) => store.markDelivered(contextA, concurrent.outboxId, claimed[0]!.leaseId));
+
+    recordStep('lease_crash_recovery');
+    const lease = await seedEpic05Outbox(owner, tenantA, 'lease', base);
+    const firstLease = await tx(contextA, (store) =>
+      store.claimNext(contextA, { leaseOwner: 'epic05-crashed-worker', leaseDurationMs: 1_000, now: base }),
+    );
+    assert.ok(firstLease?.leaseId);
+    const early = await tx(contextA, (store) =>
+      store.claimNext(contextA, { leaseOwner: 'epic05-recovery-worker', now: new Date(base.getTime() + 999) }),
+    );
+    assert.equal(early, undefined, 'an unexpired lease must not be stolen');
+    const recovered = await tx(contextA, (store) =>
+      store.claimNext(contextA, { leaseOwner: 'epic05-recovery-worker', now: new Date(base.getTime() + 1_001) }),
+    );
+    assert.ok(recovered?.leaseId && recovered.leaseId !== firstLease?.leaseId, 'expired lease must be recovered with a new identity');
+    await expectRejected(
+      () => tx(contextA, (store) => store.markDelivered(contextA, lease.outboxId, firstLease?.leaseId)),
+      /LEASE_NOT_OWNED/,
+    );
+    await tx(contextA, (store) => store.markDelivered(contextA, lease.outboxId, recovered!.leaseId));
+    const recoveryEvents = one(await owner.unsafe(
+      `SELECT count(*)::int AS count FROM external_action_operational_events
+       WHERE outbox_event_id = $1 AND event_type = 'OUTBOX_LEASE_RECOVERED'`,
+      [lease.outboxId],
+    ));
+    assert.equal(Number(recoveryEvents.count), 1, 'expired lease recovery must be auditable exactly once');
+
+    recordStep('retry_backoff_and_retry_after');
+    const retry = await seedEpic05Outbox(owner, tenantA, 'retry', base);
+    const retryClaim = await tx(contextA, (store) =>
+      store.claimNext(contextA, { leaseOwner: 'epic05-retry-worker', now: base }),
+    );
+    const scheduled = await tx(contextA, (store) => store.recordDeliveryFailure(contextA, retry.outboxId, {
+      leaseId: retryClaim!.leaseId,
+      code: 'EPIC05_RATE_LIMIT',
+      reason: 'Authorization: Bearer acceptance-only-secret',
+      retryable: true,
+      retryAfterMs: 60_000,
+      now: base,
+    }));
+    assert.equal(scheduled.deliveryStatus, 'PENDING');
+    assert.equal(scheduled.deliveryAttempts, 1);
+    assert.equal(scheduled.nextAttemptAt, '2026-09-12T00:01:00.000Z');
+    assert.equal(scheduled.failureReason?.includes('acceptance-only-secret'), false, 'retry diagnostic must be redacted');
+    const beforeRetry = await tx(contextA, (store) =>
+      store.claimNext(contextA, { leaseOwner: 'epic05-retry-worker', now: new Date(base.getTime() + 59_999) }),
+    );
+    assert.equal(beforeRetry, undefined, 'backoff must delay the next attempt');
+    const retrySuccess = await tx(contextA, (store) =>
+      store.claimNext(contextA, { leaseOwner: 'epic05-retry-worker', now: new Date(base.getTime() + 60_000) }),
+    );
+    const retryDelivered = await tx(contextA, (store) => store.markDelivered(contextA, retry.outboxId, retrySuccess!.leaseId));
+    assert.equal(retryDelivered.deliveryStatus, 'DELIVERED');
+    const retryDuplicateAck = await tx(contextA, (store) => store.markDelivered(contextA, retry.outboxId, retrySuccess!.leaseId));
+    assert.equal(retryDuplicateAck.deliveryStatus, 'DELIVERED', 'retry success must have one idempotent delivery outcome');
+
+    recordStep('dead_letter_and_replay');
+    const deadLetter = await seedEpic05Outbox(owner, tenantA, 'dead-letter', base);
+    let attemptAt = base;
+    let dead = undefined as Awaited<ReturnType<PersistentExternalActionReliabilityStore['recordDeliveryFailure']>> | undefined;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const leaseAttempt = await tx(contextA, (store) =>
+        store.claimNext(contextA, { leaseOwner: `epic05-dead-worker-${attempt}`, now: attemptAt }),
+      );
+      dead = await tx(contextA, (store) => store.recordDeliveryFailure(contextA, deadLetter.outboxId, {
+        leaseId: leaseAttempt!.leaseId,
+        code: 'EPIC05_TRANSIENT_FAILURE',
+        reason: 'token=acceptance-only-secret',
+        retryable: true,
+        now: attemptAt,
+      }));
+      attemptAt = new Date(dead.nextAttemptAt);
+    }
+    assert.equal(dead?.deliveryStatus, 'DEAD_LETTER');
+    assert.equal(dead?.failureCode, 'EPIC05_TRANSIENT_FAILURE');
+    assert.equal(dead?.failureReason?.includes('acceptance-only-secret'), false);
+    assert.equal(
+      await tx(contextA, (store) => store.claimNext(contextA, { leaseOwner: 'epic05-no-more-retry', now: attemptAt })),
+      undefined,
+      'dead-letter entries must not execute automatically',
+    );
+    await expectRejected(() => tx(contextB, (store) => store.replay(contextB, deadLetter.outboxId)), /NOT_FOUND_OR_ACCESS_DENIED/);
+    const replayed = await tx(contextA, (store) => store.replay(contextA, deadLetter.outboxId, attemptAt));
+    const replayedAgain = await tx(contextA, (store) => store.replay(contextA, deadLetter.outboxId, attemptAt));
+    assert.equal(replayed.id, replayedAgain.id, 'operator replay must be idempotent');
+    assert.equal(replayed.deliveryStatus, 'PENDING');
+    assert.equal(replayed.externalActionId, deadLetter.actionId, 'replay must retain its original governed action context');
+    let deliveryCalls = 0;
+    await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+      const worker = new ExternalActionOutboxWorker(
+        new PersistentExternalActionReliabilityStore(transaction),
+        { deliver: async (_context, event) => { deliveryCalls += 1; assert.equal(event.idempotencyKey, replayed.idempotencyKey); } },
+      );
+      const result = await worker.processNext(contextA, 'epic05-approved-workflow-delivery');
+      assert.equal(result.outcome, 'DELIVERED');
+    });
+    assert.equal(deliveryCalls, 1, 'replay must deliver one existing workflow continuation only');
+    const replayEvents = one(await owner.unsafe(
+      `SELECT count(*)::int AS count FROM external_action_operational_events
+       WHERE outbox_event_id = $1 AND event_type = 'OUTBOX_REPLAYED'`,
+      [deadLetter.outboxId],
+    ));
+    assert.equal(Number(replayEvents.count), 1, 'duplicate replay requests must produce one replay lineage event');
+
+    recordStep('tenant_rls_and_operational_state');
+    await tx(contextA, async (store) => {
+      await store.recordProviderFailure(contextA, 'EPIC05_RATE', 'RATE_LIMITED', 60_000, base);
+      await store.recordProviderFailure(contextA, 'EPIC05_AUTH', 'INVALID_GRANT', undefined, base);
+      await store.recordProviderFailure(contextA, 'EPIC05_UNAVAILABLE', 'PROVIDER_TIMEOUT', undefined, base);
+      await store.recordProviderFailure(contextA, 'EPIC05_DEGRADED', 'PROVIDER_UNKNOWN', undefined, base);
+      await store.recordCredentialHealth(contextA, 'EPIC05_VALID', { status: 'VALID', now: base });
+      await store.recordCredentialHealth(contextA, 'EPIC05_EXPIRING', { status: 'EXPIRING', now: base });
+      await store.recordCredentialHealth(contextA, 'EPIC05_EXPIRED', { status: 'EXPIRED', now: base });
+      await store.recordCredentialHealth(contextA, 'EPIC05_INVALID', { status: 'INVALID', now: base });
+      await store.recordCredentialHealth(contextA, 'EPIC05_MISSING', { status: 'MISSING', now: base });
+      await store.recordCredentialHealth(contextA, 'EPIC05_UNKNOWN', { status: 'UNKNOWN', now: base });
+      await store.recordEvent(contextA, {
+        provider: 'EPIC05_RATE', eventType: 'OUTBOX_REPLAYED', correlationId: `epic05-acceptance:${deadLetter.actionId}`,
+        externalActionId: deadLetter.actionId, details: { accessToken: 'acceptance-only-secret' }, occurredAt: base.toISOString(),
+      });
+    });
+    await tx(contextB, async (store) => {
+      assert.equal((await store.listOutbox(contextB)).some((event) => event.id.startsWith(fixturePrefix)), false);
+      assert.equal(await store.claimNext(contextB, { leaseOwner: 'epic05-tenant-b-worker', now: base }), undefined);
+      assert.equal(await store.getProviderHealth(contextB, 'EPIC05_RATE'), undefined);
+      assert.equal(await store.getCredentialHealth(contextB, 'EPIC05_VALID'), undefined);
+      await store.recordProviderFailure(contextB, 'EPIC05_ISOLATED', 'PROVIDER_TIMEOUT', undefined, base);
+    });
+    assert.equal(await tx(contextA, (store) => store.getProviderHealth(contextA, 'EPIC05_ISOLATED')), undefined);
+    await withAppTransaction(databaseUrl, tenantB, async (transaction) => {
+      const visible = rows(await transaction.unsafe(
+        `SELECT id FROM external_action_operational_events WHERE correlation_id = $1`,
+        [`epic05-acceptance:${deadLetter.actionId}`],
+      ));
+      assert.equal(visible.length, 0, 'tenant B must not read tenant A operational events');
+    });
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) =>
+      transaction.unsafe(
+        `INSERT INTO external_provider_health (id, tenant_id, provider, status)
+         VALUES ('epic05-cross-tenant-denied', $1::uuid, 'EPIC05_DENIED', 'HEALTHY')`,
+        [tenantB],
+      ),
+    ));
+    const health = await tx(contextA, (store) => store.getProviderHealth(contextA, 'EPIC05_RATE'));
+    const credentials = await tx(contextA, (store) => store.getCredentialHealth(contextA, 'EPIC05_AUTH'));
+    assert.equal(health?.status, 'RATE_LIMITED');
+    assert.equal(credentials?.status, 'REVOKED');
+    for (const [provider, expected] of [
+      ['EPIC05_VALID', 'VALID'], ['EPIC05_EXPIRING', 'EXPIRING'], ['EPIC05_EXPIRED', 'EXPIRED'],
+      ['EPIC05_INVALID', 'INVALID'], ['EPIC05_MISSING', 'MISSING'], ['EPIC05_UNKNOWN', 'UNKNOWN'],
+    ]) {
+      const state = await tx(contextA, (store) => store.getCredentialHealth(contextA, provider));
+      assert.equal(state?.status, expected, `${provider} credential lifecycle state must persist`);
+    }
+    const gateBlocked = await tx(contextA, (store) =>
+      new PersistentProviderHealthMutationGate(store).allowMutation(contextA, { provider: 'EPIC05_RATE' }, base),
+    );
+    assert.deepEqual(gateBlocked, { allowed: false, code: 'PROVIDER_HEALTH_COOLDOWN_ACTIVE' });
+    const authBlocked = await tx(contextA, (store) =>
+      new PersistentProviderHealthMutationGate(store).allowMutation(contextA, { provider: 'EPIC05_AUTH' }, base),
+    );
+    assert.deepEqual(authBlocked, { allowed: false, code: 'PROVIDER_AUTH_HEALTH_BLOCKED' });
+    const recoveryProbe = await tx(contextA, (store) =>
+      new PersistentProviderHealthMutationGate(store).allowMutation(
+        contextA,
+        { provider: 'EPIC05_RATE' },
+        new Date(base.getTime() + 60_001),
+      ),
+    );
+    assert.deepEqual(recoveryProbe, { allowed: true });
+    const firstProbe = await tx(contextA, (store) =>
+      new PersistentProviderHealthMutationGate(store).allowMutation(
+        contextA,
+        { provider: 'EPIC05_RATE' },
+        new Date(base.getTime() + 60_001),
+      ),
+    );
+    assert.deepEqual(firstProbe, { allowed: false, code: 'PROVIDER_RECOVERY_PROBE_IN_PROGRESS' });
+    await tx(contextA, (store) =>
+      store.recordProviderSuccess(contextA, 'EPIC05_RATE', new Date(base.getTime() + 60_002)),
+    );
+    assert.equal((await tx(contextA, (store) => store.getProviderHealth(contextA, 'EPIC05_RATE')))?.status, 'HEALTHY');
+    const secretRows = rows(await owner.unsafe(`
+      SELECT details::text AS payload
+      FROM external_action_operational_events
+      WHERE correlation_id LIKE 'epic05-acceptance:%'
+      UNION ALL
+      SELECT COALESCE(failure_reason, '') AS payload
+      FROM external_action_workflow_outbox
+      WHERE id = $1
+    `, [deadLetter.outboxId]));
+    assert.equal(JSON.stringify(secretRows).includes('acceptance-only-secret'), false, 'acceptance secrets must never persist');
+    recordDiagnostics({ workers: 2, attempts: 2, successfulClaims: 1, skips: 1, duplicateClaims: 0, deliveryCalls });
+
+    return {
+      migrationLedgerEntries: Number(ledger.count),
+      concurrentClaim: { workers: 2, attempts: 2, successfulClaims: 1, skips: 1, duplicateClaims: 0 },
+      leaseRecovery: 'PASS', retry: 'PASS', deadLetter: 'PASS', replay: 'PASS', providerHealth: 'PASS',
+      credentialHealth: 'PASS', operatorRecovery: 'PASS', workerBoundary: 'PASS', cleanup: 'PASS',
+    };
+  } finally {
+    await owner.unsafe(`DELETE FROM external_action_operational_events WHERE correlation_id LIKE 'epic05-acceptance:%' OR provider LIKE 'EPIC05_%'`);
+    await owner.unsafe(`DELETE FROM external_provider_credential_health WHERE provider LIKE 'EPIC05_%'`);
+    await owner.unsafe(`DELETE FROM external_provider_health WHERE provider LIKE 'EPIC05_%'`);
+    await owner.unsafe(`DELETE FROM external_action_workflow_outbox WHERE id LIKE 'epic05-acceptance-%'`);
+    await owner.unsafe(`DELETE FROM external_marketing_actions WHERE id LIKE 'epic05-acceptance-%'`);
+    const remaining = one(await owner.unsafe(`
+      SELECT (
+        (SELECT count(*) FROM external_action_operational_events WHERE provider LIKE 'EPIC05_%') +
+        (SELECT count(*) FROM external_provider_credential_health WHERE provider LIKE 'EPIC05_%') +
+        (SELECT count(*) FROM external_provider_health WHERE provider LIKE 'EPIC05_%') +
+        (SELECT count(*) FROM external_action_workflow_outbox WHERE id LIKE 'epic05-acceptance-%') +
+        (SELECT count(*) FROM external_marketing_actions WHERE id LIKE 'epic05-acceptance-%')
+      )::int AS count
+    `));
+    assert.equal(Number(remaining.count), 0, 'EPIC05 acceptance fixtures must be removed');
+    cleanup = true;
+    assert.equal(cleanup, true);
+  }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -2151,10 +2532,12 @@ async function main(): Promise<void> {
   const index0020 = journal.findIndex((entry) => entry.tag === '0020_persistent_marketing_os_runtime');
   const index0021 = journal.findIndex((entry) => entry.tag === '0021_durable_marketing_os_approvals');
   const index0022 = journal.findIndex((entry) => entry.tag === '0022_governed_external_marketing_actions');
+  const index0023 = journal.findIndex((entry) => entry.tag === '0023_external_action_reliability');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
   assert.equal(index0022, index0021 + 1, '0022 must directly follow 0021 in the canonical journal');
+  assert.equal(index0023, index0022 + 1, '0023 must directly follow 0022 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -2173,6 +2556,17 @@ async function main(): Promise<void> {
     await applyJournal(owner, journal.slice(index0020, index0020 + 1));
     await applyJournal(owner, journal.slice(index0021, index0021 + 1));
     await applyJournal(owner, journal.slice(index0022, index0022 + 1));
+    const journalMigrations = await loadJournalMigrations(migrationDirectory);
+    await bootstrapMigrationLedger(owner, journalMigrations.slice(0, index0023));
+    await applyJournalMigrations(
+      owner as unknown as JournalMigrationClient,
+      journalMigrations.slice(index0023),
+    );
+    // A second canonical-runner invocation must safely observe the 0023 ledger row.
+    await applyJournalMigrations(
+      owner as unknown as JournalMigrationClient,
+      journalMigrations.slice(index0023),
+    );
     await prepareApplicationRole(owner);
     await seedBillingAuthority(owner);
     await executePhase1ValidationCheck(
@@ -2234,6 +2628,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC03_STEP' },
     );
+    const epic05Proof = await executePhase1ValidationCheck(
+      'epic05_external_action_reliability',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic05ExternalActionReliability(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC05_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -2246,6 +2647,7 @@ async function main(): Promise<void> {
           migration0020: 'PASS',
           migration0021: 'PASS',
           migration0022: 'PASS',
+          migration0023: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -2263,10 +2665,24 @@ async function main(): Promise<void> {
           epic03Outbox: 'PASS',
           epic03Idempotency: 'PASS',
           epic03Concurrency: 'PASS',
+          epic05MigrationLedger: 'PASS',
+          epic05Rls: 'PASS',
+          epic05ConcurrentClaim: 'PASS',
+          epic05LeaseRecovery: 'PASS',
+          epic05Retry: 'PASS',
+          epic05DeadLetter: 'PASS',
+          epic05Replay: 'PASS',
+          epic05ProviderHealth: 'PASS',
+          epic05CredentialHealth: 'PASS',
+          epic05OperatorRecovery: 'PASS',
+          epic05WorkerBoundary: 'PASS',
+          epic05SecretSafety: 'PASS',
+          epic05FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
         epic03: epic03Proof,
+        epic05: epic05Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

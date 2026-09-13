@@ -25,6 +25,11 @@ $summary = [ordered]@{
   AGENTS_HTTP = 'NOT_RUN'
   WORKSTREAMS_HTTP = 'NOT_RUN'
   POLICY_HTTP = 'NOT_RUN'
+  EXTERNAL_ACTION_OPERATIONS_SUMMARY_HTTP = 'NOT_RUN'
+  EXTERNAL_ACTION_OPERATIONS_OUTBOX_HTTP = 'NOT_RUN'
+  EXTERNAL_ACTION_OPERATIONS_PROVIDER_HTTP = 'NOT_RUN'
+  EXTERNAL_ACTION_OPERATIONS_CREDENTIAL_HTTP = 'NOT_RUN'
+  EXTERNAL_ACTION_OPERATIONS_RECOVERY_HTTP = 'NOT_RUN'
   AGENT_COUNT = 'NOT_RUN'
   RUNTIME_ACCEPTANCE = 'FAIL'
 }
@@ -113,6 +118,29 @@ const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
 function Invoke-AuthenticatedGet([string]$Uri, [hashtable]$Headers) {
   $client = [System.Net.Http.HttpClient]::new()
   $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $Uri)
+  try {
+    $client.Timeout = [TimeSpan]::FromSeconds(5)
+    foreach ($name in $Headers.Keys) {
+      [void]$request.Headers.TryAddWithoutValidation($name, [string]$Headers[$name])
+    }
+    $response = $client.SendAsync($request).GetAwaiter().GetResult()
+    try {
+      return [pscustomobject]@{
+        StatusCode = [int]$response.StatusCode
+        Content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+      }
+    } finally {
+      $response.Dispose()
+    }
+  } finally {
+    $request.Dispose()
+    $client.Dispose()
+  }
+}
+
+function Invoke-AuthenticatedPost([string]$Uri, [hashtable]$Headers) {
+  $client = [System.Net.Http.HttpClient]::new()
+  $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, $Uri)
   try {
     $client.Timeout = [TimeSpan]::FromSeconds(5)
     foreach ($name in $Headers.Keys) {
@@ -253,6 +281,39 @@ try {
   if ($policies.StatusCode -ne 200) {
     $httpFailureEvidence = $policies.Content
     throw 'POLICY_HTTP_NOT_200'
+  }
+
+  $operationsBase = "http://127.0.0.1:$apiPort/marketing-os/external-action-operations"
+  $operationsSummary = Invoke-AuthenticatedGet "$operationsBase/summary" $headers
+  $summary.EXTERNAL_ACTION_OPERATIONS_SUMMARY_HTTP = [string]$operationsSummary.StatusCode
+  if ($operationsSummary.StatusCode -ne 200) {
+    $httpFailureEvidence = $operationsSummary.Content
+    throw 'EXTERNAL_ACTION_OPERATIONS_SUMMARY_HTTP_NOT_200'
+  }
+  $operationsOutbox = Invoke-AuthenticatedGet "$operationsBase/outbox" $headers
+  $summary.EXTERNAL_ACTION_OPERATIONS_OUTBOX_HTTP = [string]$operationsOutbox.StatusCode
+  if ($operationsOutbox.StatusCode -ne 200) {
+    $httpFailureEvidence = $operationsOutbox.Content
+    throw 'EXTERNAL_ACTION_OPERATIONS_OUTBOX_HTTP_NOT_200'
+  }
+  $operationsProvider = Invoke-AuthenticatedGet "$operationsBase/provider-health/GOOGLE_ADS" $headers
+  $summary.EXTERNAL_ACTION_OPERATIONS_PROVIDER_HTTP = [string]$operationsProvider.StatusCode
+  if ($operationsProvider.StatusCode -ne 200) {
+    $httpFailureEvidence = $operationsProvider.Content
+    throw 'EXTERNAL_ACTION_OPERATIONS_PROVIDER_HTTP_NOT_200'
+  }
+  $operationsCredential = Invoke-AuthenticatedGet "$operationsBase/credential-health/GOOGLE_ADS" $headers
+  $summary.EXTERNAL_ACTION_OPERATIONS_CREDENTIAL_HTTP = [string]$operationsCredential.StatusCode
+  if ($operationsCredential.StatusCode -ne 200) {
+    $httpFailureEvidence = $operationsCredential.Content
+    throw 'EXTERNAL_ACTION_OPERATIONS_CREDENTIAL_HTTP_NOT_200'
+  }
+  # This is a tenant-scoped recovery check only. It never calls a provider or replays an action.
+  $operationsRecovery = Invoke-AuthenticatedPost "$operationsBase/outbox/recover-expired-leases" $headers
+  $summary.EXTERNAL_ACTION_OPERATIONS_RECOVERY_HTTP = [string]$operationsRecovery.StatusCode
+  if ($operationsRecovery.StatusCode -ne 201) {
+    $httpFailureEvidence = $operationsRecovery.Content
+    throw 'EXTERNAL_ACTION_OPERATIONS_RECOVERY_HTTP_NOT_201'
   }
 
   $summary.RUNTIME_ACCEPTANCE = 'PASS'

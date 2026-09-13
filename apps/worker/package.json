@@ -14,6 +14,7 @@
   "dependencies": {
     "@platform/config": "0.1.0",
     "@platform/db": "0.1.0",
+    "@platform/marketing-os-persistence": "0.1.0",
     "@temporalio/worker": "^1.11.7",
     "@temporalio/workflow": "^1.11.7"
   },

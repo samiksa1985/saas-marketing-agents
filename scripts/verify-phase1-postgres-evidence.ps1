@@ -37,6 +37,7 @@ $expected = [ordered]@{
   'Migration 0020' = 'migration0020'
   'Migration 0021' = 'migration0021'
   'Migration 0022' = 'migration0022'
+  'Migration 0023' = 'migration0023'
   'RLS' = 'rls'
   'FORCE RLS' = 'forceRls'
   'Tenant isolation' = 'tenantIsolation'
@@ -53,6 +54,19 @@ $expected = [ordered]@{
   'EPIC-03 outbox' = 'epic03Outbox'
   'EPIC-03 idempotency' = 'epic03Idempotency'
   'EPIC-03 concurrency' = 'epic03Concurrency'
+  'EPIC-05 migration ledger' = 'epic05MigrationLedger'
+  'EPIC-05 RLS' = 'epic05Rls'
+  'EPIC-05 concurrent claim' = 'epic05ConcurrentClaim'
+  'EPIC-05 lease recovery' = 'epic05LeaseRecovery'
+  'EPIC-05 retry and backoff' = 'epic05Retry'
+  'EPIC-05 dead letter' = 'epic05DeadLetter'
+  'EPIC-05 replay' = 'epic05Replay'
+  'EPIC-05 provider health' = 'epic05ProviderHealth'
+  'EPIC-05 credential health' = 'epic05CredentialHealth'
+  'EPIC-05 operator recovery' = 'epic05OperatorRecovery'
+  'EPIC-05 worker boundary' = 'epic05WorkerBoundary'
+  'EPIC-05 secret safety' = 'epic05SecretSafety'
+  'EPIC-05 fixture cleanup' = 'epic05FixtureCleanup'
 }
 
 foreach ($label in $expected.Keys) {
@@ -64,11 +78,16 @@ foreach ($label in $expected.Keys) {
   Write-Host "${label}: $value"
 }
 
-if ($result.migrationCount -ne 23 -or $result.latestMigration -ne '0022_governed_external_marketing_actions') {
-  throw "EPIC-03 evidence does not prove the canonical 23-migration chain through 0022. Count=$($result.migrationCount); latest=$($result.latestMigration)"
+if ($result.migrationCount -ne 24 -or $result.latestMigration -ne '0023_external_action_reliability') {
+  throw "EPIC-05 evidence does not prove the canonical 24-migration chain through 0023. Count=$($result.migrationCount); latest=$($result.latestMigration)"
 }
 if (-not $result.epic03 -or $result.epic03.concurrency.successes -ne 1 -or $result.epic03.concurrency.conflicts -ne 1 -or $result.epic03.concurrency.unexpectedDuplicates -ne 0) {
   throw 'EPIC-03 concurrency evidence is missing or does not prove one owner, one conflict, and no duplicate.'
+}
+if (-not $result.epic05 -or $result.epic05.migrationLedgerEntries -ne 1 -or
+    $result.epic05.concurrentClaim.successfulClaims -ne 1 -or
+    $result.epic05.concurrentClaim.duplicateClaims -ne 0) {
+  throw 'EPIC-05 evidence is missing or does not prove one migration ledger entry, one claim owner, and no duplicate claim.'
 }
 
 Write-Host 'PHASE1_EVIDENCE_VERIFICATION=PASS'

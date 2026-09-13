@@ -62,6 +62,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0020_persistent_marketing_os_runtime',
     '0021_durable_marketing_os_approvals',
     '0022_governed_external_marketing_actions',
+    '0023_external_action_reliability',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -120,6 +121,43 @@ test('0022 persists provider-neutral governed external actions with RLS, idempot
   assert.match(schema, /export const externalActionPolicies = pgTable/);
   assert.match(schema, /export const externalActionPolicyAudit = pgTable/);
   assert.match(schema, /export const externalActionWorkflowOutbox = pgTable/);
+});
+
+test('0023 adds tenant-scoped outbox leasing, provider health, and secret-free operational records', () => {
+  const migration = source('0023_external_action_reliability.sql');
+  const schema = source('../src/schema.ts');
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS lease_id/);
+  assert.match(migration, /^BEGIN;/m);
+  assert.match(migration, /COMMIT;\s*$/m);
+  assert.match(migration, /'PROCESSING', 'DELIVERED', 'FAILED', 'DEAD_LETTER'/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_provider_health/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_provider_credential_health/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS external_action_operational_events/);
+  assert.match(migration, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(migration, /WITH CHECK \(tenant_id = NULLIF\(current_setting/);
+  assert.doesNotMatch(migration, /refresh_token|access_token|client_secret|developer_token|api_key/i);
+  assert.match(schema, /export const externalProviderHealth = pgTable/);
+  assert.match(schema, /export const externalProviderCredentialHealth = pgTable/);
+  assert.match(schema, /export const externalActionOperationalEvents = pgTable/);
+  assert.match(schema, /leaseExpiresAt: timestamp\('lease_expires_at'/);
+  assert.match(schema, /deadLetteredAt: timestamp\('dead_lettered_at'/);
+});
+
+test('EPIC05 PostgreSQL fixtures use the same controlled clock as their lease claims', () => {
+  const harness = readFileSync(
+    fileURLToPath(new URL('scripts/phase1-postgres.ts', root)),
+    'utf8',
+  );
+  const fixture = (
+    harness.match(/async function seedEpic05Outbox[\s\S]*?\n}\n\nasync function bootstrapMigrationLedger/)
+      ?.[0]
+  ) ?? '';
+
+  assert.match(fixture, /availableAt: Date/);
+  assert.match(fixture, /next_attempt_at\)[\s\S]*?\$5::timestamptz, \$5::timestamptz/);
+  assert.doesNotMatch(fixture, /now\(\)/);
+  assert.match(harness, /seedEpic05Outbox\(owner, tenantA, 'concurrent', base\)/);
 });
 
 test('knowledge embedding dimensions use the canonical 1536 database contract', () => {

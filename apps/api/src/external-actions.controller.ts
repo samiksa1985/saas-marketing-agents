@@ -120,6 +120,7 @@ export class ExternalActionsController {
       ...(conditions?.length ? { conditions } : {}),
       ...(idempotencyKey ? { idempotencyKey } : {}),
     });
+    await this.actions.recordApprovalDecision(context, actionId);
     return this.actions.get(context, actionId);
   }
 }

@@ -39,6 +39,7 @@ export class LocalAcceptanceAuthProvider implements AuthProvider {
         'audit:read',
         'security_policy:read',
         'security_policy:manage',
+        'system_health:read',
       ],
       locale: 'ar-SA',
     };

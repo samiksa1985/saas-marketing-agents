@@ -32,6 +32,11 @@ import { ProductSurfaceController, ProductSurfaceService } from './product-surfa
 import { ExternalActionsController } from './external-actions.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
 import {
+  ExternalActionOperationsController,
+  EXTERNAL_ACTION_OPERATIONS_APPLICATION_SERVICE,
+} from './external-action-operations.controller.js';
+import { ExternalActionOperationsApplicationService } from './external-action-operations.application.js';
+import {
   EXTERNAL_ACTION_APPLICATION_SERVICE,
   ExternalActionApplicationService,
 } from './external-actions.application.js';
@@ -101,7 +106,7 @@ const googleAdsGateway = new GoogleAdsProviderGateway(
 );
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[
     AppService,
     RegistryService,
@@ -126,6 +131,16 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
     {
       provide: EXTERNAL_ACTION_APPLICATION_SERVICE,
       useExisting: ExternalActionApplicationService,
+    },
+    {
+      provide: ExternalActionOperationsApplicationService,
+      useFactory: (databaseFacade: typeof tenantDatabase) =>
+        new ExternalActionOperationsApplicationService(databaseFacade),
+      inject: [API_TENANT_DATABASE],
+    },
+    {
+      provide: EXTERNAL_ACTION_OPERATIONS_APPLICATION_SERVICE,
+      useExisting: ExternalActionOperationsApplicationService,
     },
     {
       provide: MarketingOsApplicationService,

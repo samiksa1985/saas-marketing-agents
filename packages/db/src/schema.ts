@@ -1024,8 +1024,18 @@ export const externalActionWorkflowOutbox = pgTable(
     payload: jsonb('payload').notNull(),
     deliveryStatus: varchar('delivery_status', { length: 16 }).notNull().default('PENDING'),
     deliveryAttempts: integer('delivery_attempts').notNull().default(0),
+    leaseId: varchar('lease_id', { length: 128 }),
+    leaseOwner: varchar('lease_owner', { length: 255 }),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     lastError: text('last_error'),
+    failureCode: varchar('failure_code', { length: 128 }),
+    failureReason: text('failure_reason'),
+    failedAt: timestamp('failed_at', { withTimezone: true }),
+    deadLetteredAt: timestamp('dead_lettered_at', { withTimezone: true }),
+    retryAfterAt: timestamp('retry_after_at', { withTimezone: true }),
     occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
     ...times,
   },
@@ -1037,6 +1047,92 @@ export const externalActionWorkflowOutbox = pgTable(
     index('external_action_workflow_outbox_tenant_delivery_idx').on(
       table.tenantId,
       table.deliveryStatus,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/** Provider-neutral health. Operational state never contains credentials. */
+export const externalProviderHealth = pgTable(
+  'external_provider_health',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('UNKNOWN'),
+    rollingFailureCount: integer('rolling_failure_count').notNull().default(0),
+    lastSuccessfulAt: timestamp('last_successful_at', { withTimezone: true }),
+    lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
+    retryAfterAt: timestamp('retry_after_at', { withTimezone: true }),
+    cooldownUntil: timestamp('cooldown_until', { withTimezone: true }),
+    recoveryProbeLeaseUntil: timestamp('recovery_probe_lease_until', { withTimezone: true }),
+    lastErrorCode: varchar('last_error_code', { length: 128 }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_provider_health_tenant_provider_uidx').on(table.tenantId, table.provider),
+    index('external_provider_health_tenant_status_idx').on(table.tenantId, table.status),
+  ],
+);
+
+/** Lifecycle status only; credential material stays in the configured secret provider. */
+export const externalProviderCredentialHealth = pgTable(
+  'external_provider_credential_health',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('UNKNOWN'),
+    observedAt: timestamp('observed_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    lastRefreshAt: timestamp('last_refresh_at', { withTimezone: true }),
+    lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
+    disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
+    rotationRequired: boolean('rotation_required').notNull().default(false),
+    lastErrorCode: varchar('last_error_code', { length: 128 }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_provider_credential_health_tenant_provider_uidx').on(
+      table.tenantId,
+      table.provider,
+    ),
+  ],
+);
+
+/** Sanitized operational events and timings for governed external actions. */
+export const externalActionOperationalEvents = pgTable(
+  'external_action_operational_events',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    externalActionId: varchar('external_action_id', { length: 255 }).references(
+      () => externalMarketingActions.id,
+      { onDelete: 'cascade' },
+    ),
+    workflowRunId: varchar('workflow_run_id', { length: 255 }),
+    outboxEventId: varchar('outbox_event_id', { length: 255 }).references(
+      () => externalActionWorkflowOutbox.id,
+      { onDelete: 'cascade' },
+    ),
+    eventType: varchar('event_type', { length: 128 }).notNull(),
+    correlationId: varchar('correlation_id', { length: 255 }).notNull(),
+    latencyMs: integer('latency_ms'),
+    errorCode: varchar('error_code', { length: 128 }),
+    details: jsonb('details').notNull().default({}),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('external_action_operational_events_tenant_provider_occurred_idx').on(
+      table.tenantId,
+      table.provider,
+      table.occurredAt,
+    ),
+    index('external_action_operational_events_tenant_action_occurred_idx').on(
+      table.tenantId,
+      table.externalActionId,
       table.occurredAt,
     ),
   ],

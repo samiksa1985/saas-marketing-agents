@@ -37,6 +37,7 @@ test('local acceptance provider returns only the fixed canonical acceptance cont
         'audit:read',
         'security_policy:read',
         'security_policy:manage',
+        'system_health:read',
       ],
       locale: 'ar-SA',
     });

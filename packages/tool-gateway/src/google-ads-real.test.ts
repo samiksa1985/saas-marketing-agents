@@ -203,6 +203,16 @@ test('REST transport rejects unsupported campaign creation and sanitizes provide
       && error.code === 'GOOGLE_ADS_AUTHENTICATION_FAILED'
       && !error.message.includes('sensitive'),
   );
+
+  const revoked = new GoogleAdsRestTransport({
+    fetcher: async () => response(400, { error: { message: 'invalid_grant' } }),
+  });
+  await assert.rejects(
+    () => revoked.validateConnection(credentials),
+    (error: unknown) => error instanceof GoogleAdsProviderError
+      && error.code === 'GOOGLE_ADS_CREDENTIAL_REVOKED'
+      && !error.message.includes('invalid_grant'),
+  );
 });
 
 test('REST transport maps sanitized quota, access, campaign, policy, invalid-mutation, and timeout failures', async () => {

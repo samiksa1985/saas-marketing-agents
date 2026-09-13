@@ -2,7 +2,9 @@
 param(
   [switch]$KeepRunning,
   [ValidateRange(1024, 65535)]
-  [int]$Port = 55432
+  [int]$Port = 55432,
+  [ValidatePattern('^[a-z0-9][a-z0-9_-]*$')]
+  [string]$ProjectName = "nawa-phase1-$PID"
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,10 +62,10 @@ $env:PHASE1_ADMIN_DATABASE_URL = "postgresql://phase1_owner:$escapedPassword@loc
 try {
   Push-Location $repositoryRoot
   try {
-    & docker compose -f $composeFile up -d
+    & docker compose -p $ProjectName -f $composeFile up -d
     if ($LASTEXITCODE -ne 0) { throw 'Failed to start the disposable Phase 1 PostgreSQL compose service.' }
 
-    $containerId = (& docker compose -f $composeFile ps -q postgres).Trim()
+    $containerId = (& docker compose -p $ProjectName -f $composeFile ps -q postgres).Trim()
     if (-not $containerId) { throw 'Phase 1 PostgreSQL container ID was not returned.' }
     $ready = $false
     foreach ($attempt in 1..60) {
@@ -72,7 +74,7 @@ try {
       Start-Sleep -Seconds 2
     }
     if (-not $ready) {
-      & docker compose -f $composeFile logs postgres
+      & docker compose -p $ProjectName -f $composeFile logs postgres
       throw 'Disposable Phase 1 PostgreSQL did not become healthy.'
     }
 
@@ -89,9 +91,27 @@ try {
     $transcript = @()
     if (Test-Path -LiteralPath $stdoutFile) { $transcript += Get-Content -LiteralPath $stdoutFile }
     if (Test-Path -LiteralPath $stderrFile) { $transcript += Get-Content -LiteralPath $stderrFile }
+    $harnessExitCode = $process.ExitCode
+    $compiledFallback = $false
+    if ($harnessExitCode -ne 0 -and (($transcript -join "`n") -match 'uv_os_get_passwd.*ENOMEM')) {
+      # tsx can fail before test/program discovery in constrained Windows
+      # sessions. Build with tsc, then run the same harness source from dist.
+      & $npmPath --workspace '@platform/db' run build
+      if ($LASTEXITCODE -ne 0) { throw 'Phase 1 compiled fallback build failed.' }
+      $compiledStdout = Join-Path $evidenceDirectory "phase1-$timestamp.compiled.stdout.log"
+      $compiledStderr = Join-Path $evidenceDirectory "phase1-$timestamp.compiled.stderr.log"
+      $nodePath = (Get-Command node.exe -ErrorAction Stop).Source
+      $compiled = Start-Process -FilePath $nodePath -ArgumentList @('packages/db/dist/scripts/phase1-postgres.js') `
+        -WorkingDirectory $repositoryRoot -NoNewWindow -PassThru -Wait `
+        -RedirectStandardOutput $compiledStdout -RedirectStandardError $compiledStderr
+      $transcript = @()
+      if (Test-Path -LiteralPath $compiledStdout) { $transcript += Get-Content -LiteralPath $compiledStdout }
+      if (Test-Path -LiteralPath $compiledStderr) { $transcript += Get-Content -LiteralPath $compiledStderr }
+      $harnessExitCode = $compiled.ExitCode
+      $compiledFallback = $true
+    }
     [System.IO.File]::WriteAllLines($logFile, [string[]]$transcript, [System.Text.UTF8Encoding]::new($false))
     $transcript | ForEach-Object { Write-Host $_ }
-    $harnessExitCode = $process.ExitCode
     try {
       $result = Get-Phase1HarnessResultFromLog $logFile
     } catch {
@@ -109,13 +129,14 @@ try {
     Write-Host "PHASE1_EVIDENCE_RESULT=$resultFile"
     if ($harnessExitCode -ne 0) { throw "Phase 1 harness exited with code $harnessExitCode." }
     Assert-Phase1PassResult $result
+    if ($compiledFallback) { Write-Host 'PHASE1_COMPILED_FALLBACK=PASS' }
     Write-Host 'PHASE1_LOCAL_RUNNER=PASS'
   } finally {
     Pop-Location
   }
 } finally {
   if (-not $KeepRunning) {
-    & docker compose -f $composeFile down -v | Out-Host
+    & docker compose -p $ProjectName -f $composeFile down -v | Out-Host
   }
   Remove-Item Env:PHASE1_POSTGRES_USER, Env:PHASE1_POSTGRES_PASSWORD, Env:PHASE1_POSTGRES_DB -ErrorAction SilentlyContinue
   Remove-Item Env:PHASE1_POSTGRES_PORT, Env:PHASE1_CONFIRM_DISPOSABLE, Env:PHASE1_DATABASE_URL, Env:PHASE1_ADMIN_DATABASE_URL -ErrorAction SilentlyContinue

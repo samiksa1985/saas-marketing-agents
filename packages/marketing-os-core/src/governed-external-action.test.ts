@@ -11,6 +11,7 @@ import {
   type ExternalActionApprovalGateway,
   type ExternalActionApprovalRecord,
   type ExternalActionPolicy,
+  type ExternalActionMutationSafetyGate,
   type ExternalMarketingActionProposal,
   type ExternalMarketingProviderGateway,
   type GovernedExternalAction,
@@ -147,7 +148,11 @@ class Provider implements ExternalMarketingProviderGateway {
   }
 }
 
-function executor(overrides: { policy?: ExternalActionPolicy; entitlement?: boolean } = {}) {
+function executor(overrides: {
+  policy?: ExternalActionPolicy;
+  entitlement?: boolean;
+  mutationSafetyGate?: ExternalActionMutationSafetyGate;
+} = {}) {
   const approvals = new Approvals();
   const provider = new Provider();
   const budget = new CanonicalExternalActionBudgetAuthority(
@@ -175,7 +180,11 @@ function executor(overrides: { policy?: ExternalActionPolicy; entitlement?: bool
       new ExternalActionPolicyEngine(() => '2026-09-08T00:00:00.000Z'),
       overrides.policy ?? policy,
       approvals,
-      { now: () => '2026-09-08T00:00:00.000Z', createId: (() => { let number = 0; return () => `evidence:${++number}`; })() },
+      {
+        now: () => '2026-09-08T00:00:00.000Z',
+        createId: (() => { let number = 0; return () => `evidence:${++number}`; })(),
+        ...(overrides.mutationSafetyGate ? { mutationSafetyGate: overrides.mutationSafetyGate } : {}),
+      },
     ),
   };
 }
@@ -231,6 +240,27 @@ test('rejected durable approvals, dry-run-only policy, and provider retries rema
   assert.equal(failed.failureCode, 'PROVIDER_TIMEOUT');
   assert.equal((await retrySetup.executor.retry(context(), retry.id)).status, 'VERIFIED');
   assert.equal(retrySetup.provider.executions, 2);
+});
+
+test('provider health circuit gate blocks governed mutation without a provider bypass', async () => {
+  let gateCalls = 0;
+  const setup = executor({
+    mutationSafetyGate: {
+      async allowMutation() {
+        gateCalls += 1;
+        return { allowed: false, code: 'PROVIDER_HEALTH_COOLDOWN_ACTIVE' };
+      },
+    },
+  });
+  const action = await setup.executor.propose(context(), proposal());
+  const awaiting = await setup.executor.requestApproval(context(), action.id);
+  setup.approvals.approve(awaiting.approvalId!);
+  const blocked = await setup.executor.execute(context(), action.id);
+  assert.equal(blocked.status, 'REJECTED');
+  assert.equal(blocked.failureCode, 'PROVIDER_HEALTH_COOLDOWN_ACTIVE');
+  assert.equal(gateCalls, 1);
+  assert.equal(setup.provider.executions, 0);
+  assert.ok(blocked.evidence.some((item) => item.type === 'PROVIDER_HEALTH_MUTATION_BLOCKED'));
 });
 
 test('an inconclusive timeout blocks automated replay until read-back can reconcile it', async () => {

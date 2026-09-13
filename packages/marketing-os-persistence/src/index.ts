@@ -280,6 +280,7 @@ export * from './knowledge.js';
 export * from './approvals.js';
 
 export * from './external-actions.js';
+export * from './external-action-reliability.js';
 export * from './external-action-policies.js';
 
 export * from './sales.js';

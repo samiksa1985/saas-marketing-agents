@@ -454,6 +454,29 @@ export class InMemoryExternalActionStore implements ExternalActionStore {
 export interface GovernedExternalActionExecutorOptions {
   now?: () => string;
   createId?: () => string;
+  /**
+   * Optional provider-neutral health gate. It is evaluated only immediately
+   * before a governed mutation; simulation and read-back verification remain
+   * available so an unsafe provider can be diagnosed without a raw bypass.
+   */
+  mutationSafetyGate?: ExternalActionMutationSafetyGate;
+}
+
+/** Persistence adapters may supply a fail-closed provider health circuit breaker. */
+export interface ExternalActionMutationSafetyGate {
+  allowMutation(
+    context: TenantContext,
+    proposal: Pick<ExternalMarketingActionProposal, 'provider'>,
+  ): Promise<{ allowed: boolean; code?: string }>;
+  recordSuccess?(
+    context: TenantContext,
+    proposal: Pick<ExternalMarketingActionProposal, 'provider'>,
+  ): Promise<void>;
+  recordFailure?(
+    context: TenantContext,
+    proposal: Pick<ExternalMarketingActionProposal, 'provider'>,
+    code: string,
+  ): Promise<void>;
 }
 
 /**
@@ -463,6 +486,7 @@ export interface GovernedExternalActionExecutorOptions {
 export class GovernedExternalActionExecutor {
   private readonly now: () => string;
   private readonly createId: () => string;
+  private readonly mutationSafetyGate: ExternalActionMutationSafetyGate | undefined;
 
   constructor(
     private readonly store: ExternalActionStore,
@@ -475,6 +499,7 @@ export class GovernedExternalActionExecutor {
   ) {
     this.now = options.now ?? (() => new Date().toISOString());
     this.createId = options.createId ?? randomUUID;
+    this.mutationSafetyGate = options.mutationSafetyGate;
   }
 
   async propose(context: TenantContext, proposal: ExternalMarketingActionProposal): Promise<GovernedExternalAction> {
@@ -640,6 +665,18 @@ export class GovernedExternalActionExecutor {
         evidence: [...action.evidence, this.evidence('DRY_RUN_ONLY_BLOCKED_LIVE_EXECUTION', refreshedPolicy)],
       });
     }
+    const healthDecision = await this.mutationSafetyGate?.allowMutation(context, action.proposal);
+    if (healthDecision && !healthDecision.allowed) {
+      return this.transition(context, action, 'REJECTED', {
+        failureCode: healthDecision.code ?? 'PROVIDER_HEALTH_BLOCKED',
+        evidence: [
+          ...action.evidence,
+          this.evidence('PROVIDER_HEALTH_MUTATION_BLOCKED', {
+            code: healthDecision.code ?? 'PROVIDER_HEALTH_BLOCKED',
+          }),
+        ],
+      });
+    }
     action = await this.transition(context, action, 'EXECUTING', {
       budgetDecision: refreshedBudget,
       policyDecision: refreshedPolicy,
@@ -647,9 +684,12 @@ export class GovernedExternalActionExecutor {
     });
     try {
       const execution = await this.provider.execute(context, createGovernedDispatch(action));
-      return this.verifyExecution(context, action, execution, 'PROVIDER_EXECUTED');
+      const verified = await this.verifyExecution(context, action, execution, 'PROVIDER_EXECUTED');
+      await this.recordProviderHealthSuccess(context, action.proposal);
+      return verified;
     } catch (error) {
       const details = providerErrorDetails(error);
+      await this.recordProviderHealthFailure(context, action.proposal, details.code);
       if (details.unknownOutcome) {
         const recovery = await this.reconcileUnknownExecution(context, action);
         if (recovery.status === 'APPLIED' && recovery.execution) {
@@ -756,6 +796,29 @@ export class GovernedExternalActionExecutor {
       updatedAt: this.now(),
       evidence: patch.evidence ?? action.evidence,
     });
+  }
+
+  private async recordProviderHealthSuccess(
+    context: TenantContext,
+    proposal: ExternalMarketingActionProposal,
+  ): Promise<void> {
+    try {
+      await this.mutationSafetyGate?.recordSuccess?.(context, proposal);
+    } catch {
+      // Health telemetry must never hide a completed governed provider result.
+    }
+  }
+
+  private async recordProviderHealthFailure(
+    context: TenantContext,
+    proposal: ExternalMarketingActionProposal,
+    code: string,
+  ): Promise<void> {
+    try {
+      await this.mutationSafetyGate?.recordFailure?.(context, proposal, code);
+    } catch {
+      // The original provider failure remains authoritative if metrics fail.
+    }
   }
 
   private async verifyExecution(
