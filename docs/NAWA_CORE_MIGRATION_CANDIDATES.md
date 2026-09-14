@@ -16,12 +16,14 @@ IP. No Core runtime dependency is introduced here.
 | Tool gateway | `@platform/tool-gateway`, governed dispatch capability | Google Ads adapter, mutations, verification | Medium / medium | governed tool-execution provider | After transport registry exists |
 | Entitlements | Phase-1 authoritative billing access | Marketing external-action entitlement key | Medium / medium | entitlement provider | Core commercial-platform phase |
 | Generic external-action primitives | `GovernedExternalActionExecutor` lifecycle/opaque dispatch | Action types, simulation, rollback and evidence are Growth IP | High / high | idempotent external-action execution primitive | Extract only after a second product proves shared semantics |
+| Campaign orchestration ports | EPIC07 `CampaignProviderCapabilityRegistry`, workflow binding, and existing action/policy/evidence ports | Unified campaign model, objectives, allocation rationale, provider budget semantics, campaign performance, and optimization remain Growth IP | High / high | campaign-orchestration provider / capability registry | Candidate only after another product proves the same provider-neutral contract |
 
 ## Boundaries preserved
 
-Growth recommendations, campaign/action models, spend-impact simulation, Google
-Ads adapter and verification, marketing rollback, marketing evidence, workflows,
-and API/UX remain in this product. The new policy and credential ports are narrow
-adaptation seams, not a generic policy or secret platform.
+Growth recommendations, unified campaign/action models, spend-impact
+simulation, Google/Meta adapters and verification, marketing rollback,
+marketing evidence, workflows, and API/UX remain in this product. The new
+capability registry and existing policy/credential ports are narrow adaptation
+seams, not a generic campaign, policy, or secret platform.
 
 Premature Core migration performed: **NO**.

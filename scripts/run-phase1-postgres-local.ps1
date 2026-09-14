@@ -96,12 +96,12 @@ try {
     if ($harnessExitCode -ne 0 -and (($transcript -join "`n") -match 'uv_os_get_passwd.*ENOMEM')) {
       # tsx can fail before test/program discovery in constrained Windows
       # sessions. Build with tsc, then run the same harness source from dist.
-      & $npmPath --workspace '@platform/db' run build
+      & $npmPath --workspace '@platform/db' run build:phase1
       if ($LASTEXITCODE -ne 0) { throw 'Phase 1 compiled fallback build failed.' }
       $compiledStdout = Join-Path $evidenceDirectory "phase1-$timestamp.compiled.stdout.log"
       $compiledStderr = Join-Path $evidenceDirectory "phase1-$timestamp.compiled.stderr.log"
       $nodePath = (Get-Command node.exe -ErrorAction Stop).Source
-      $compiled = Start-Process -FilePath $nodePath -ArgumentList @('packages/db/dist/scripts/phase1-postgres.js') `
+      $compiled = Start-Process -FilePath $nodePath -ArgumentList @('.phase1-compiled/packages/db/scripts/phase1-postgres.js') `
         -WorkingDirectory $repositoryRoot -NoNewWindow -PassThru -Wait `
         -RedirectStandardOutput $compiledStdout -RedirectStandardError $compiledStderr
       $transcript = @()

@@ -54,7 +54,7 @@ test('a failed harness result is persisted before a non-zero runner exit is hand
     runner,
     /Save-Phase1EvidenceResult \$result \$resultFile[\s\S]*if \(\$harnessExitCode -ne 0\)/,
   );
-  assert.match(runner, /uv_os_get_passwd\.\*ENOMEM[\s\S]*packages\/db\/dist\/scripts\/phase1-postgres\.js/);
+  assert.match(runner, /uv_os_get_passwd\.\*ENOMEM[\s\S]*build:phase1[\s\S]*\.phase1-compiled\/packages\/db\/scripts\/phase1-postgres\.js/);
   assert.match(runner, /docker compose -p \$ProjectName -f \$composeFile up -d/);
   assert.match(runner, /docker compose -p \$ProjectName -f \$composeFile down -v/);
 });
@@ -130,6 +130,7 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
         migration0021: 'PASS',
         migration0022: 'PASS',
         migration0023: 'PASS',
+        migration0024: 'PASS',
         rls: 'PASS',
         forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
         tenantIsolation: 'PASS',
@@ -162,16 +163,16 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
   assert.match(`${result.stdout}\n${result.stderr}`, /Billing authority is not verified as PASS/);
 });
 
-test('verifier fails closed when a PASS result does not prove migration 0023 and EPIC-05 checks', () => {
+test('verifier fails closed when a PASS result does not prove migration 0024 and EPIC-07 checks', () => {
   const directory = mkdtempSync(join(tmpdir(), 'phase1-verifier-epic03-'));
   writeFileSync(
     join(directory, 'phase1-20260908-000001.result.json'),
     JSON.stringify({
       status: 'PASS',
-      migrationCount: 24,
-      latestMigration: '0023_external_action_reliability',
+      migrationCount: 25,
+      latestMigration: '0024_unified_campaign_orchestration',
       checks: {
-        migrationChain: 'PASS', migration0020: 'PASS', migration0021: 'PASS', migration0022: 'PASS',
+        migrationChain: 'PASS', migration0020: 'PASS', migration0021: 'PASS', migration0022: 'PASS', migration0023: 'PASS',
         rls: 'PASS', forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE', tenantIsolation: 'PASS', poolingLeak: 'PASS',
         pgvector: 'PASS', billingAuthority: 'PASS', billingConcurrency: 'PASS', billingIdempotency: 'PASS',
         billingRollback: 'PASS', billingCrossTenantIsolation: 'PASS',
@@ -187,5 +188,5 @@ test('verifier fails closed when a PASS result does not prove migration 0023 and
   ], { cwd: directory, encoding: 'utf8' });
 
   assert.notEqual(result.status, 0);
-  assert.match(`${result.stdout}\n${result.stderr}`, /Migration 0023 is not verified as PASS/);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Migration 0024 is not verified as PASS/);
 });

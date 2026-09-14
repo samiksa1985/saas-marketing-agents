@@ -63,6 +63,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0021_durable_marketing_os_approvals',
     '0022_governed_external_marketing_actions',
     '0023_external_action_reliability',
+    '0024_unified_campaign_orchestration',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -142,6 +143,30 @@ test('0023 adds tenant-scoped outbox leasing, provider health, and secret-free o
   assert.match(schema, /export const externalActionOperationalEvents = pgTable/);
   assert.match(schema, /leaseExpiresAt: timestamp\('lease_expires_at'/);
   assert.match(schema, /deadLetteredAt: timestamp\('dead_lettered_at'/);
+});
+
+test('0024 persists provider-neutral unified campaign orchestration with RLS and no provider secrets', () => {
+  const migration = source('0024_unified_campaign_orchestration.sql');
+  const schema = source('../src/schema.ts');
+
+  for (const table of [
+    'unified_campaigns',
+    'unified_campaign_execution_steps',
+    'unified_campaign_performance_snapshots',
+    'unified_campaign_recommendations',
+  ]) {
+    assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+    assert.match(migration, new RegExp(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`));
+  }
+  assert.match(migration, /^BEGIN;/m);
+  assert.match(migration, /COMMIT;\s*$/m);
+  assert.match(migration, /unified_campaigns_tenant_idempotency_uidx/);
+  assert.match(migration, /WITH CHECK \(tenant_id = NULLIF\(current_setting/);
+  assert.doesNotMatch(migration, /refresh_token|access_token|client_secret|developer_token|api_key|password/i);
+  assert.match(schema, /export const unifiedCampaigns = pgTable/);
+  assert.match(schema, /export const unifiedCampaignExecutionSteps = pgTable/);
+  assert.match(schema, /export const unifiedCampaignPerformanceSnapshots = pgTable/);
+  assert.match(schema, /export const unifiedCampaignRecommendations = pgTable/);
 });
 
 test('EPIC05 PostgreSQL fixtures use the same controlled clock as their lease claims', () => {

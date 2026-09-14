@@ -1,4 +1,5 @@
 ﻿import {
+  bigint,
   boolean,
   integer,
   real,
@@ -1137,6 +1138,97 @@ export const externalActionOperationalEvents = pgTable(
     ),
   ],
 );
+
+/** EPIC07 provider-neutral campaign intent; no provider credentials or raw responses persist here. */
+export const unifiedCampaigns = pgTable(
+  'unified_campaigns',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    organizationId: varchar('organization_id', { length: 255 }).notNull(),
+    objective: varchar('objective', { length: 64 }).notNull(),
+    goal: text('goal').notNull(),
+    locale: varchar('locale', { length: 16 }).notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    totalBudgetMinor: bigint('total_budget_minor', { mode: 'number' }).notNull(),
+    minorUnitScale: integer('minor_unit_scale').notNull(),
+    lifecycle: varchar('lifecycle', { length: 32 }).notNull(),
+    definition: jsonb('definition').notNull(),
+    executionPlan: jsonb('execution_plan'),
+    workflowId: varchar('workflow_id', { length: 255 }),
+    evidenceReferences: jsonb('evidence_references').notNull().default([]),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('unified_campaigns_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+    index('unified_campaigns_tenant_lifecycle_idx').on(table.tenantId, table.lifecycle, table.updatedAt),
+  ],
+);
+
+export const unifiedCampaignExecutionSteps = pgTable(
+  'unified_campaign_execution_steps',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    accountId: varchar('account_id', { length: 255 }).notNull(),
+    campaignResourceId: varchar('campaign_resource_id', { length: 255 }).notNull(),
+    externalActionId: varchar('external_action_id', { length: 255 }).references(() => externalMarketingActions.id, { onDelete: 'set null' }),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    allocation: jsonb('allocation').notNull(),
+    proposal: jsonb('proposal').notNull(),
+    outcome: jsonb('outcome'),
+    status: varchar('status', { length: 32 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('unified_campaign_execution_steps_tenant_campaign_channel_uidx').on(table.tenantId, table.unifiedCampaignId, table.channelId),
+    uniqueIndex('unified_campaign_execution_steps_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+    index('unified_campaign_execution_steps_tenant_campaign_idx').on(table.tenantId, table.unifiedCampaignId, table.status),
+  ],
+);
+
+export const unifiedCampaignPerformanceSnapshots = pgTable(
+  'unified_campaign_performance_snapshots',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    metrics: jsonb('metrics').notNull(),
+    provenance: jsonb('provenance').notNull().default([]),
+    verification: varchar('verification', { length: 16 }).notNull(),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(),
+    freshnessExpiresAt: timestamp('freshness_expires_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('unified_campaign_performance_tenant_campaign_captured_idx').on(table.tenantId, table.unifiedCampaignId, table.capturedAt),
+  ],
+);
+
+export const unifiedCampaignRecommendations = pgTable(
+  'unified_campaign_recommendations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 64 }).notNull(),
+    recommendation: jsonb('recommendation').notNull(),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('unified_campaign_recommendations_tenant_campaign_id_uidx').on(table.tenantId, table.unifiedCampaignId, table.id),
+    index('unified_campaign_recommendations_tenant_campaign_created_idx').on(table.tenantId, table.unifiedCampaignId, table.createdAt),
+  ],
+);
+
 export const marketingOutcomeEvents = pgTable(
   'marketing_outcome_events',
   {

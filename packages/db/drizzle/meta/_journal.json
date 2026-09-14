@@ -169,6 +169,13 @@
       "when": 1788629864178,
       "tag": "0023_external_action_reliability",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788629864179,
+      "tag": "0024_unified_campaign_orchestration",
+      "breakpoints": true
     }
   ]
 }

@@ -106,13 +106,15 @@ fail-closed evidence without exposing a connection URL or password.
 Preserve the full terminal output and return it without credentials. A result is valid only when the final line contains `PHASE1_POSTGRES_RESULT=` with JSON `status` equal to `PASS`. A missing required assertion, failed migration, unavailable extension, or command failure is a blocker.
 
 The current journal includes `0020_persistent_marketing_os_runtime`,
-`0021_durable_marketing_os_approvals`, and
-`0022_governed_external_marketing_actions`. The harness applies `0019` after
-verifying the pre-repair state, then applies `0020`, `0021`, and `0022` before
-schema, RLS, pgvector, approval, billing, and EPIC-03 policy/action/outbox
-checks. The verifier requires migration count 23, latest migration 0022, and
-one real concurrent action owner with one PostgreSQL conflict. It must not print
-a pass record after a failed migration or failed assertion.
+`0021_durable_marketing_os_approvals`, `0022_governed_external_marketing_actions`,
+`0023_external_action_reliability`, and
+`0024_unified_campaign_orchestration`. The harness applies `0019` after
+verifying the pre-repair state, then applies the remaining journal before
+schema, RLS, pgvector, approval, billing, governed-action, reliability, and
+unified-campaign checks. The verifier requires migration count 25, latest
+migration 0024, the EPIC07 migration/RLS/idempotency/fixture-cleanup checks,
+and one real concurrent action owner with one PostgreSQL conflict. It must not
+print a pass record after a failed migration or failed assertion.
 
 The prior Phase-1 closeout evidence through 0021 remains valid for its bounded
 scope. A fresh fail-closed result through 0022 has now passed for EPIC-03;

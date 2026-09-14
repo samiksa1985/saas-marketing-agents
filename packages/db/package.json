@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b",
+    "build:phase1": "tsc -p tsconfig.phase1.json",
     "typecheck": "tsc -b --pretty false",
     "lint": "prettier --check src",
     "test": "tsx --test src/**/*.test.ts",

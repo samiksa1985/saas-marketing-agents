@@ -30,6 +30,7 @@ import { ApiTenantDurableApprovalRepository } from './durable-approval.repositor
 import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
 import { ExternalActionsController } from './external-actions.controller.js';
+import { UnifiedCampaignsController } from './unified-campaigns.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
 import {
   ExternalActionOperationsController,
@@ -40,6 +41,10 @@ import {
   EXTERNAL_ACTION_APPLICATION_SERVICE,
   ExternalActionApplicationService,
 } from './external-actions.application.js';
+import {
+  UNIFIED_CAMPAIGN_APPLICATION_SERVICE,
+  UnifiedCampaignApplicationService,
+} from './unified-campaigns.application.js';
 import { createApiAuthProvider } from './auth-provider.factory.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
@@ -54,6 +59,10 @@ import {
   MockMetaAdsProvider,
   ExternalActionProviderRegistry,
 } from '@platform/tool-gateway';
+import {
+  GOOGLE_ADS_MUTATION_TYPES,
+  META_ADS_MUTATION_TYPES,
+} from '@platform/marketing-os-core';
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
 
@@ -128,12 +137,18 @@ const metaAdsGateway = new MetaAdsProviderGateway(
   },
 );
 const externalActionProviders = new ExternalActionProviderRegistry({
-  GOOGLE_ADS: googleAdsGateway,
-  META_ADS: metaAdsGateway,
+  GOOGLE_ADS: {
+    gateway: googleAdsGateway,
+    capabilities: { actionTypes: GOOGLE_ADS_MUTATION_TYPES, budgetUnit: 'MAJOR' },
+  },
+  META_ADS: {
+    gateway: metaAdsGateway,
+    capabilities: { actionTypes: META_ADS_MUTATION_TYPES, budgetUnit: 'MINOR' },
+  },
 });
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,ExternalActionPoliciesController,ExternalActionOperationsController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[
     AppService,
     RegistryService,
@@ -158,6 +173,21 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
     {
       provide: EXTERNAL_ACTION_APPLICATION_SERVICE,
       useExisting: ExternalActionApplicationService,
+    },
+    {
+      provide: UnifiedCampaignApplicationService,
+      useFactory: (databaseFacade: typeof tenantDatabase, actions: ExternalActionApplicationService<any>) =>
+        new UnifiedCampaignApplicationService(
+          databaseFacade,
+          actions,
+          externalActionProviders,
+          workflowRuntime,
+        ),
+      inject: [API_TENANT_DATABASE, ExternalActionApplicationService],
+    },
+    {
+      provide: UNIFIED_CAMPAIGN_APPLICATION_SERVICE,
+      useExisting: UnifiedCampaignApplicationService,
     },
     {
       provide: ExternalActionOperationsApplicationService,

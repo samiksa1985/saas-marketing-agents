@@ -171,3 +171,4 @@ function planKey(tenantId: string, planId: string): string {
 export * from './execution.js';
 export * from './external-marketing-action.js';
 export * from './governed-external-action.js';
+export * from './unified-campaign.js';

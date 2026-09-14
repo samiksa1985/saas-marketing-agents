@@ -25,6 +25,7 @@ import {
   PersistentExternalActionOutcomeStore,
   PersistentExternalActionPolicyStore,
   PersistentExternalActionStore,
+  PersistentUnifiedCampaignStore,
 } from '../../marketing-os-persistence/src/index.js';
 import type { GovernedExternalAction } from '../../marketing-os-core/src/governed-external-action.js';
 import type { TenantContext } from '../../contracts/src/index.js';
@@ -89,6 +90,12 @@ type Epic05Proof = {
   credentialHealth: 'PASS';
   operatorRecovery: 'PASS';
   workerBoundary: 'PASS';
+  cleanup: 'PASS';
+};
+type Epic07Proof = {
+  migrationLedgerEntries: number;
+  rlsTables: number;
+  idempotency: { attempts: number; created: number; duplicates: number };
   cleanup: 'PASS';
 };
 
@@ -382,11 +389,13 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'external_action_policies', 'external_action_policy_audit',
         'external_marketing_actions', 'external_marketing_action_evidence',
         'external_action_workflow_outbox', 'external_provider_health',
-        'external_provider_credential_health', 'external_action_operational_events'
+        'external_provider_credential_health', 'external_action_operational_events',
+        'unified_campaigns', 'unified_campaign_execution_steps',
+        'unified_campaign_performance_snapshots', 'unified_campaign_recommendations'
       )
   `, recordSql),
   );
-  assert.equal(tables.length, 28, 'required canonical tables are missing');
+  assert.equal(tables.length, 32, 'required canonical tables are missing');
   const minorUnits = rows(
     await validationUnsafe(owner, `
     SELECT table_name, column_name, data_type
@@ -2333,7 +2342,7 @@ async function testEpic05ExternalActionReliability(
     const scheduled = await tx(contextA, (store) => store.recordDeliveryFailure(contextA, retry.outboxId, {
       leaseId: retryClaim!.leaseId,
       code: 'EPIC05_RATE_LIMIT',
-      reason: 'Authorization: Bearer acceptance-only-secret',
+      reason: 'Authorization: Bearer fixture-sensitive-marker',
       retryable: true,
       retryAfterMs: 60_000,
       now: base,
@@ -2341,7 +2350,7 @@ async function testEpic05ExternalActionReliability(
     assert.equal(scheduled.deliveryStatus, 'PENDING');
     assert.equal(scheduled.deliveryAttempts, 1);
     assert.equal(scheduled.nextAttemptAt, '2026-09-12T00:01:00.000Z');
-    assert.equal(scheduled.failureReason?.includes('acceptance-only-secret'), false, 'retry diagnostic must be redacted');
+    assert.equal(scheduled.failureReason?.includes('fixture-sensitive-marker'), false, 'retry diagnostic must be redacted');
     const beforeRetry = await tx(contextA, (store) =>
       store.claimNext(contextA, { leaseOwner: 'epic05-retry-worker', now: new Date(base.getTime() + 59_999) }),
     );
@@ -2519,6 +2528,156 @@ async function testEpic05ExternalActionReliability(
   }
 }
 
+/** Real PostgreSQL acceptance for EPIC07's tenant-scoped orchestration state. */
+async function testEpic07UnifiedCampaignOrchestration(
+  owner: SqlClient,
+  databaseUrl: string,
+  recordSql: SqlRecorder,
+  recordStep: (step: string) => void,
+  recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void,
+): Promise<Epic07Proof> {
+  const prefix = 'epic07-acceptance-';
+  const campaignA = `${prefix}campaign-a`;
+  const campaignB = `${prefix}campaign-b`;
+  let cleanup = false;
+  try {
+    recordStep('schema_and_migration_ledger');
+    const tables = rows(await validationUnsafe(owner, `
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name IN (
+        'unified_campaigns', 'unified_campaign_execution_steps',
+        'unified_campaign_performance_snapshots', 'unified_campaign_recommendations'
+      )
+    `, recordSql));
+    assert.equal(tables.length, 4, 'EPIC07 orchestration tables are missing');
+    const ledger = one(await owner.unsafe(`
+      SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations"
+      WHERE created_at = 1788629864179
+    `));
+    assert.equal(Number(ledger.count), 1, 'migration 0024 must have exactly one ledger record');
+
+    recordStep('seed_tenant_rows');
+    for (const [campaignId, tenantId] of [[campaignA, tenantA], [campaignB, tenantB]] as const) {
+      await owner.unsafe(
+        `INSERT INTO unified_campaigns
+          (id, tenant_id, idempotency_key, organization_id, objective, goal, locale, currency,
+           total_budget_minor, minor_unit_scale, lifecycle, definition, evidence_references)
+         VALUES ($1, $2::uuid, $3, 'epic07-org', 'LEAD_GENERATION', 'Acceptance', 'ar', 'SAR',
+                 100000, 2, 'PLANNED', '{}'::jsonb, '[]'::jsonb)`,
+        [campaignId, tenantId, `${prefix}${tenantId}`],
+      );
+      await owner.unsafe(
+        `INSERT INTO unified_campaign_execution_steps
+          (id, tenant_id, campaign_id, channel_id, provider, account_id, campaign_resource_id,
+           idempotency_key, allocation, proposal, status)
+         VALUES ($1, $2::uuid, $3, 'google', 'GOOGLE_ADS', 'account', 'resource', $4,
+                 '{}'::jsonb, '{}'::jsonb, 'PLANNED')`,
+        [`${campaignId}-step`, tenantId, campaignId, `${campaignId}-step-key`],
+      );
+      await owner.unsafe(
+        `INSERT INTO unified_campaign_performance_snapshots
+          (id, tenant_id, campaign_id, channel_id, provider, currency, metrics, provenance,
+           verification, captured_at, freshness_expires_at)
+         VALUES ($1, $2::uuid, $3, 'google', 'GOOGLE_ADS', 'SAR', '{}'::jsonb, '[]'::jsonb,
+                 'UNKNOWN', now(), now() + interval '1 hour')`,
+        [`${campaignId}-snapshot`, tenantId, campaignId],
+      );
+      await owner.unsafe(
+        `INSERT INTO unified_campaign_recommendations
+          (id, tenant_id, campaign_id, type, recommendation, requires_approval)
+         VALUES ($1, $2::uuid, $3, 'REVIEW_TARGET_CPA', '{}'::jsonb, true)`,
+        [`${campaignId}-recommendation`, tenantId, campaignId],
+      );
+    }
+
+    recordStep('tenant_rls');
+    for (const table of [
+      'unified_campaigns',
+      'unified_campaign_execution_steps',
+      'unified_campaign_performance_snapshots',
+      'unified_campaign_recommendations',
+    ]) {
+      await withAppTransaction(databaseUrl, tenantA, async (transaction) => {
+        const visible = rows(await validationTransactionUnsafe(
+          transaction,
+          `SELECT tenant_id::text FROM ${table} WHERE id LIKE $1 ORDER BY id`,
+          [`${prefix}%`],
+          recordSql,
+        ));
+        assert.deepEqual(visible.map((row) => row.tenant_id), [tenantA], `${table} must isolate tenant A`);
+      });
+      await withAppTransaction(databaseUrl, tenantB, async (transaction) => {
+        const visible = rows(await validationTransactionUnsafe(
+          transaction,
+          `SELECT tenant_id::text FROM ${table} WHERE id LIKE $1 ORDER BY id`,
+          [`${prefix}%`],
+          recordSql,
+        ));
+        assert.deepEqual(visible.map((row) => row.tenant_id), [tenantB], `${table} must isolate tenant B`);
+      });
+    }
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) =>
+      transaction.unsafe(
+        `INSERT INTO unified_campaigns
+          (id, tenant_id, idempotency_key, organization_id, objective, goal, locale, currency,
+           total_budget_minor, minor_unit_scale, lifecycle, definition, evidence_references)
+         VALUES ('epic07-cross-tenant', $1::uuid, 'epic07-cross-tenant', 'org', 'LEAD_GENERATION',
+                 'denied', 'en', 'SAR', 1, 2, 'DRAFT', '{}'::jsonb, '[]'::jsonb)`,
+        [tenantB],
+      ),
+    ));
+
+    recordStep('idempotency_concurrency');
+    const idempotency = `${prefix}concurrent`;
+    const results = await Promise.all([0, 1].map((attempt) => withAppTransaction(
+      databaseUrl,
+      tenantA,
+      async (transaction) => rows(await transaction.unsafe(
+        `INSERT INTO unified_campaigns
+          (id, tenant_id, idempotency_key, organization_id, objective, goal, locale, currency,
+           total_budget_minor, minor_unit_scale, lifecycle, definition, evidence_references)
+         VALUES ($1, $2::uuid, $3, 'org', 'LEAD_GENERATION', 'concurrent', 'en', 'SAR',
+                 1, 2, 'DRAFT', '{}'::jsonb, '[]'::jsonb)
+         ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+         RETURNING id`,
+        [`${prefix}concurrent-${attempt}`, tenantA, idempotency],
+      )),
+    )));
+    const created = results.filter((result) => result.length === 1).length;
+    assert.equal(created, 1, 'exactly one concurrent orchestration intent may persist');
+    const count = one(await owner.unsafe(
+      `SELECT count(*)::int AS count FROM unified_campaigns WHERE tenant_id = $1::uuid AND idempotency_key = $2`,
+      [tenantA, idempotency],
+    ));
+    assert.equal(Number(count.count), 1, 'tenant idempotency uniqueness must survive concurrent attempts');
+    recordDiagnostics({ epic07IdempotencyAttempts: 2, epic07IdempotencyCreated: created });
+
+    recordStep('persistence_store_contract');
+    await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+      const store = new PersistentUnifiedCampaignStore(transaction);
+      const campaign = await store.findByIdempotencyKey(epic05Context(tenantA), idempotency);
+      assert.equal(campaign?.tenantId, tenantA, 'persistent campaign store must read only scoped intent');
+    });
+
+    recordStep('fixture_cleanup');
+    await owner.unsafe(`DELETE FROM unified_campaigns WHERE id LIKE $1`, [`${prefix}%`]);
+    const remaining = one(await owner.unsafe(
+      `SELECT count(*)::int AS count FROM unified_campaigns WHERE id LIKE $1`,
+      [`${prefix}%`],
+    ));
+    assert.equal(Number(remaining.count), 0, 'EPIC07 acceptance fixtures must be removed');
+    cleanup = true;
+    return {
+      migrationLedgerEntries: 1,
+      rlsTables: tables.length,
+      idempotency: { attempts: 2, created, duplicates: 2 - created },
+      cleanup: 'PASS',
+    };
+  } finally {
+    if (!cleanup) await owner.unsafe(`DELETE FROM unified_campaigns WHERE id LIKE $1`, [`${prefix}%`]);
+  }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -2533,11 +2692,13 @@ async function main(): Promise<void> {
   const index0021 = journal.findIndex((entry) => entry.tag === '0021_durable_marketing_os_approvals');
   const index0022 = journal.findIndex((entry) => entry.tag === '0022_governed_external_marketing_actions');
   const index0023 = journal.findIndex((entry) => entry.tag === '0023_external_action_reliability');
+  const index0024 = journal.findIndex((entry) => entry.tag === '0024_unified_campaign_orchestration');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
   assert.equal(index0022, index0021 + 1, '0022 must directly follow 0021 in the canonical journal');
   assert.equal(index0023, index0022 + 1, '0023 must directly follow 0022 in the canonical journal');
+  assert.equal(index0024, index0023 + 1, '0024 must directly follow 0023 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -2562,7 +2723,7 @@ async function main(): Promise<void> {
       owner as unknown as JournalMigrationClient,
       journalMigrations.slice(index0023),
     );
-    // A second canonical-runner invocation must safely observe the 0023 ledger row.
+    // A second canonical-runner invocation must safely observe the 0023/0024 ledger rows.
     await applyJournalMigrations(
       owner as unknown as JournalMigrationClient,
       journalMigrations.slice(index0023),
@@ -2635,6 +2796,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC05_STEP' },
     );
+    const epic07Proof = await executePhase1ValidationCheck(
+      'epic07_unified_campaign_orchestration',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic07UnifiedCampaignOrchestration(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC07_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -2648,6 +2816,7 @@ async function main(): Promise<void> {
           migration0021: 'PASS',
           migration0022: 'PASS',
           migration0023: 'PASS',
+          migration0024: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -2678,11 +2847,16 @@ async function main(): Promise<void> {
           epic05WorkerBoundary: 'PASS',
           epic05SecretSafety: 'PASS',
           epic05FixtureCleanup: 'PASS',
+          epic07Persistence: 'PASS',
+          epic07Rls: 'PASS',
+          epic07Idempotency: 'PASS',
+          epic07FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
         epic03: epic03Proof,
         epic05: epic05Proof,
+        epic07: epic07Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

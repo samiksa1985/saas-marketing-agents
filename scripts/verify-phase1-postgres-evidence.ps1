@@ -38,6 +38,7 @@ $expected = [ordered]@{
   'Migration 0021' = 'migration0021'
   'Migration 0022' = 'migration0022'
   'Migration 0023' = 'migration0023'
+  'Migration 0024' = 'migration0024'
   'RLS' = 'rls'
   'FORCE RLS' = 'forceRls'
   'Tenant isolation' = 'tenantIsolation'
@@ -67,6 +68,10 @@ $expected = [ordered]@{
   'EPIC-05 worker boundary' = 'epic05WorkerBoundary'
   'EPIC-05 secret safety' = 'epic05SecretSafety'
   'EPIC-05 fixture cleanup' = 'epic05FixtureCleanup'
+  'EPIC-07 persistence' = 'epic07Persistence'
+  'EPIC-07 RLS' = 'epic07Rls'
+  'EPIC-07 idempotency' = 'epic07Idempotency'
+  'EPIC-07 fixture cleanup' = 'epic07FixtureCleanup'
 }
 
 foreach ($label in $expected.Keys) {
@@ -78,8 +83,8 @@ foreach ($label in $expected.Keys) {
   Write-Host "${label}: $value"
 }
 
-if ($result.migrationCount -ne 24 -or $result.latestMigration -ne '0023_external_action_reliability') {
-  throw "EPIC-05 evidence does not prove the canonical 24-migration chain through 0023. Count=$($result.migrationCount); latest=$($result.latestMigration)"
+if ($result.migrationCount -ne 25 -or $result.latestMigration -ne '0024_unified_campaign_orchestration') {
+  throw "EPIC-07 evidence does not prove the canonical 25-migration chain through 0024. Count=$($result.migrationCount); latest=$($result.latestMigration)"
 }
 if (-not $result.epic03 -or $result.epic03.concurrency.successes -ne 1 -or $result.epic03.concurrency.conflicts -ne 1 -or $result.epic03.concurrency.unexpectedDuplicates -ne 0) {
   throw 'EPIC-03 concurrency evidence is missing or does not prove one owner, one conflict, and no duplicate.'
@@ -88,6 +93,11 @@ if (-not $result.epic05 -or $result.epic05.migrationLedgerEntries -ne 1 -or
     $result.epic05.concurrentClaim.successfulClaims -ne 1 -or
     $result.epic05.concurrentClaim.duplicateClaims -ne 0) {
   throw 'EPIC-05 evidence is missing or does not prove one migration ledger entry, one claim owner, and no duplicate claim.'
+}
+if (-not $result.epic07 -or $result.epic07.migrationLedgerEntries -ne 1 -or
+    $result.epic07.rlsTables -ne 4 -or $result.epic07.idempotency.created -ne 1 -or
+    $result.epic07.idempotency.duplicates -ne 1 -or $result.epic07.cleanup -ne 'PASS') {
+  throw 'EPIC-07 evidence is missing or does not prove migration ledger, four RLS tables, idempotency, and fixture cleanup.'
 }
 
 Write-Host 'PHASE1_EVIDENCE_VERIFICATION=PASS'
