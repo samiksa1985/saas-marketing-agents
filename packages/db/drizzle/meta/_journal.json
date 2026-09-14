@@ -176,6 +176,13 @@
       "when": 1788629864179,
       "tag": "0024_unified_campaign_orchestration",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1788629864180,
+      "tag": "0025_cross_channel_performance_optimization",
+      "breakpoints": true
     }
   ]
 }

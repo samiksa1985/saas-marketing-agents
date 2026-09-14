@@ -17,6 +17,8 @@ IP. No Core runtime dependency is introduced here.
 | Entitlements | Phase-1 authoritative billing access | Marketing external-action entitlement key | Medium / medium | entitlement provider | Core commercial-platform phase |
 | Generic external-action primitives | `GovernedExternalActionExecutor` lifecycle/opaque dispatch | Action types, simulation, rollback and evidence are Growth IP | High / high | idempotent external-action execution primitive | Extract only after a second product proves shared semantics |
 | Campaign orchestration ports | EPIC07 `CampaignProviderCapabilityRegistry`, workflow binding, and existing action/policy/evidence ports | Unified campaign model, objectives, allocation rationale, provider budget semantics, campaign performance, and optimization remain Growth IP | High / high | campaign-orchestration provider / capability registry | Candidate only after another product proves the same provider-neutral contract |
+| Performance intelligence ports | EPIC08 canonical telemetry normalization, attribution V1, diagnostics/anomalies, recommendations, simulations, outcomes, and learning records | Metric semantics, campaign evidence, optimization rules, and recommendation rationale remain Growth IP | High / high | evidence provider, model provider, audit provider, memory provider | Candidate only after a second product proves identical metric and governance semantics |
+| Future customer-growth capability registry | EPIC08 design-only `FutureGrowthCapabilityRegistry` for CRM, lead management, conversations, AI receptionist, reputation/reviews, local presence, and multi-location growth | Customer lifecycle policy, provider mappings, and growth recommendations remain Growth IP | Medium / medium | capability provider registry | Contract-only; do not migrate or adopt a vendor yet |
 
 ## Boundaries preserved
 
@@ -25,5 +27,12 @@ simulation, Google/Meta adapters and verification, marketing rollback,
 marketing evidence, workflows, and API/UX remain in this product. The new
 capability registry and existing policy/credential ports are narrow adaptation
 seams, not a generic campaign, policy, or secret platform.
+
+EPIC08 preserves future `PolicyProvider`, `EvidenceProvider`, `ModelProvider`,
+`AgentRuntimeProvider`, `ApprovalProvider`, `AuditProvider`, `MemoryProvider`,
+and `WorkflowProvider` compatibility through narrow local ports. The design-only
+future capability registry has no Vendasta, Dynamics, Salesforce, HubSpot, CRM,
+conversation, receptionist, review, or location implementation and no Core
+runtime dependency.
 
 Premature Core migration performed: **NO**.

@@ -172,3 +172,4 @@ export * from './execution.js';
 export * from './external-marketing-action.js';
 export * from './governed-external-action.js';
 export * from './unified-campaign.js';
+export * from './performance-optimization.js';

@@ -188,6 +188,20 @@ test('schema invariants identify the failing check and use PostgreSQL 16 catalog
   assert.match(harness, /c\.relforcerowsecurity AS force_rls_enabled/);
 });
 
+test('EPIC08 schema validation passes the SQL recorder as validationUnsafe third argument', () => {
+  const harness = readFileSync(
+    fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),
+    'utf8',
+  );
+  const start = harness.indexOf('async function testEpic08CrossChannelPerformanceOptimization(');
+  const end = harness.indexOf('\nasync function main()', start);
+  const epic08 = harness.slice(start, end);
+
+  assert.ok(start >= 0 && end > start, 'EPIC08 harness must exist');
+  assert.match(epic08, /validationUnsafe\(owner,\s*`[\s\S]*?campaign_optimization_learning[\s\S]*?`, recordSql\)/);
+  assert.doesNotMatch(epic08, /validationUnsafe\([\s\S]*?ANY\(\$1::text\[\]\)[\s\S]*?\[tables\], recordSql\)/);
+});
+
 test('marketing CRUD harness scopes each RLS operation to a transaction and reports its step', () => {
   const harness = readFileSync(
     fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),

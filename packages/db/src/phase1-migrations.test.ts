@@ -64,6 +64,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0022_governed_external_marketing_actions',
     '0023_external_action_reliability',
     '0024_unified_campaign_orchestration',
+    '0025_cross_channel_performance_optimization',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -167,6 +168,34 @@ test('0024 persists provider-neutral unified campaign orchestration with RLS and
   assert.match(schema, /export const unifiedCampaignExecutionSteps = pgTable/);
   assert.match(schema, /export const unifiedCampaignPerformanceSnapshots = pgTable/);
   assert.match(schema, /export const unifiedCampaignRecommendations = pgTable/);
+});
+
+test('0025 persists provider-neutral performance evidence and governed optimization records with RLS', () => {
+  const migration = source('0025_cross_channel_performance_optimization.sql');
+  const schema = source('../src/schema.ts');
+
+  for (const table of [
+    'campaign_performance_observations',
+    'campaign_performance_aggregates',
+    'campaign_performance_diagnostics',
+    'campaign_performance_anomalies',
+    'campaign_optimization_recommendations',
+    'campaign_optimization_simulations',
+    'campaign_optimization_outcomes',
+    'campaign_optimization_learning',
+  ]) {
+    assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+    assert.match(migration, new RegExp(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`));
+  }
+  assert.match(migration, /campaign_performance_observation_tenant_idempotency_uidx/);
+  assert.match(migration, /campaign_optimization_simulation_tenant_recommendation_uidx/);
+  assert.match(migration, /campaign_optimization_outcome_tenant_action_uidx/);
+  assert.match(migration, /^BEGIN;/m);
+  assert.match(migration, /COMMIT;\s*$/m);
+  assert.match(migration, /WITH CHECK \(tenant_id = NULLIF\(current_setting/);
+  assert.doesNotMatch(migration, /refresh_token|access_token|client_secret|developer_token|api_key|password/i);
+  assert.match(schema, /export const campaignPerformanceObservations = pgTable/);
+  assert.match(schema, /export const campaignOptimizationLearning = pgTable/);
 });
 
 test('EPIC05 PostgreSQL fixtures use the same controlled clock as their lease claims', () => {

@@ -1229,6 +1229,155 @@ export const unifiedCampaignRecommendations = pgTable(
   ],
 );
 
+/** EPIC08 canonical performance evidence and governed optimization records. */
+export const campaignPerformanceObservations = pgTable(
+  'campaign_performance_observations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    providerCampaignId: varchar('provider_campaign_id', { length: 255 }).notNull(),
+    snapshotId: varchar('snapshot_id', { length: 255 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    observation: jsonb('observation').notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    collectedAt: timestamp('collected_at', { withTimezone: true }).notNull(),
+    verificationState: varchar('verification_state', { length: 16 }).notNull(),
+    freshnessState: varchar('freshness_state', { length: 16 }).notNull(),
+    normalizationVersion: varchar('normalization_version', { length: 64 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_observation_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+    uniqueIndex('campaign_performance_observation_tenant_provider_snapshot_uidx').on(table.tenantId, table.provider, table.providerCampaignId, table.snapshotId, table.normalizationVersion),
+    index('campaign_performance_observation_tenant_campaign_period_idx').on(table.tenantId, table.unifiedCampaignId, table.periodEnd),
+  ],
+);
+
+export const campaignPerformanceAggregates = pgTable(
+  'campaign_performance_aggregates',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    aggregate: jsonb('aggregate').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_aggregate_tenant_campaign_id_uidx').on(table.tenantId, table.unifiedCampaignId, table.id),
+    index('campaign_performance_aggregate_tenant_campaign_generated_idx').on(table.tenantId, table.unifiedCampaignId, table.generatedAt),
+  ],
+);
+
+export const campaignPerformanceDiagnostics = pgTable(
+  'campaign_performance_diagnostics',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }),
+    type: varchar('type', { length: 80 }).notNull(),
+    diagnostic: jsonb('diagnostic').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_diagnostic_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_performance_diagnostic_tenant_campaign_generated_idx').on(table.tenantId, table.unifiedCampaignId, table.generatedAt),
+  ],
+);
+
+export const campaignPerformanceAnomalies = pgTable(
+  'campaign_performance_anomalies',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 64 }).notNull(),
+    anomaly: jsonb('anomaly').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_anomaly_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_performance_anomaly_tenant_campaign_generated_idx').on(table.tenantId, table.unifiedCampaignId, table.generatedAt),
+  ],
+);
+
+export const campaignOptimizationRecommendations = pgTable(
+  'campaign_optimization_recommendations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }),
+    provider: varchar('provider', { length: 64 }),
+    actionType: varchar('action_type', { length: 64 }).notNull(),
+    recommendation: jsonb('recommendation').notNull(),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_recommendation_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_optimization_recommendation_tenant_campaign_created_idx').on(table.tenantId, table.unifiedCampaignId, table.createdAt),
+  ],
+);
+
+export const campaignOptimizationSimulations = pgTable(
+  'campaign_optimization_simulations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull().references(() => campaignOptimizationRecommendations.id, { onDelete: 'cascade' }),
+    simulation: jsonb('simulation').notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_simulation_tenant_recommendation_uidx').on(table.tenantId, table.recommendationId),
+  ],
+);
+
+export const campaignOptimizationOutcomes = pgTable(
+  'campaign_optimization_outcomes',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull().references(() => campaignOptimizationRecommendations.id, { onDelete: 'cascade' }),
+    externalActionId: varchar('external_action_id', { length: 255 }).notNull().references(() => externalMarketingActions.id, { onDelete: 'restrict' }),
+    outcome: jsonb('outcome').notNull(),
+    measuredAt: timestamp('measured_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_outcome_tenant_action_uidx').on(table.tenantId, table.externalActionId),
+    index('campaign_optimization_outcome_tenant_campaign_measured_idx').on(table.tenantId, table.unifiedCampaignId, table.measuredAt),
+  ],
+);
+
+export const campaignOptimizationLearning = pgTable(
+  'campaign_optimization_learning',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull().references(() => campaignOptimizationRecommendations.id, { onDelete: 'cascade' }),
+    learning: jsonb('learning').notNull(),
+    ruleVersion: varchar('rule_version', { length: 32 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_learning_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_optimization_learning_tenant_campaign_created_idx').on(table.tenantId, table.unifiedCampaignId, table.createdAt),
+  ],
+);
+
 export const marketingOutcomeEvents = pgTable(
   'marketing_outcome_events',
   {

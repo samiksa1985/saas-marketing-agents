@@ -25,6 +25,7 @@ import {
   PersistentExternalActionOutcomeStore,
   PersistentExternalActionPolicyStore,
   PersistentExternalActionStore,
+  PersistentPerformanceOptimizationStore,
   PersistentUnifiedCampaignStore,
 } from '../../marketing-os-persistence/src/index.js';
 import type { GovernedExternalAction } from '../../marketing-os-core/src/governed-external-action.js';
@@ -96,6 +97,13 @@ type Epic07Proof = {
   migrationLedgerEntries: number;
   rlsTables: number;
   idempotency: { attempts: number; created: number; duplicates: number };
+  cleanup: 'PASS';
+};
+type Epic08Proof = {
+  migrationLedgerEntries: number;
+  rlsTables: number;
+  observationIdempotency: { attempts: number; created: number; duplicates: number };
+  learningIsolation: 'PASS';
   cleanup: 'PASS';
 };
 
@@ -391,11 +399,15 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'external_action_workflow_outbox', 'external_provider_health',
         'external_provider_credential_health', 'external_action_operational_events',
         'unified_campaigns', 'unified_campaign_execution_steps',
-        'unified_campaign_performance_snapshots', 'unified_campaign_recommendations'
+        'unified_campaign_performance_snapshots', 'unified_campaign_recommendations',
+        'campaign_performance_observations', 'campaign_performance_aggregates',
+        'campaign_performance_diagnostics', 'campaign_performance_anomalies',
+        'campaign_optimization_recommendations', 'campaign_optimization_simulations',
+        'campaign_optimization_outcomes', 'campaign_optimization_learning'
       )
   `, recordSql),
   );
-  assert.equal(tables.length, 32, 'required canonical tables are missing');
+  assert.equal(tables.length, 40, 'required canonical tables are missing');
   const minorUnits = rows(
     await validationUnsafe(owner, `
     SELECT table_name, column_name, data_type
@@ -460,11 +472,19 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'external_action_workflow_outbox'::regclass,
         'external_provider_health'::regclass,
         'external_provider_credential_health'::regclass,
-        'external_action_operational_events'::regclass
+        'external_action_operational_events'::regclass,
+        'campaign_performance_observations'::regclass,
+        'campaign_performance_aggregates'::regclass,
+        'campaign_performance_diagnostics'::regclass,
+        'campaign_performance_anomalies'::regclass,
+        'campaign_optimization_recommendations'::regclass,
+        'campaign_optimization_simulations'::regclass,
+        'campaign_optimization_outcomes'::regclass,
+        'campaign_optimization_learning'::regclass
       )
   `, recordSql),
   );
-  assert.equal(marketingForeignKeys.length, 13, 'Marketing OS tenant foreign keys are missing');
+  assert.equal(marketingForeignKeys.length, 21, 'Marketing OS tenant foreign keys are missing');
   const governedIndexes = rows(
     await validationUnsafe(owner, `
       SELECT indexname FROM pg_indexes
@@ -2678,6 +2698,142 @@ async function testEpic07UnifiedCampaignOrchestration(
   }
 }
 
+/** Real PostgreSQL acceptance for EPIC08 canonical telemetry and decision records. */
+async function testEpic08CrossChannelPerformanceOptimization(
+  owner: SqlClient,
+  databaseUrl: string,
+  recordSql: SqlRecorder,
+  recordStep: (step: string) => void,
+  recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void,
+): Promise<Epic08Proof> {
+  const prefix = 'epic08-acceptance-';
+  const campaignA = `${prefix}campaign-a`;
+  const campaignB = `${prefix}campaign-b`;
+  const actionA = `${prefix}action-a`;
+  const actionB = `${prefix}action-b`;
+  let cleanup = false;
+  const tables = [
+    'campaign_performance_observations', 'campaign_performance_aggregates',
+    'campaign_performance_diagnostics', 'campaign_performance_anomalies',
+    'campaign_optimization_recommendations', 'campaign_optimization_simulations',
+    'campaign_optimization_outcomes', 'campaign_optimization_learning',
+  ] as const;
+  try {
+    recordStep('schema_and_migration_ledger');
+    const found = rows(await validationUnsafe(owner, `
+      SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+      AND table_name IN (
+        'campaign_performance_observations', 'campaign_performance_aggregates',
+        'campaign_performance_diagnostics', 'campaign_performance_anomalies',
+        'campaign_optimization_recommendations', 'campaign_optimization_simulations',
+        'campaign_optimization_outcomes', 'campaign_optimization_learning'
+      )
+    `, recordSql));
+    assert.equal(found.length, tables.length, 'EPIC08 performance optimization tables are missing');
+    const ledger = one(await owner.unsafe(`
+      SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at = 1788629864180
+    `));
+    assert.equal(Number(ledger.count), 1, 'migration 0025 must have exactly one ledger record');
+
+    recordStep('seed_tenant_rows');
+    for (const [campaignId, actionId, tenantId] of [[campaignA, actionA, tenantA], [campaignB, actionB, tenantB]] as const) {
+      await owner.unsafe(
+        `INSERT INTO unified_campaigns
+          (id, tenant_id, idempotency_key, organization_id, objective, goal, locale, currency, total_budget_minor, minor_unit_scale, lifecycle, definition, evidence_references)
+         VALUES ($1, $2::uuid, $3, 'epic08-org', 'LEAD_GENERATION', 'Acceptance', 'en', 'SAR', 100000, 2, 'ACTIVE', '{}'::jsonb, '[]'::jsonb)`,
+        [campaignId, tenantId, `${campaignId}-key`],
+      );
+      await owner.unsafe(
+        `INSERT INTO external_marketing_actions
+          (id, tenant_id, organization_id, actor, agent_identity, workflow_run_id, recommendation_id, provider, account_id, campaign_id, action_type, target_lock_key, proposal, status, idempotency_key, requested_at)
+         VALUES ($1, $2::uuid, 'epic08-org', 'harness', 'harness', 'workflow', 'recommendation', 'EPIC08', 'account', 'campaign', 'PAUSE_CAMPAIGN', $3, '{}'::jsonb, 'VERIFIED', $4, now())`,
+        [actionId, tenantId, `${actionId}-target`, `${actionId}-key`],
+      );
+      await owner.unsafe(
+        `INSERT INTO campaign_performance_observations
+          (id, tenant_id, unified_campaign_id, channel_id, provider, provider_campaign_id, snapshot_id, idempotency_key, observation, period_start, period_end, collected_at, verification_state, freshness_state, normalization_version)
+         VALUES ($1, $2::uuid, $3, 'channel', 'EPIC08', 'provider-campaign', 'snapshot', $4, '{}'::jsonb, now() - interval '1 hour', now(), now(), 'VERIFIED', 'FRESH', 'v1')`,
+        [`${campaignId}-observation`, tenantId, campaignId, `${campaignId}-observation-key`],
+      );
+      await owner.unsafe(
+        `INSERT INTO campaign_performance_aggregates (id, tenant_id, unified_campaign_id, aggregate, generated_at)
+         VALUES ($1, $2::uuid, $3, '{}'::jsonb, now())`, [`${campaignId}-aggregate`, tenantId, campaignId]);
+      await owner.unsafe(
+        `INSERT INTO campaign_performance_diagnostics (id, tenant_id, unified_campaign_id, type, diagnostic, generated_at)
+         VALUES ($1, $2::uuid, $3, 'INSUFFICIENT_EVIDENCE', '{}'::jsonb, now())`, [`${campaignId}-diagnostic`, tenantId, campaignId]);
+      await owner.unsafe(
+        `INSERT INTO campaign_performance_anomalies (id, tenant_id, unified_campaign_id, type, anomaly, generated_at)
+         VALUES ($1, $2::uuid, $3, 'SPEND_SPIKE', '{}'::jsonb, now())`, [`${campaignId}-anomaly`, tenantId, campaignId]);
+      await owner.unsafe(
+        `INSERT INTO campaign_optimization_recommendations (id, tenant_id, unified_campaign_id, action_type, recommendation, requires_approval, expires_at)
+         VALUES ($1, $2::uuid, $3, 'PAUSE_CAMPAIGN', '{}'::jsonb, true, now() + interval '1 day')`, [`${campaignId}-recommendation`, tenantId, campaignId]);
+      await owner.unsafe(
+        `INSERT INTO campaign_optimization_simulations (id, tenant_id, unified_campaign_id, recommendation_id, simulation)
+         VALUES ($1, $2::uuid, $3, $4, '{}'::jsonb)`, [`${campaignId}-simulation`, tenantId, campaignId, `${campaignId}-recommendation`]);
+      await owner.unsafe(
+        `INSERT INTO campaign_optimization_outcomes (id, tenant_id, unified_campaign_id, recommendation_id, external_action_id, outcome, measured_at)
+         VALUES ($1, $2::uuid, $3, $4, $5, '{}'::jsonb, now())`, [`${campaignId}-outcome`, tenantId, campaignId, `${campaignId}-recommendation`, actionId]);
+      await owner.unsafe(
+        `INSERT INTO campaign_optimization_learning (id, tenant_id, unified_campaign_id, recommendation_id, learning, rule_version)
+         VALUES ($1, $2::uuid, $3, $4, '{}'::jsonb, 'V1')`, [`${campaignId}-learning`, tenantId, campaignId, `${campaignId}-recommendation`]);
+    }
+
+    recordStep('tenant_rls_and_learning_isolation');
+    for (const table of tables) {
+      await withAppTransaction(databaseUrl, tenantA, async (transaction) => {
+        const visible = rows(await validationTransactionUnsafe(transaction, `SELECT tenant_id::text FROM ${table} WHERE id LIKE $1 ORDER BY id`, [`${prefix}%`], recordSql));
+        assert.deepEqual(visible.map((row) => row.tenant_id), [tenantA], `${table} must isolate tenant A`);
+      });
+      await withAppTransaction(databaseUrl, tenantB, async (transaction) => {
+        const visible = rows(await validationTransactionUnsafe(transaction, `SELECT tenant_id::text FROM ${table} WHERE id LIKE $1 ORDER BY id`, [`${prefix}%`], recordSql));
+        assert.deepEqual(visible.map((row) => row.tenant_id), [tenantB], `${table} must isolate tenant B`);
+      });
+    }
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(
+      `INSERT INTO campaign_optimization_learning (id, tenant_id, unified_campaign_id, recommendation_id, learning, rule_version)
+       VALUES ('epic08-cross-tenant-learning', $1::uuid, $2, $3, '{}'::jsonb, 'V1')`,
+      [tenantB, campaignB, `${campaignB}-recommendation`],
+    )));
+
+    recordStep('observation_idempotency_concurrency');
+    const idempotencyKey = `${prefix}concurrent-observation`;
+    const attempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(
+      `INSERT INTO campaign_performance_observations
+        (id, tenant_id, unified_campaign_id, channel_id, provider, provider_campaign_id, snapshot_id, idempotency_key, observation, period_start, period_end, collected_at, verification_state, freshness_state, normalization_version)
+       VALUES ($1, $2::uuid, $3, 'channel', 'EPIC08', 'concurrent', 'snapshot', $4, '{}'::jsonb, now(), now(), now(), 'VERIFIED', 'FRESH', 'v1')
+       ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`,
+      [`${prefix}concurrent-${attempt}`, tenantA, campaignA, idempotencyKey],
+    )))));
+    const created = attempts.filter((result) => result.length === 1).length;
+    assert.equal(created, 1, 'exactly one idempotent observation may persist concurrently');
+    recordDiagnostics({ epic08ObservationAttempts: 2, epic08ObservationCreated: created });
+
+    recordStep('persistence_store_contract');
+    await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+      const store = new PersistentPerformanceOptimizationStore(transaction);
+      const learning = await store.listLearning(epic05Context(tenantA), campaignA);
+      assert.equal(learning.length, 1, 'persistent optimization store must read only tenant-scoped learning');
+    });
+
+    recordStep('fixture_cleanup');
+    for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]);
+    await owner.unsafe(`DELETE FROM external_marketing_actions WHERE id LIKE $1`, [`${prefix}%`]);
+    await owner.unsafe(`DELETE FROM unified_campaigns WHERE id LIKE $1`, [`${prefix}%`]);
+    const remaining = one(await owner.unsafe(`
+      SELECT (${tables.map((table) => `(SELECT count(*) FROM ${table} WHERE id LIKE '${prefix}%')`).join(' + ')})::int AS count
+    `));
+    assert.equal(Number(remaining.count), 0, 'EPIC08 acceptance fixtures must be removed');
+    cleanup = true;
+    return { migrationLedgerEntries: 1, rlsTables: tables.length, observationIdempotency: { attempts: 2, created, duplicates: 2 - created }, learningIsolation: 'PASS', cleanup: 'PASS' };
+  } finally {
+    if (!cleanup) {
+      for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]);
+      await owner.unsafe(`DELETE FROM external_marketing_actions WHERE id LIKE $1`, [`${prefix}%`]);
+      await owner.unsafe(`DELETE FROM unified_campaigns WHERE id LIKE $1`, [`${prefix}%`]);
+    }
+  }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -2693,12 +2849,14 @@ async function main(): Promise<void> {
   const index0022 = journal.findIndex((entry) => entry.tag === '0022_governed_external_marketing_actions');
   const index0023 = journal.findIndex((entry) => entry.tag === '0023_external_action_reliability');
   const index0024 = journal.findIndex((entry) => entry.tag === '0024_unified_campaign_orchestration');
+  const index0025 = journal.findIndex((entry) => entry.tag === '0025_cross_channel_performance_optimization');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
   assert.equal(index0022, index0021 + 1, '0022 must directly follow 0021 in the canonical journal');
   assert.equal(index0023, index0022 + 1, '0023 must directly follow 0022 in the canonical journal');
   assert.equal(index0024, index0023 + 1, '0024 must directly follow 0023 in the canonical journal');
+  assert.equal(index0025, index0024 + 1, '0025 must directly follow 0024 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -2723,7 +2881,7 @@ async function main(): Promise<void> {
       owner as unknown as JournalMigrationClient,
       journalMigrations.slice(index0023),
     );
-    // A second canonical-runner invocation must safely observe the 0023/0024 ledger rows.
+    // A second canonical-runner invocation must safely observe the 0023/0025 ledger rows.
     await applyJournalMigrations(
       owner as unknown as JournalMigrationClient,
       journalMigrations.slice(index0023),
@@ -2803,6 +2961,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC07_STEP' },
     );
+    const epic08Proof = await executePhase1ValidationCheck(
+      'epic08_cross_channel_performance_optimization',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic08CrossChannelPerformanceOptimization(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC08_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -2817,6 +2982,7 @@ async function main(): Promise<void> {
           migration0022: 'PASS',
           migration0023: 'PASS',
           migration0024: 'PASS',
+          migration0025: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -2851,12 +3017,18 @@ async function main(): Promise<void> {
           epic07Rls: 'PASS',
           epic07Idempotency: 'PASS',
           epic07FixtureCleanup: 'PASS',
+          epic08Persistence: 'PASS',
+          epic08Rls: 'PASS',
+          epic08ObservationIdempotency: 'PASS',
+          epic08LearningIsolation: 'PASS',
+          epic08FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
         epic03: epic03Proof,
         epic05: epic05Proof,
         epic07: epic07Proof,
+        epic08: epic08Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',
