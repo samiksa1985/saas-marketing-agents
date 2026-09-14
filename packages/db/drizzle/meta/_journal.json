@@ -183,6 +183,13 @@
       "when": 1788629864180,
       "tag": "0025_cross_channel_performance_optimization",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788629864181,
+      "tag": "0026_customer_acquisition_revenue_intelligence",
+      "breakpoints": true
     }
   ]
 }

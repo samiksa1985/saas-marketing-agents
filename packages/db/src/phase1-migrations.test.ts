@@ -65,6 +65,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0023_external_action_reliability',
     '0024_unified_campaign_orchestration',
     '0025_cross_channel_performance_optimization',
+    '0026_customer_acquisition_revenue_intelligence',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -196,6 +197,32 @@ test('0025 persists provider-neutral performance evidence and governed optimizat
   assert.doesNotMatch(migration, /refresh_token|access_token|client_secret|developer_token|api_key|password/i);
   assert.match(schema, /export const campaignPerformanceObservations = pgTable/);
   assert.match(schema, /export const campaignOptimizationLearning = pgTable/);
+});
+
+test('0026 persists provider-neutral acquisition and revenue intelligence with RLS and idempotency', () => {
+  const migration = source('0026_customer_acquisition_revenue_intelligence.sql');
+  const schema = source('../src/schema.ts');
+  for (const table of [
+    'customer_identities', 'customer_identity_identifiers', 'customer_identity_edges', 'customer_identity_aliases',
+    'customer_leads', 'customer_lead_capture_quarantine', 'customer_lead_sources', 'customer_lead_identity_links', 'customer_lead_engagement_signals',
+    'customer_lead_qualification_assessments', 'customer_conversation_threads', 'customer_conversation_participants',
+    'revenue_opportunities', 'revenue_events', 'revenue_attribution_assessments', 'customer_funnel_transitions',
+    'acquisition_revenue_diagnostics', 'lead_routing_recommendations', 'acquisition_data_quality_assessments',
+    'customer_provider_capabilities',
+  ]) {
+    assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+    assert.match(migration, /ENABLE ROW LEVEL SECURITY/);
+  }
+  assert.match(migration, /customer_leads_tenant_idempotency_uidx/);
+  assert.match(migration, /customer_lead_quarantine_tenant_idempotency_uidx/);
+  assert.match(migration, /revenue_event_tenant_idempotency_uidx/);
+  assert.match(migration, /customer_identity_identifier_tenant_value_uidx/);
+  assert.match(migration, /^BEGIN;/m); assert.match(migration, /COMMIT;\s*$/m);
+  assert.doesNotMatch(migration, /refresh_token|access_token|client_secret|developer_token|api_key|password/i);
+  assert.match(schema, /export const customerLeads = pgTable/);
+  assert.match(schema, /export const customerLeadCaptureQuarantine = pgTable/);
+  assert.match(schema, /export const customerIdentities = pgTable/);
+  assert.match(schema, /export const revenueEvents = pgTable/);
 });
 
 test('EPIC05 PostgreSQL fixtures use the same controlled clock as their lease claims', () => {

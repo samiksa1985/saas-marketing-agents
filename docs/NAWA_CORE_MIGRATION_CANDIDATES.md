@@ -19,6 +19,8 @@ IP. No Core runtime dependency is introduced here.
 | Campaign orchestration ports | EPIC07 `CampaignProviderCapabilityRegistry`, workflow binding, and existing action/policy/evidence ports | Unified campaign model, objectives, allocation rationale, provider budget semantics, campaign performance, and optimization remain Growth IP | High / high | campaign-orchestration provider / capability registry | Candidate only after another product proves the same provider-neutral contract |
 | Performance intelligence ports | EPIC08 canonical telemetry normalization, attribution V1, diagnostics/anomalies, recommendations, simulations, outcomes, and learning records | Metric semantics, campaign evidence, optimization rules, and recommendation rationale remain Growth IP | High / high | evidence provider, model provider, audit provider, memory provider | Candidate only after a second product proves identical metric and governance semantics |
 | Future customer-growth capability registry | EPIC08 design-only `FutureGrowthCapabilityRegistry` for CRM, lead management, conversations, AI receptionist, reputation/reviews, local presence, and multi-location growth | Customer lifecycle policy, provider mappings, and growth recommendations remain Growth IP | Medium / medium | capability provider registry | Contract-only; do not migrate or adopt a vendor yet |
+| Customer identity and CRM capability ports | EPIC09 canonical lead/identity graph, `CRMProvider`, tenant capability records, consent/evidence contracts | Identity resolution policy, qualification, acquisition, revenue, campaign linkage, CRM mapping, and routing remain Growth IP | High / high | identity provider, CRM capability provider, evidence provider | Candidate only after another product proves the same first-party lifecycle semantics |
+| Revenue intelligence evidence ports | EPIC09 opportunity, verified revenue event, attribution, funnel, diagnostic, and routing-recommendation contracts | Revenue semantics, currency policy, attribution limits, sales funnel diagnostics, and growth rules remain Growth IP | High / high | evidence/memory/audit provider | Preserve local implementation; no Core migration now |
 
 ## Boundaries preserved
 
@@ -34,5 +36,11 @@ and `WorkflowProvider` compatibility through narrow local ports. The design-only
 future capability registry has no Vendasta, Dynamics, Salesforce, HubSpot, CRM,
 conversation, receptionist, review, or location implementation and no Core
 runtime dependency.
+
+EPIC09 preserves future `IdentityProvider`, `PolicyProvider`, `EvidenceProvider`,
+`ApprovalProvider`, `AuditProvider`, `WorkflowProvider`, `SecretProvider`, and
+`MemoryProvider` seams while retaining Growth-specific customer acquisition,
+qualification, CRM mapping, funnel, attribution, and revenue intelligence IP.
+No NAWA Core migration or vendor dependency is performed.
 
 Premature Core migration performed: **NO**.

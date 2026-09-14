@@ -118,6 +118,14 @@ ledger/eight-table RLS/observation-idempotency/tenant-learning/fixture-cleanup
 checks, and one real concurrent action owner with one PostgreSQL conflict. It
 must not print a pass record after a failed migration or failed assertion.
 
+The journal now also includes `0026_customer_acquisition_revenue_intelligence`.
+The verifier requires migration count 27, latest migration 0026, and EPIC09
+migration-ledger, twenty-table RLS, tenant A/B, cross-tenant/missing-context
+denial, lead idempotency, identity deduplication, revenue-event idempotency,
+persistence-scope, and fixture-cleanup evidence. Until a new local disposable
+run produces those exact checks as `PASS`, EPIC09 PostgreSQL evidence is
+`PENDING_LOCAL_RUN`.
+
 The prior Phase-1 closeout evidence through 0021 remains valid for its bounded
 scope. A fresh fail-closed result through 0022 has now passed for EPIC-03;
 see `EPIC03_POSTGRESQL_EVIDENCE.md`. The runbook remains a reproducible

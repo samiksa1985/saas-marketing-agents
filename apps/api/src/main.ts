@@ -32,6 +32,7 @@ import { ProductSurfaceController, ProductSurfaceService } from './product-surfa
 import { ExternalActionsController } from './external-actions.controller.js';
 import { UnifiedCampaignsController } from './unified-campaigns.controller.js';
 import { PerformanceOptimizationController } from './performance-optimization.controller.js';
+import { CustomerAcquisitionRevenueController } from './customer-acquisition-revenue.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
 import {
   ExternalActionOperationsController,
@@ -50,6 +51,10 @@ import {
   PERFORMANCE_OPTIMIZATION_APPLICATION_SERVICE,
   PerformanceOptimizationApplicationService,
 } from './performance-optimization.application.js';
+import {
+  CUSTOMER_ACQUISITION_REVENUE_APPLICATION_SERVICE,
+  CustomerAcquisitionRevenueApplicationService,
+} from './customer-acquisition-revenue.application.js';
 import { createApiAuthProvider } from './auth-provider.factory.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
@@ -153,7 +158,7 @@ const externalActionProviders = new ExternalActionProviderRegistry({
 });
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,ExternalActionPoliciesController,ExternalActionOperationsController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[
     AppService,
     RegistryService,
@@ -211,6 +216,16 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
     {
       provide: PERFORMANCE_OPTIMIZATION_APPLICATION_SERVICE,
       useExisting: PerformanceOptimizationApplicationService,
+    },
+    {
+      provide: CustomerAcquisitionRevenueApplicationService,
+      useFactory: (databaseFacade: typeof tenantDatabase) =>
+        new CustomerAcquisitionRevenueApplicationService(databaseFacade),
+      inject: [API_TENANT_DATABASE],
+    },
+    {
+      provide: CUSTOMER_ACQUISITION_REVENUE_APPLICATION_SERVICE,
+      useExisting: CustomerAcquisitionRevenueApplicationService,
     },
     {
       provide: ExternalActionOperationsApplicationService,

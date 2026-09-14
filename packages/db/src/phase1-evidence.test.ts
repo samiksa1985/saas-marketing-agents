@@ -132,6 +132,7 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
         migration0023: 'PASS',
         migration0024: 'PASS',
         migration0025: 'PASS',
+        migration0026: 'PASS',
         rls: 'PASS',
         forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
         tenantIsolation: 'PASS',
@@ -145,6 +146,7 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
         epic05MigrationLedger: 'PASS', epic05Rls: 'PASS', epic05ConcurrentClaim: 'PASS', epic05LeaseRecovery: 'PASS', epic05Retry: 'PASS', epic05DeadLetter: 'PASS', epic05Replay: 'PASS', epic05ProviderHealth: 'PASS', epic05CredentialHealth: 'PASS', epic05OperatorRecovery: 'PASS', epic05WorkerBoundary: 'PASS', epic05SecretSafety: 'PASS', epic05FixtureCleanup: 'PASS',
         epic07Persistence: 'PASS', epic07Rls: 'PASS', epic07Idempotency: 'PASS', epic07FixtureCleanup: 'PASS',
         epic08Persistence: 'PASS', epic08Rls: 'PASS', epic08ObservationIdempotency: 'PASS', epic08LearningIsolation: 'PASS', epic08FixtureCleanup: 'PASS',
+        epic09Persistence: 'PASS', epic09Rls: 'PASS', epic09LeadIdempotency: 'PASS', epic09IdentityDeduplication: 'PASS', epic09CrossTenantDenial: 'PASS', epic09MissingContextDenial: 'PASS', epic09RevenueEventIdempotency: 'PASS', epic09FixtureCleanup: 'PASS',
       },
     }),
   );
@@ -196,10 +198,12 @@ test('verifier fails closed when a PASS result does not prove migration 0024 and
   assert.match(`${result.stdout}\n${result.stderr}`, /Migration 0024 is not verified as PASS/);
 });
 
-test('verifier fails closed when a PASS result omits migration 0025 or EPIC-08 checks', () => {
+test('verifier fails closed when a PASS result omits migration 0025/0026 or EPIC-08/09 checks', () => {
   const verifier = readFileSync(verifierPath, 'utf8');
   assert.match(verifier, /'Migration 0025' = 'migration0025'/);
-  assert.match(verifier, /EPIC-08 evidence does not prove the canonical 26-migration chain through 0025/);
+  assert.match(verifier, /'Migration 0026' = 'migration0026'/);
+  assert.match(verifier, /EPIC-09 evidence does not prove the canonical 27-migration chain through 0026/);
   assert.match(verifier, /epic08ObservationIdempotency/);
   assert.match(verifier, /epic08\.rlsTables -ne 8/);
+  assert.match(verifier, /epic09\.rlsTables -ne 20/);
 });

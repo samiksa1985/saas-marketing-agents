@@ -1378,6 +1378,121 @@ export const campaignOptimizationLearning = pgTable(
   ],
 );
 
+// EPIC-09: provider-neutral customer acquisition and revenue intelligence.
+// PII remains tenant-scoped and is never projected into operational logs.
+export const customerIdentities = pgTable('customer_identities', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  tenantId: tenant(() => tenants.id),
+  identityType: varchar('identity_type', { length: 32 }).notNull(),
+  identity: jsonb('identity').notNull(),
+  ...times,
+}, (table) => [uniqueIndex('customer_identities_tenant_id_uidx').on(table.tenantId, table.id)]);
+
+export const customerIdentityIdentifiers = pgTable('customer_identity_identifiers', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  tenantId: tenant(() => tenants.id),
+  identityId: varchar('identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  identifierType: varchar('identifier_type', { length: 64 }).notNull(),
+  normalizedValue: text('normalized_value').notNull(),
+  identifier: jsonb('identifier').notNull(),
+  ...times,
+}, (table) => [
+  uniqueIndex('customer_identity_identifier_tenant_value_uidx').on(table.tenantId, table.identifierType, table.normalizedValue),
+  index('customer_identity_identifier_tenant_identity_idx').on(table.tenantId, table.identityId),
+]);
+
+export const customerIdentityEdges = pgTable('customer_identity_edges', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id),
+  fromIdentityId: varchar('from_identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  toIdentityId: varchar('to_identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  resolution: varchar('resolution', { length: 32 }).notNull(), reason: text('reason').notNull(), confidence: real('confidence').notNull(),
+  evidenceRefs: jsonb('evidence_refs').notNull(), resolverVersion: varchar('resolver_version', { length: 64 }).notNull(), createdAt: times.createdAt,
+}, (table) => [uniqueIndex('customer_identity_edges_tenant_pair_uidx').on(table.tenantId, table.fromIdentityId, table.toIdentityId)]);
+
+export const customerIdentityAliases = pgTable('customer_identity_aliases', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id),
+  identityId: varchar('identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  alias: text('alias').notNull(), reason: text('reason').notNull(), evidenceRefs: jsonb('evidence_refs').notNull(), ...times,
+}, (table) => [uniqueIndex('customer_identity_aliases_tenant_identity_alias_uidx').on(table.tenantId, table.identityId, table.alias)]);
+
+export const customerLeads = pgTable('customer_leads', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+  source: varchar('source', { length: 96 }).notNull(), sourceProvider: varchar('source_provider', { length: 96 }), sourceCampaignId: varchar('source_campaign_id', { length: 255 }),
+  unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }), normalizedEmail: text('normalized_email'), normalizedPhone: text('normalized_phone'),
+  lead: jsonb('lead').notNull(), capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [
+  uniqueIndex('customer_leads_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+  index('customer_leads_tenant_campaign_idx').on(table.tenantId, table.unifiedCampaignId),
+  index('customer_leads_tenant_email_idx').on(table.tenantId, table.normalizedEmail),
+  index('customer_leads_tenant_phone_idx').on(table.tenantId, table.normalizedPhone),
+]);
+
+export const customerLeadSources = pgTable('customer_lead_sources', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  source: varchar('source', { length: 96 }).notNull(), sourceProvider: varchar('source_provider', { length: 96 }), sourceCampaignId: varchar('source_campaign_id', { length: 255 }), sourceRecord: jsonb('source_record').notNull(), capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('customer_lead_sources_tenant_lead_source_uidx').on(table.tenantId, table.leadId, table.id)]);
+
+export const customerLeadIdentityLinks = pgTable('customer_lead_identity_links', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  identityId: varchar('identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }), resolution: varchar('resolution', { length: 32 }).notNull(),
+  reason: text('reason').notNull(), confidence: real('confidence').notNull(), evidenceRefs: jsonb('evidence_refs').notNull(), resolverVersion: varchar('resolver_version', { length: 64 }).notNull(), createdAt: times.createdAt,
+}, (table) => [uniqueIndex('customer_lead_identity_link_tenant_pair_uidx').on(table.tenantId, table.leadId, table.identityId)]);
+
+export const customerLeadEngagementSignals = pgTable('customer_lead_engagement_signals', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  signalType: varchar('signal_type', { length: 64 }).notNull(), channel: varchar('channel', { length: 32 }), source: varchar('source', { length: 96 }).notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), confidence: real('confidence').notNull(), evidenceRefs: jsonb('evidence_refs').notNull(), ...times,
+}, (table) => [index('customer_lead_engagement_tenant_lead_occurred_idx').on(table.tenantId, table.leadId, table.occurredAt)]);
+
+export const customerLeadQualificationAssessments = pgTable('customer_lead_qualification_assessments', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  assessment: jsonb('assessment').notNull(), ruleVersion: varchar('rule_version', { length: 64 }).notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('customer_lead_qualification_tenant_lead_uidx').on(table.tenantId, table.leadId)]);
+
+export const customerConversationThreads = pgTable('customer_conversation_threads', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), channel: varchar('channel', { length: 32 }).notNull(), externalThreadId: varchar('external_thread_id', { length: 255 }),
+  thread: jsonb('thread').notNull(), startedAt: timestamp('started_at', { withTimezone: true }).notNull(), lastMessageAt: timestamp('last_message_at', { withTimezone: true }), ...times,
+}, (table) => [uniqueIndex('customer_conversation_thread_tenant_external_uidx').on(table.tenantId, table.channel, table.externalThreadId)]);
+
+export const customerConversationParticipants = pgTable('customer_conversation_participants', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), threadId: varchar('thread_id', { length: 255 }).notNull().references(() => customerConversationThreads.id, { onDelete: 'cascade' }),
+  identityId: varchar('identity_id', { length: 255 }).references(() => customerIdentities.id, { onDelete: 'set null' }), externalParticipantId: varchar('external_participant_id', { length: 255 }), participant: jsonb('participant').notNull(), ...times,
+}, (table) => [index('customer_conversation_participant_tenant_thread_idx').on(table.tenantId, table.threadId)]);
+
+export const revenueOpportunities = pgTable('revenue_opportunities', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), externalOpportunityId: varchar('external_opportunity_id', { length: 255 }), provider: varchar('provider', { length: 64 }).notNull(),
+  stage: varchar('stage', { length: 32 }).notNull(), status: varchar('status', { length: 32 }).notNull(), amountMinor: bigint('amount_minor', { mode: 'number' }), currency: varchar('currency', { length: 3 }), opportunity: jsonb('opportunity').notNull(), closedAt: timestamp('closed_at', { withTimezone: true }), ...times,
+}, (table) => [uniqueIndex('revenue_opportunity_tenant_provider_external_uidx').on(table.tenantId, table.provider, table.externalOpportunityId), index('revenue_opportunity_tenant_stage_idx').on(table.tenantId, table.stage)]);
+
+export const revenueEvents = pgTable('revenue_events', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), opportunityId: varchar('opportunity_id', { length: 255 }).references(() => revenueOpportunities.id, { onDelete: 'set null' }),
+  eventType: varchar('event_type', { length: 48 }).notNull(), amountMinor: bigint('amount_minor', { mode: 'number' }), currency: varchar('currency', { length: 3 }), externalEventId: varchar('external_event_id', { length: 255 }), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), verificationState: varchar('verification_state', { length: 16 }).notNull(), event: jsonb('event').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('revenue_event_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey), index('revenue_event_tenant_opportunity_idx').on(table.tenantId, table.opportunityId)]);
+
+export const revenueAttributionAssessments = pgTable('revenue_attribution_assessments', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), revenueEventId: varchar('revenue_event_id', { length: 255 }).notNull().references(() => revenueEvents.id, { onDelete: 'cascade' }),
+  opportunityId: varchar('opportunity_id', { length: 255 }).references(() => revenueOpportunities.id, { onDelete: 'set null' }), model: varchar('model', { length: 48 }).notNull(), confidence: real('confidence').notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('revenue_attribution_tenant_event_model_uidx').on(table.tenantId, table.revenueEventId, table.model)]);
+
+export const customerFunnelTransitions = pgTable('customer_funnel_transitions', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).references(() => customerLeads.id, { onDelete: 'set null' }), opportunityId: varchar('opportunity_id', { length: 255 }).references(() => revenueOpportunities.id, { onDelete: 'set null' }), fromStage: varchar('from_stage', { length: 32 }), toStage: varchar('to_stage', { length: 32 }).notNull(), sourceCampaignId: varchar('source_campaign_id', { length: 255 }), transition: jsonb('transition').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [index('customer_funnel_transition_tenant_stage_idx').on(table.tenantId, table.toStage, table.occurredAt)]);
+
+export const acquisitionRevenueDiagnostics = pgTable('acquisition_revenue_diagnostics', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), diagnosticType: varchar('diagnostic_type', { length: 64 }).notNull(), severity: varchar('severity', { length: 16 }).notNull(), diagnostic: jsonb('diagnostic').notNull(), generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [index('acquisition_revenue_diagnostic_tenant_generated_idx').on(table.tenantId, table.generatedAt)]);
+
+export const leadRoutingRecommendations = pgTable('lead_routing_recommendations', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }), kind: varchar('kind', { length: 64 }).notNull(), recommendation: jsonb('recommendation').notNull(), createdAt: times.createdAt,
+}, (table) => [uniqueIndex('lead_routing_recommendation_tenant_lead_kind_uidx').on(table.tenantId, table.leadId, table.kind)]);
+
+export const acquisitionDataQualityAssessments = pgTable('acquisition_data_quality_assessments', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), subjectType: varchar('subject_type', { length: 32 }).notNull(), subjectId: varchar('subject_id', { length: 255 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [index('acquisition_data_quality_tenant_subject_idx').on(table.tenantId, table.subjectType, table.subjectId)]);
+
+export const customerProviderCapabilities = pgTable('customer_provider_capabilities', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), provider: varchar('provider', { length: 64 }).notNull(), enabled: boolean('enabled').notNull(), healthStatus: varchar('health_status', { length: 16 }).notNull(), capabilities: jsonb('capabilities').notNull(), ...times,
+}, (table) => [uniqueIndex('customer_provider_capability_tenant_provider_uidx').on(table.tenantId, table.provider)]);
+
 export const marketingOutcomeEvents = pgTable(
   'marketing_outcome_events',
   {
@@ -1925,6 +2040,12 @@ export const clientProfitabilityAssessments = pgTable('client_profitability_asse
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/** Quarantine stores only bounded failure metadata; it intentionally excludes the malformed PII payload. */
+export const customerLeadCaptureQuarantine = pgTable('customer_lead_capture_quarantine', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+  code: varchar('code', { length: 64 }).notNull(), reason: varchar('reason', { length: 128 }).notNull(), capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('customer_lead_quarantine_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey)]);
 
 export const financialScenarioSnapshots = pgTable('financial_scenario_snapshots', {
   id: uuid('id').defaultRandom().primaryKey(),

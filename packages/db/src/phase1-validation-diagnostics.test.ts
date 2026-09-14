@@ -202,6 +202,46 @@ test('EPIC08 schema validation passes the SQL recorder as validationUnsafe third
   assert.doesNotMatch(epic08, /validationUnsafe\([\s\S]*?ANY\(\$1::text\[\]\)[\s\S]*?\[tables\], recordSql\)/);
 });
 
+test('EPIC08 observation concurrency handles only the canonical provider snapshot duplicate and proves one replay result', () => {
+  const harness = readFileSync(
+    fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),
+    'utf8',
+  );
+  const start = harness.indexOf("recordStep('observation_idempotency_concurrency')");
+  const end = harness.indexOf("recordStep('persistence_store_contract')", start);
+  const concurrency = harness.slice(start, end);
+
+  assert.ok(start >= 0 && end > start, 'EPIC08 observation concurrency harness must exist');
+  assert.match(
+    concurrency,
+    /ON CONFLICT ON CONSTRAINT campaign_performance_observation_tenant_provider_snapshot_uidx\s+DO NOTHING RETURNING id/,
+  );
+  assert.doesNotMatch(concurrency, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING/);
+  assert.match(concurrency, /assert\.equal\(attempts\.length, 2/);
+  assert.match(concurrency, /assert\.equal\(Number\(canonical\.total\), 1/);
+  assert.match(concurrency, /assert\.equal\(Number\(canonical\.idempotency_matches\), 1/);
+});
+
+test('EPIC09 harness seeds the persistence adapter with canonical lead data and proves idempotency through database context', () => {
+  const harness = readFileSync(
+    fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),
+    'utf8',
+  );
+  const start = harness.indexOf('async function testEpic09CustomerAcquisitionRevenueIntelligence(');
+  const end = harness.indexOf('\nasync function main()', start);
+  const epic09 = harness.slice(start, end);
+
+  assert.ok(start >= 0 && end > start, 'EPIC09 harness must exist');
+  assert.match(epic09, /const leadPayload = \(tenantId: string, item: ReturnType<typeof fixture>\)/);
+  assert.match(epic09, /JSON\.stringify\(leadPayload\(tenantId, item\)\)/);
+  assert.match(epic09, /JSON\.stringify\(leadPayload\(tenantA, concurrentLead\)\)/);
+  assert.match(epic09, /assert\.equal\(Number\(canonicalLead\.total\), 1/);
+  assert.match(epic09, /assert\.equal\(Number\(canonicalIdentifier\.total\), 1/);
+  assert.match(epic09, /assert\.equal\(Number\(canonicalLink\.total\), 1/);
+  assert.match(epic09, /assert\.equal\(Number\(canonicalRevenue\.total\), 1/);
+  assert.match(epic09, /caller-provided Tenant B context must not bypass Tenant A database RLS context/);
+});
+
 test('marketing CRUD harness scopes each RLS operation to a transaction and reports its step', () => {
   const harness = readFileSync(
     fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),

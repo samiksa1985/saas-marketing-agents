@@ -26,6 +26,7 @@ import {
   PersistentExternalActionPolicyStore,
   PersistentExternalActionStore,
   PersistentPerformanceOptimizationStore,
+  PersistentCustomerAcquisitionRevenueStore,
   PersistentUnifiedCampaignStore,
 } from '../../marketing-os-persistence/src/index.js';
 import type { GovernedExternalAction } from '../../marketing-os-core/src/governed-external-action.js';
@@ -104,6 +105,16 @@ type Epic08Proof = {
   rlsTables: number;
   observationIdempotency: { attempts: number; created: number; duplicates: number };
   learningIsolation: 'PASS';
+  cleanup: 'PASS';
+};
+type Epic09Proof = {
+  migrationLedgerEntries: number;
+  rlsTables: number;
+  leadIdempotency: { attempts: number; created: number; duplicates: number };
+  identityDeduplication: { attempts: number; created: number; duplicates: number };
+  crossTenantDenied: 'PASS';
+  missingContextDenied: 'PASS';
+  revenueEventIdempotency: 'PASS';
   cleanup: 'PASS';
 };
 
@@ -403,11 +414,17 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'campaign_performance_observations', 'campaign_performance_aggregates',
         'campaign_performance_diagnostics', 'campaign_performance_anomalies',
         'campaign_optimization_recommendations', 'campaign_optimization_simulations',
-        'campaign_optimization_outcomes', 'campaign_optimization_learning'
+        'campaign_optimization_outcomes', 'campaign_optimization_learning',
+        'customer_identities', 'customer_identity_identifiers', 'customer_identity_edges', 'customer_identity_aliases',
+        'customer_leads', 'customer_lead_capture_quarantine', 'customer_lead_sources', 'customer_lead_identity_links', 'customer_lead_engagement_signals',
+        'customer_lead_qualification_assessments', 'customer_conversation_threads', 'customer_conversation_participants',
+        'revenue_opportunities', 'revenue_events', 'revenue_attribution_assessments', 'customer_funnel_transitions',
+        'acquisition_revenue_diagnostics', 'lead_routing_recommendations', 'acquisition_data_quality_assessments',
+        'customer_provider_capabilities'
       )
   `, recordSql),
   );
-  assert.equal(tables.length, 40, 'required canonical tables are missing');
+  assert.equal(tables.length, 60, 'required canonical tables are missing');
   const minorUnits = rows(
     await validationUnsafe(owner, `
     SELECT table_name, column_name, data_type
@@ -2801,12 +2818,27 @@ async function testEpic08CrossChannelPerformanceOptimization(
       `INSERT INTO campaign_performance_observations
         (id, tenant_id, unified_campaign_id, channel_id, provider, provider_campaign_id, snapshot_id, idempotency_key, observation, period_start, period_end, collected_at, verification_state, freshness_state, normalization_version)
        VALUES ($1, $2::uuid, $3, 'channel', 'EPIC08', 'concurrent', 'snapshot', $4, '{}'::jsonb, now(), now(), now(), 'VERIFIED', 'FRESH', 'v1')
-       ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`,
+       ON CONFLICT ON CONSTRAINT campaign_performance_observation_tenant_provider_snapshot_uidx
+       DO NOTHING RETURNING id`,
       [`${prefix}concurrent-${attempt}`, tenantA, campaignA, idempotencyKey],
     )))));
+    assert.equal(attempts.length, 2, 'EPIC08 must issue two concurrent observation attempts');
     const created = attempts.filter((result) => result.length === 1).length;
     assert.equal(created, 1, 'exactly one idempotent observation may persist concurrently');
-    recordDiagnostics({ epic08ObservationAttempts: 2, epic08ObservationCreated: created });
+    const canonical = one(await owner.unsafe(
+      `SELECT count(*)::int AS total,
+              count(*) FILTER (WHERE idempotency_key = $2)::int AS idempotency_matches
+         FROM campaign_performance_observations
+        WHERE tenant_id = $1::uuid
+          AND provider = 'EPIC08'
+          AND provider_campaign_id = 'concurrent'
+          AND snapshot_id = 'snapshot'
+          AND normalization_version = 'v1'`,
+      [tenantA, idempotencyKey],
+    ));
+    assert.equal(Number(canonical.total), 1, 'the provider snapshot race must leave one canonical observation');
+    assert.equal(Number(canonical.idempotency_matches), 1, 'the canonical observation must retain the replay idempotency key');
+    recordDiagnostics({ epic08ObservationAttempts: attempts.length, epic08ObservationCreated: created });
 
     recordStep('persistence_store_contract');
     await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
@@ -2834,6 +2866,137 @@ async function testEpic08CrossChannelPerformanceOptimization(
   }
 }
 
+/** Real PostgreSQL acceptance for provider-neutral customer acquisition and revenue intelligence. */
+async function testEpic09CustomerAcquisitionRevenueIntelligence(
+  owner: SqlClient,
+  databaseUrl: string,
+  recordSql: SqlRecorder,
+  recordStep: (step: string) => void,
+  recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void,
+): Promise<Epic09Proof> {
+  const prefix = 'epic09-acceptance-';
+  const tables = [
+    'customer_identities', 'customer_identity_identifiers', 'customer_identity_edges', 'customer_identity_aliases',
+    'customer_leads', 'customer_lead_capture_quarantine', 'customer_lead_sources', 'customer_lead_identity_links', 'customer_lead_engagement_signals',
+    'customer_lead_qualification_assessments', 'customer_conversation_threads', 'customer_conversation_participants',
+    'revenue_opportunities', 'revenue_events', 'revenue_attribution_assessments', 'customer_funnel_transitions',
+    'acquisition_revenue_diagnostics', 'lead_routing_recommendations', 'acquisition_data_quality_assessments',
+    'customer_provider_capabilities',
+  ] as const;
+  const fixture = (tenantId: string) => ({
+    identity: `${prefix}${tenantId.slice(0, 8)}-identity`, lead: `${prefix}${tenantId.slice(0, 8)}-lead`,
+    thread: `${prefix}${tenantId.slice(0, 8)}-thread`, opportunity: `${prefix}${tenantId.slice(0, 8)}-opportunity`, event: `${prefix}${tenantId.slice(0, 8)}-event`,
+  });
+  const leadPayload = (tenantId: string, item: ReturnType<typeof fixture>) => ({
+    leadId: item.lead,
+    tenantId,
+    externalLeadIds: [`${item.lead}-external`],
+    source: 'FORM',
+    capturedAt: '2026-09-14T00:00:00.000Z',
+    firstSeenAt: '2026-09-14T00:00:00.000Z',
+    lastSeenAt: '2026-09-14T00:00:00.000Z',
+    status: 'NEW',
+    lifecycleStage: 'LEAD',
+    sourceMetadata: { fixture: 'epic09' },
+    consentState: 'UNKNOWN',
+    consentEvidenceRefs: [],
+    evidenceRefs: [],
+    confidence: 1,
+    createdAt: '2026-09-14T00:00:00.000Z',
+    updatedAt: '2026-09-14T00:00:00.000Z',
+  });
+  let cleanup = false;
+  try {
+    recordStep('schema_and_migration_ledger');
+    const found = rows(await validationUnsafe(owner, `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN (${tables.map((table) => `'${table}'`).join(', ')})`, recordSql));
+    assert.equal(found.length, tables.length, 'EPIC09 acquisition/revenue tables are missing');
+    const ledger = one(await owner.unsafe(`SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at = 1788629864181`));
+    assert.equal(Number(ledger.count), 1, 'migration 0026 must have exactly one ledger record');
+
+    recordStep('seed_tenant_rows');
+    for (const tenantId of [tenantA, tenantB]) {
+      const item = fixture(tenantId);
+      await owner.unsafe(`INSERT INTO customer_identities (id, tenant_id, identity_type, identity) VALUES ($1, $2::uuid, 'PERSON', '{}'::jsonb)`, [item.identity, tenantId]);
+      await owner.unsafe(`INSERT INTO customer_identity_identifiers (id, tenant_id, identity_id, identifier_type, normalized_value, identifier) VALUES ($1, $2::uuid, $3, 'EMAIL', $4, '{}'::jsonb)`, [`${item.identity}-identifier`, tenantId, item.identity, `${tenantId.slice(0, 8)}@example.test`]);
+      await owner.unsafe(`INSERT INTO customer_identity_edges (id, tenant_id, from_identity_id, to_identity_id, resolution, reason, confidence, evidence_refs, resolver_version) VALUES ($1, $2::uuid, $3, $3, 'EXACT_MATCH', 'fixture', 1, '[]'::jsonb, 'V1')`, [`${item.identity}-edge`, tenantId, item.identity]);
+      await owner.unsafe(`INSERT INTO customer_identity_aliases (id, tenant_id, identity_id, alias, reason, evidence_refs) VALUES ($1, $2::uuid, $3, 'alias', 'fixture', '[]'::jsonb)`, [`${item.identity}-alias`, tenantId, item.identity]);
+      await owner.unsafe(`INSERT INTO customer_leads (id, tenant_id, idempotency_key, source, lead, captured_at) VALUES ($1, $2::uuid, $3, 'FORM', $4::jsonb, now())`, [item.lead, tenantId, `${item.lead}-key`, JSON.stringify(leadPayload(tenantId, item))]);
+      await owner.unsafe(`INSERT INTO customer_lead_capture_quarantine (id, tenant_id, idempotency_key, code, reason, captured_at) VALUES ($1, $2::uuid, $3, 'LEAD_CAPTURE_MALFORMED', 'fixture', now())`, [`${item.lead}-quarantine`, tenantId, `${item.lead}-quarantine-key`]);
+      await owner.unsafe(`INSERT INTO customer_lead_sources (id, tenant_id, lead_id, source, source_record, captured_at) VALUES ($1, $2::uuid, $3, 'FORM', '{}'::jsonb, now())`, [`${item.lead}-source`, tenantId, item.lead]);
+      await owner.unsafe(`INSERT INTO customer_lead_identity_links (id, tenant_id, lead_id, identity_id, resolution, reason, confidence, evidence_refs, resolver_version) VALUES ($1, $2::uuid, $3, $4, 'EXACT_MATCH', 'fixture', 1, '[]'::jsonb, 'V1')`, [`${item.lead}-link`, tenantId, item.lead, item.identity]);
+      await owner.unsafe(`INSERT INTO customer_lead_engagement_signals (id, tenant_id, lead_id, signal_type, source, occurred_at, confidence, evidence_refs) VALUES ($1, $2::uuid, $3, 'REQUESTED_DEMO', 'fixture', now(), 1, '[]'::jsonb)`, [`${item.lead}-signal`, tenantId, item.lead]);
+      await owner.unsafe(`INSERT INTO customer_lead_qualification_assessments (id, tenant_id, lead_id, assessment, rule_version, assessed_at) VALUES ($1, $2::uuid, $3, '{}'::jsonb, 'QUALIFICATION_V1', now())`, [`${item.lead}-qualification`, tenantId, item.lead]);
+      await owner.unsafe(`INSERT INTO customer_conversation_threads (id, tenant_id, channel, thread, started_at) VALUES ($1, $2::uuid, 'WEB_CHAT', '{}'::jsonb, now())`, [item.thread, tenantId]);
+      await owner.unsafe(`INSERT INTO customer_conversation_participants (id, tenant_id, thread_id, identity_id, participant) VALUES ($1, $2::uuid, $3, $4, '{}'::jsonb)`, [`${item.thread}-participant`, tenantId, item.thread, item.identity]);
+      await owner.unsafe(`INSERT INTO revenue_opportunities (id, tenant_id, provider, stage, status, amount_minor, currency, opportunity) VALUES ($1, $2::uuid, 'NAWA_NATIVE', 'PROSPECTING', 'OPEN', 1000, 'SAR', '{}'::jsonb)`, [item.opportunity, tenantId]);
+      await owner.unsafe(`INSERT INTO revenue_events (id, tenant_id, opportunity_id, event_type, amount_minor, currency, idempotency_key, verification_state, event, occurred_at) VALUES ($1, $2::uuid, $3, 'BOOKED_REVENUE', 1000, 'SAR', $4, 'VERIFIED', '{}'::jsonb, now())`, [item.event, tenantId, item.opportunity, `${item.event}-key`]);
+      await owner.unsafe(`INSERT INTO revenue_attribution_assessments (id, tenant_id, revenue_event_id, opportunity_id, model, confidence, assessment, assessed_at) VALUES ($1, $2::uuid, $3, $4, 'LEAD_SOURCE', 1, '{}'::jsonb, now())`, [`${item.event}-attribution`, tenantId, item.event, item.opportunity]);
+      await owner.unsafe(`INSERT INTO customer_funnel_transitions (id, tenant_id, lead_id, opportunity_id, to_stage, transition, occurred_at) VALUES ($1, $2::uuid, $3, $4, 'LEAD', '{}'::jsonb, now())`, [`${item.lead}-transition`, tenantId, item.lead, item.opportunity]);
+      await owner.unsafe(`INSERT INTO acquisition_revenue_diagnostics (id, tenant_id, diagnostic_type, severity, diagnostic, generated_at) VALUES ($1, $2::uuid, 'DATA_QUALITY', 'INFO', '{}'::jsonb, now())`, [`${item.lead}-diagnostic`, tenantId]);
+      await owner.unsafe(`INSERT INTO lead_routing_recommendations (id, tenant_id, lead_id, kind, recommendation) VALUES ($1, $2::uuid, $3, 'NURTURE', '{}'::jsonb)`, [`${item.lead}-routing`, tenantId, item.lead]);
+      await owner.unsafe(`INSERT INTO acquisition_data_quality_assessments (id, tenant_id, subject_type, subject_id, assessment, assessed_at) VALUES ($1, $2::uuid, 'LEAD', $3, '{}'::jsonb, now())`, [`${item.lead}-quality`, tenantId, item.lead]);
+      await owner.unsafe(`INSERT INTO customer_provider_capabilities (id, tenant_id, provider, enabled, health_status, capabilities) VALUES ($1, $2::uuid, 'NAWA_NATIVE', true, 'HEALTHY', '{}'::jsonb)`, [`${item.lead}-capability`, tenantId]);
+    }
+
+    recordStep('tenant_rls_cross_tenant_and_missing_context');
+    for (const table of tables) for (const tenantId of [tenantA, tenantB]) await withAppTransaction(databaseUrl, tenantId, async (transaction) => {
+      const visible = rows(await validationTransactionUnsafe(transaction, `SELECT tenant_id::text FROM ${table} WHERE id LIKE $1 ORDER BY id`, [`${prefix}%`], recordSql));
+      assert.deepEqual(visible.map((row) => row.tenant_id), [tenantId], `${table} must isolate ${tenantId}`);
+    });
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(`INSERT INTO customer_leads (id, tenant_id, idempotency_key, source, lead, captured_at) VALUES ('epic09-cross-tenant', $1::uuid, 'denied', 'FORM', '{}'::jsonb, now())`, [tenantB])));
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(`INSERT INTO customer_lead_identity_links (id, tenant_id, lead_id, identity_id, resolution, reason, confidence, evidence_refs, resolver_version) VALUES ('epic09-cross-tenant-link', $1::uuid, $2, $3, 'EXACT_MATCH', 'denied', 1, '[]'::jsonb, 'V1')`, [tenantB, fixture(tenantB).lead, fixture(tenantB).identity])));
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(`INSERT INTO revenue_opportunities (id, tenant_id, provider, stage, status, opportunity) VALUES ('epic09-cross-tenant-crm-link', $1::uuid, 'CUSTOM', 'PROSPECTING', 'OPEN', '{}'::jsonb)`, [tenantB])));
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, undefined, (transaction) => transaction.unsafe(`INSERT INTO customer_leads (id, tenant_id, idempotency_key, source, lead, captured_at) VALUES ('epic09-missing-context', $1::uuid, 'missing', 'FORM', '{}'::jsonb, now())`, [tenantA])));
+
+    recordStep('lead_and_identity_idempotency');
+    const leadKey = `${prefix}concurrent-lead`;
+    const leadAttempts = await Promise.all([0, 1].map((attempt) => {
+      const concurrentLead = { ...fixture(tenantA), lead: `${prefix}concurrent-lead-${attempt}` };
+      return withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(
+        `INSERT INTO customer_leads (id, tenant_id, idempotency_key, source, lead, captured_at)
+         VALUES ($1, $2::uuid, $3, 'FORM', $4::jsonb, now())
+         ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`,
+        [concurrentLead.lead, tenantA, leadKey, JSON.stringify(leadPayload(tenantA, concurrentLead))],
+      )));
+    }));
+    const leadCreated = leadAttempts.filter((result) => result.length === 1).length; assert.equal(leadCreated, 1, 'lead capture idempotency must create one row');
+    const canonicalLead = one(await owner.unsafe(`SELECT count(*)::int AS total, count(*) FILTER (WHERE idempotency_key = $2)::int AS idempotency_matches FROM customer_leads WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, leadKey]));
+    assert.equal(Number(canonicalLead.total), 1, 'lead idempotency must leave one canonical row');
+    assert.equal(Number(canonicalLead.idempotency_matches), 1, 'canonical lead must retain its idempotency key');
+    const concurrentIdentityId = `${prefix}concurrent-identity`;
+    await owner.unsafe(`INSERT INTO customer_identities (id, tenant_id, identity_type, identity) VALUES ($1, $2::uuid, 'PERSON', '{}'::jsonb)`, [concurrentIdentityId, tenantA]);
+    const identityAttempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => {
+      return rows(await transaction.unsafe(`INSERT INTO customer_identity_identifiers (id, tenant_id, identity_id, identifier_type, normalized_value, identifier) VALUES ($1, $2::uuid, $3, 'EMAIL', 'dedupe@example.test', '{}'::jsonb) ON CONFLICT (tenant_id, identifier_type, normalized_value) DO NOTHING RETURNING id`, [`${concurrentIdentityId}-identifier-${attempt}`, tenantA, concurrentIdentityId]));
+    })));
+    const identityCreated = identityAttempts.filter((result) => result.length === 1).length; assert.equal(identityCreated, 1, 'exact normalized identity identifier must deduplicate');
+    const canonicalIdentifier = one(await owner.unsafe(`SELECT count(*)::int AS total FROM customer_identity_identifiers WHERE tenant_id = $1::uuid AND identifier_type = 'EMAIL' AND normalized_value = 'dedupe@example.test'`, [tenantA]));
+    assert.equal(Number(canonicalIdentifier.total), 1, 'identity deduplication must leave one normalized identifier');
+    const linkAttempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(`INSERT INTO customer_lead_identity_links (id, tenant_id, lead_id, identity_id, resolution, reason, confidence, evidence_refs, resolver_version) VALUES ($1, $2::uuid, $3, $4, 'EXACT_MATCH', 'concurrent-fixture', 1, '[]'::jsonb, 'V1') ON CONFLICT (tenant_id, lead_id, identity_id) DO NOTHING RETURNING id`, [`${prefix}concurrent-link-${attempt}`, tenantA, fixture(tenantA).lead, concurrentIdentityId])))));
+    const linkCreated = linkAttempts.filter((result) => result.length === 1).length;
+    assert.equal(linkCreated, 1, 'identity link idempotency must create one canonical link');
+    const canonicalLink = one(await owner.unsafe(`SELECT count(*)::int AS total FROM customer_lead_identity_links WHERE tenant_id = $1::uuid AND lead_id = $2 AND identity_id = $3`, [tenantA, fixture(tenantA).lead, concurrentIdentityId]));
+    assert.equal(Number(canonicalLink.total), 1, 'identity link idempotency must leave one persisted link');
+    const revenueKey = `${prefix}concurrent-revenue`;
+    const revenueAttempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(`INSERT INTO revenue_events (id, tenant_id, event_type, idempotency_key, verification_state, event, occurred_at) VALUES ($1, $2::uuid, 'BOOKED_REVENUE', $3, 'VERIFIED', '{}'::jsonb, now()) ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`, [`${prefix}concurrent-revenue-${attempt}`, tenantA, revenueKey])))));
+    const revenueCreated = revenueAttempts.filter((result) => result.length === 1).length;
+    assert.equal(revenueCreated, 1, 'revenue event idempotency must create one canonical event');
+    const canonicalRevenue = one(await owner.unsafe(`SELECT count(*)::int AS total FROM revenue_events WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, revenueKey]));
+    assert.equal(Number(canonicalRevenue.total), 1, 'revenue event idempotency must leave one persisted event');
+    await withAppDrizzleTransaction(databaseUrl, tenantA, recordSql, async (transaction) => {
+      const store = new PersistentCustomerAcquisitionRevenueStore(transaction);
+      assert.equal((await store.listLeads(epic05Context(tenantA))).some((lead) => lead.leadId === fixture(tenantA).lead && lead.tenantId === tenantA), true, 'persistent acquisition store must return the canonical Tenant A lead shape');
+      assert.deepEqual(await store.listLeads(epic05Context(tenantB)), [], 'caller-provided Tenant B context must not bypass Tenant A database RLS context');
+    });
+    recordDiagnostics({ epic09LeadAttempts: leadAttempts.length, epic09LeadCreated: leadCreated, epic09IdentityAttempts: identityAttempts.length, epic09IdentityCreated: identityCreated, epic09LinkAttempts: linkAttempts.length, epic09LinkCreated: linkCreated, epic09RevenueAttempts: revenueAttempts.length, epic09RevenueCreated: revenueCreated });
+
+    recordStep('fixture_cleanup');
+    for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]);
+    const remaining = one(await owner.unsafe(`SELECT (${tables.map((table) => `(SELECT count(*) FROM ${table} WHERE id LIKE '${prefix}%')`).join(' + ')})::int AS count`));
+    assert.equal(Number(remaining.count), 0, 'EPIC09 acceptance fixtures must be removed'); cleanup = true;
+    return { migrationLedgerEntries: 1, rlsTables: tables.length, leadIdempotency: { attempts: 2, created: leadCreated, duplicates: 2 - leadCreated }, identityDeduplication: { attempts: 2, created: identityCreated, duplicates: 2 - identityCreated }, crossTenantDenied: 'PASS', missingContextDenied: 'PASS', revenueEventIdempotency: 'PASS', cleanup: 'PASS' };
+  } finally { if (!cleanup) for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]); }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -2850,6 +3013,7 @@ async function main(): Promise<void> {
   const index0023 = journal.findIndex((entry) => entry.tag === '0023_external_action_reliability');
   const index0024 = journal.findIndex((entry) => entry.tag === '0024_unified_campaign_orchestration');
   const index0025 = journal.findIndex((entry) => entry.tag === '0025_cross_channel_performance_optimization');
+  const index0026 = journal.findIndex((entry) => entry.tag === '0026_customer_acquisition_revenue_intelligence');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
@@ -2857,6 +3021,7 @@ async function main(): Promise<void> {
   assert.equal(index0023, index0022 + 1, '0023 must directly follow 0022 in the canonical journal');
   assert.equal(index0024, index0023 + 1, '0024 must directly follow 0023 in the canonical journal');
   assert.equal(index0025, index0024 + 1, '0025 must directly follow 0024 in the canonical journal');
+  assert.equal(index0026, index0025 + 1, '0026 must directly follow 0025 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -2968,6 +3133,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC08_STEP' },
     );
+    const epic09Proof = await executePhase1ValidationCheck(
+      'epic09_customer_acquisition_revenue_intelligence',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic09CustomerAcquisitionRevenueIntelligence(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC09_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -2983,6 +3155,7 @@ async function main(): Promise<void> {
           migration0023: 'PASS',
           migration0024: 'PASS',
           migration0025: 'PASS',
+          migration0026: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -3022,6 +3195,14 @@ async function main(): Promise<void> {
           epic08ObservationIdempotency: 'PASS',
           epic08LearningIsolation: 'PASS',
           epic08FixtureCleanup: 'PASS',
+          epic09Persistence: 'PASS',
+          epic09Rls: 'PASS',
+          epic09LeadIdempotency: 'PASS',
+          epic09IdentityDeduplication: 'PASS',
+          epic09CrossTenantDenial: 'PASS',
+          epic09MissingContextDenial: 'PASS',
+          epic09RevenueEventIdempotency: 'PASS',
+          epic09FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
@@ -3029,6 +3210,7 @@ async function main(): Promise<void> {
         epic05: epic05Proof,
         epic07: epic07Proof,
         epic08: epic08Proof,
+        epic09: epic09Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',
