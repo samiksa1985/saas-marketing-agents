@@ -126,6 +126,14 @@ type Epic10Proof = {
   missingContextDenied: 'PASS';
   cleanup: 'PASS';
 };
+type Epic11Proof = {
+  migrationLedgerEntries: number;
+  rlsTables: number;
+  journeyEvent: { attempts: number; created: number; duplicates: number };
+  nextBestAction: { attempts: number; created: number; duplicates: number };
+  journeyOutcome: { attempts: number; created: number; duplicates: number };
+  crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS';
+};
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
 const tenantB = '22222222-2222-2222-2222-222222222222';
@@ -2826,31 +2834,45 @@ async function testEpic08CrossChannelPerformanceOptimization(
     )));
 
     recordStep('observation_idempotency_concurrency');
-    const idempotencyKey = `${prefix}concurrent-observation`;
+    const naturalKey = `${prefix}concurrent-provider-snapshot`;
     const attempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(
       `INSERT INTO campaign_performance_observations
         (id, tenant_id, unified_campaign_id, channel_id, provider, provider_campaign_id, snapshot_id, idempotency_key, observation, period_start, period_end, collected_at, verification_state, freshness_state, normalization_version)
        VALUES ($1, $2::uuid, $3, 'channel', 'EPIC08', 'concurrent', 'snapshot', $4, '{}'::jsonb, now(), now(), now(), 'VERIFIED', 'FRESH', 'v1')
        ON CONFLICT ON CONSTRAINT campaign_performance_observation_tenant_provider_snapshot_uidx
        DO NOTHING RETURNING id`,
-      [`${prefix}concurrent-${attempt}`, tenantA, campaignA, idempotencyKey],
+      [`${prefix}concurrent-${attempt}`, tenantA, campaignA, `${naturalKey}-${attempt}`],
     )))));
     assert.equal(attempts.length, 2, 'EPIC08 must issue two concurrent observation attempts');
     const created = attempts.filter((result) => result.length === 1).length;
     assert.equal(created, 1, 'exactly one idempotent observation may persist concurrently');
     const canonical = one(await owner.unsafe(
       `SELECT count(*)::int AS total,
-              count(*) FILTER (WHERE idempotency_key = $2)::int AS idempotency_matches
+              count(DISTINCT idempotency_key)::int AS persisted_idempotency_keys
          FROM campaign_performance_observations
         WHERE tenant_id = $1::uuid
           AND provider = 'EPIC08'
           AND provider_campaign_id = 'concurrent'
           AND snapshot_id = 'snapshot'
           AND normalization_version = 'v1'`,
-      [tenantA, idempotencyKey],
+      [tenantA],
     ));
     assert.equal(Number(canonical.total), 1, 'the provider snapshot race must leave one canonical observation');
-    assert.equal(Number(canonical.idempotency_matches), 1, 'the canonical observation must retain the replay idempotency key');
+    assert.equal(Number(canonical.persisted_idempotency_keys), 1, 'the provider snapshot race must persist exactly one idempotency value');
+    recordStep('observation_idempotency_replay');
+    const idempotencyKey = `${prefix}concurrent-observation-idempotency`;
+    const idempotencyAttempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(
+      `INSERT INTO campaign_performance_observations
+        (id, tenant_id, unified_campaign_id, channel_id, provider, provider_campaign_id, snapshot_id, idempotency_key, observation, period_start, period_end, collected_at, verification_state, freshness_state, normalization_version)
+       VALUES ($1, $2::uuid, $3, 'channel', 'EPIC08-IDEMPOTENCY', $4, $5, $6, '{}'::jsonb, now(), now(), now(), 'VERIFIED', 'FRESH', 'v1')
+       ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`,
+      [`${prefix}idempotency-${attempt}`, tenantA, campaignA, `provider-campaign-${attempt}`, `snapshot-${attempt}`, idempotencyKey],
+    )))));
+    assert.equal(idempotencyAttempts.length, 2, 'EPIC08 must issue two concurrent idempotency replay attempts');
+    const idempotencyCreated = idempotencyAttempts.filter((result) => result.length === 1).length;
+    assert.equal(idempotencyCreated, 1, 'exactly one idempotency replay observation may persist concurrently');
+    const idempotencyCanonical = one(await owner.unsafe(`SELECT count(*)::int AS total FROM campaign_performance_observations WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, idempotencyKey]));
+    assert.equal(Number(idempotencyCanonical.total), 1, 'the idempotency replay must leave one canonical observation');
     recordDiagnostics({ epic08ObservationAttempts: attempts.length, epic08ObservationCreated: created });
 
     recordStep('persistence_store_contract');
@@ -3087,6 +3109,65 @@ async function testEpic10CustomerConversationsAiReceptionist(
   } finally { if (!cleanup) for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]); }
 }
 
+/** Real PostgreSQL acceptance for EPIC11 journey evidence, recommendations, outcomes, and tenant learning. */
+async function testEpic11CustomerJourneyLifecycleOrchestration(owner: SqlClient, databaseUrl: string, recordSql: SqlRecorder, recordStep: (step: string) => void, recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void): Promise<Epic11Proof> {
+  const prefix = 'epic11-acceptance-';
+  const tables = ['customer_lifecycle_assessments', 'customer_journey_events', 'customer_journey_stage_assessments', 'journey_triggers', 'action_eligibility_assessments', 'next_best_action_recommendations', 'customer_journey_plans', 'customer_journey_plan_steps', 'nurture_recommendations', 'reengagement_assessments', 'retention_risk_assessments', 'renewal_assessments', 'expansion_opportunity_assessments', 'customer_journey_health_assessments', 'journey_blocker_diagnostics', 'contact_frequency_assessments', 'journey_orchestration_states', 'journey_action_outcomes', 'journey_learning_records'] as const;
+  const fixture = (tenantId: string) => ({ identity: `${prefix}${tenantId.slice(0, 8)}-identity`, event: `${prefix}${tenantId.slice(0, 8)}-event`, recommendation: `${prefix}${tenantId.slice(0, 8)}-recommendation`, plan: `${prefix}${tenantId.slice(0, 8)}-plan`, outcome: `${prefix}${tenantId.slice(0, 8)}-outcome`, learning: `${prefix}${tenantId.slice(0, 8)}-learning` });
+  const fixturePairs = [tenantA, tenantB].map((tenantId) => ({ tenantId, ...fixture(tenantId) }));
+  type CleanupEntry = { table: string; columns: readonly string[]; cleanup: () => Promise<void>; remaining: () => Promise<number> };
+  const cleanupMap: CleanupEntry[] = [
+    { table: 'customer_journey_plan_steps', columns: ['tenant_id', 'plan_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM customer_journey_plan_steps WHERE tenant_id = $1::uuid AND plan_id = $2`, [item.tenantId, item.plan]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_journey_plan_steps WHERE tenant_id = $1::uuid AND plan_id = $2`, [item.tenantId, item.plan])).count); return count; } },
+    { table: 'customer_journey_plans', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM customer_journey_plans WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_journey_plans WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'customer_journey_events', columns: ['tenant_id', 'identity_id', 'idempotency_key'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM customer_journey_events WHERE tenant_id = $1::uuid AND (identity_id = $2 OR idempotency_key = $3)`, [item.tenantId, item.identity, `${item.event}-key`]); await owner.unsafe(`DELETE FROM customer_journey_events WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, `${prefix}event-key`]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_journey_events WHERE tenant_id = $1::uuid AND (identity_id = $2 OR idempotency_key = $3)`, [item.tenantId, item.identity, `${item.event}-key`])).count); return count + Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_journey_events WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, `${prefix}event-key`])).count); } },
+    { table: 'customer_lifecycle_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM customer_lifecycle_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_lifecycle_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'customer_journey_stage_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM customer_journey_stage_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_journey_stage_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'journey_triggers', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM journey_triggers WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM journey_triggers WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'action_eligibility_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM action_eligibility_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM action_eligibility_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'next_best_action_recommendations', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM next_best_action_recommendations WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); await owner.unsafe(`DELETE FROM next_best_action_recommendations WHERE tenant_id = $1::uuid AND identity_id = 'concurrent'`, [tenantA]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM next_best_action_recommendations WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count + Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM next_best_action_recommendations WHERE tenant_id = $1::uuid AND identity_id = 'concurrent'`, [tenantA])).count); } },
+    { table: 'nurture_recommendations', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM nurture_recommendations WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM nurture_recommendations WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'reengagement_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM reengagement_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM reengagement_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'retention_risk_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM retention_risk_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM retention_risk_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'renewal_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM renewal_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM renewal_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'expansion_opportunity_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM expansion_opportunity_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM expansion_opportunity_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'customer_journey_health_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM customer_journey_health_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_journey_health_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'journey_blocker_diagnostics', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM journey_blocker_diagnostics WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM journey_blocker_diagnostics WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'contact_frequency_assessments', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM contact_frequency_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM contact_frequency_assessments WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'journey_orchestration_states', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM journey_orchestration_states WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM journey_orchestration_states WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+    { table: 'journey_action_outcomes', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM journey_action_outcomes WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); await owner.unsafe(`DELETE FROM journey_action_outcomes WHERE tenant_id = $1::uuid AND identity_id = 'concurrent'`, [tenantA]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM journey_action_outcomes WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count + Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM journey_action_outcomes WHERE tenant_id = $1::uuid AND identity_id = 'concurrent'`, [tenantA])).count); } },
+    { table: 'journey_learning_records', columns: ['tenant_id', 'identity_id'], cleanup: async () => { for (const item of fixturePairs) await owner.unsafe(`DELETE FROM journey_learning_records WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity]); }, remaining: async () => { let count = 0; for (const item of fixturePairs) count += Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM journey_learning_records WHERE tenant_id = $1::uuid AND identity_id = $2`, [item.tenantId, item.identity])).count); return count; } },
+  ];
+  const cleanupFixtures = async () => { for (const entry of cleanupMap) await entry.cleanup(); };
+  const assertFixturesClean = async () => { let remaining = 0; for (const entry of cleanupMap) remaining += await entry.remaining(); assert.equal(remaining, 0, 'EPIC11 acceptance fixtures must be removed'); };
+  let cleanup = false;
+  try {
+    recordStep('schema_and_migration_ledger');
+    const found = rows(await validationUnsafe(owner, `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN (${tables.map((table) => `'${table}'`).join(', ')})`, recordSql)); assert.equal(found.length, tables.length, 'EPIC11 journey tables are missing');
+    const ledger = one(await owner.unsafe(`SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at = 1788629864183`)); assert.equal(Number(ledger.count), 1, 'migration 0028 must have exactly one ledger record');
+    recordStep('seed_tenant_rows');
+    for (const tenantId of [tenantA, tenantB]) { const item = fixture(tenantId); const payload = JSON.stringify({ tenantId, identityId: item.identity, evidenceRefs: [] });
+      await owner.unsafe(`INSERT INTO customer_journey_events (id, tenant_id, identity_id, event_type, idempotency_key, event, occurred_at) VALUES ($1, $2::uuid, $3, 'LEAD_CREATED', $4, $5::jsonb, now())`, [item.event, tenantId, item.identity, `${item.event}-key`, payload]);
+      await owner.unsafe(`INSERT INTO customer_lifecycle_assessments (id, tenant_id, identity_id, current_state, assessment, effective_at) VALUES ($1, $2::uuid, $3, 'LEAD', $4::jsonb, now())`, [`${item.identity}-lifecycle`, tenantId, item.identity, payload]);
+      await owner.unsafe(`INSERT INTO customer_journey_stage_assessments (id, tenant_id, identity_id, current_state, assessment, assessed_at) VALUES ($1, $2::uuid, $3, 'LEAD', $4::jsonb, now())`, [`${item.identity}-stage`, tenantId, item.identity, payload]);
+      await owner.unsafe(`INSERT INTO next_best_action_recommendations (id, tenant_id, identity_id, action, deterministic_key, eligibility, expires_at, recommendation) VALUES ($1, $2::uuid, $3, 'QUALIFY', $4, 'ELIGIBLE', now() + interval '1 hour', $5::jsonb)`, [item.recommendation, tenantId, item.identity, `${item.recommendation}-key`, payload]);
+      await owner.unsafe(`INSERT INTO customer_journey_plans (id, tenant_id, identity_id, lifecycle_state, plan) VALUES ($1, $2::uuid, $3, 'LEAD', $4::jsonb)`, [item.plan, tenantId, item.identity, payload]);
+      await owner.unsafe(`INSERT INTO journey_action_outcomes (id, tenant_id, identity_id, idempotency_key, outcome_type, outcome, observed_at) VALUES ($1, $2::uuid, $3, $4, 'UNKNOWN', $5::jsonb, now())`, [item.outcome, tenantId, item.identity, `${item.outcome}-key`, payload]);
+      await owner.unsafe(`INSERT INTO journey_learning_records (id, tenant_id, identity_id, learning, recorded_at) VALUES ($1, $2::uuid, $3, $4::jsonb, now())`, [item.learning, tenantId, item.identity, payload]); }
+    recordStep('tenant_rls_cross_tenant_and_missing_context');
+    for (const tenantId of [tenantA, tenantB]) await withAppTransaction(databaseUrl, tenantId, async (transaction) => { const visible = rows(await validationTransactionUnsafe(transaction, `SELECT tenant_id::text FROM customer_journey_events WHERE id LIKE $1`, [`${prefix}%`], recordSql)); assert.deepEqual(visible.map((row) => row.tenant_id), [tenantId]); });
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(`INSERT INTO customer_journey_events (id, tenant_id, event_type, idempotency_key, event, occurred_at) VALUES ('epic11-cross-tenant', $1::uuid, 'OTHER', 'denied', '{}'::jsonb, now())`, [tenantB])));
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, undefined, (transaction) => transaction.unsafe(`INSERT INTO customer_journey_events (id, tenant_id, event_type, idempotency_key, event, occurred_at) VALUES ('epic11-missing-context', $1::uuid, 'OTHER', 'missing', '{}'::jsonb, now())`, [tenantA])));
+    const concurrent = async (table: 'customer_journey_events' | 'next_best_action_recommendations' | 'journey_action_outcomes', key: string) => Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => table === 'customer_journey_events' ? rows(await transaction.unsafe(`INSERT INTO customer_journey_events (id, tenant_id, event_type, idempotency_key, event, occurred_at) VALUES ($1, $2::uuid, 'OTHER', $3, '{}'::jsonb, now()) ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`, [`${prefix}${table}-${attempt}`, tenantA, key])) : table === 'next_best_action_recommendations' ? rows(await transaction.unsafe(`INSERT INTO next_best_action_recommendations (id, tenant_id, identity_id, action, deterministic_key, eligibility, expires_at, recommendation) VALUES ($1, $2::uuid, 'concurrent', 'QUALIFY', $3, 'ELIGIBLE', now(), '{}'::jsonb) ON CONFLICT (tenant_id, deterministic_key) DO NOTHING RETURNING id`, [`${prefix}${table}-${attempt}`, tenantA, key])) : rows(await transaction.unsafe(`INSERT INTO journey_action_outcomes (id, tenant_id, identity_id, idempotency_key, outcome_type, outcome, observed_at) VALUES ($1, $2::uuid, 'concurrent', $3, 'UNKNOWN', '{}'::jsonb, now()) ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`, [`${prefix}${table}-${attempt}`, tenantA, key])))));
+    recordStep('journey_event_idempotency'); const eventAttempts = await concurrent('customer_journey_events', `${prefix}event-key`); const eventCreated = eventAttempts.filter((result) => result.length === 1).length; assert.equal(eventCreated, 1);
+    recordStep('next_best_action_idempotency'); const nbaAttempts = await concurrent('next_best_action_recommendations', `${prefix}nba-key`); const nbaCreated = nbaAttempts.filter((result) => result.length === 1).length; assert.equal(nbaCreated, 1);
+    recordStep('journey_outcome_idempotency'); const outcomeAttempts = await concurrent('journey_action_outcomes', `${prefix}outcome-key`); const outcomeCreated = outcomeAttempts.filter((result) => result.length === 1).length; assert.equal(outcomeCreated, 1);
+    recordStep('journey_learning_isolation'); await withAppTransaction(databaseUrl, tenantA, async (transaction) => { const blocked = rows(await validationTransactionUnsafe(transaction, `SELECT id FROM journey_learning_records WHERE id = $1`, [fixture(tenantB).learning], recordSql)); assert.equal(blocked.length, 0, 'Tenant A must not read Tenant B learning'); });
+    recordDiagnostics({ epic11JourneyEventAttempts: eventAttempts.length, epic11JourneyEventCreated: eventCreated, epic11NextBestActionAttempts: nbaAttempts.length, epic11NextBestActionCreated: nbaCreated, epic11JourneyOutcomeAttempts: outcomeAttempts.length, epic11JourneyOutcomeCreated: outcomeCreated });
+    recordStep('fixture_cleanup'); await cleanupFixtures(); await assertFixturesClean(); cleanup = true;
+    return { migrationLedgerEntries: 1, rlsTables: tables.length, journeyEvent: { attempts: 2, created: eventCreated, duplicates: 2 - eventCreated }, nextBestAction: { attempts: 2, created: nbaCreated, duplicates: 2 - nbaCreated }, journeyOutcome: { attempts: 2, created: outcomeCreated, duplicates: 2 - outcomeCreated }, crossTenantDenied: 'PASS', missingContextDenied: 'PASS', learningIsolation: 'PASS', cleanup: 'PASS' };
+  } finally { if (!cleanup) await cleanupFixtures(); }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -3105,6 +3186,7 @@ async function main(): Promise<void> {
   const index0025 = journal.findIndex((entry) => entry.tag === '0025_cross_channel_performance_optimization');
   const index0026 = journal.findIndex((entry) => entry.tag === '0026_customer_acquisition_revenue_intelligence');
   const index0027 = journal.findIndex((entry) => entry.tag === '0027_customer_conversations_ai_receptionist');
+  const index0028 = journal.findIndex((entry) => entry.tag === '0028_customer_journey_lifecycle_orchestration');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
@@ -3114,6 +3196,7 @@ async function main(): Promise<void> {
   assert.equal(index0025, index0024 + 1, '0025 must directly follow 0024 in the canonical journal');
   assert.equal(index0026, index0025 + 1, '0026 must directly follow 0025 in the canonical journal');
   assert.equal(index0027, index0026 + 1, '0027 must directly follow 0026 in the canonical journal');
+  assert.equal(index0028, index0027 + 1, '0028 must directly follow 0027 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -3239,6 +3322,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC10_STEP' },
     );
+    const epic11Proof = await executePhase1ValidationCheck(
+      'epic11_customer_journey_lifecycle_orchestration',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic11CustomerJourneyLifecycleOrchestration(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC11_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -3256,6 +3346,7 @@ async function main(): Promise<void> {
           migration0025: 'PASS',
           migration0026: 'PASS',
           migration0027: 'PASS',
+          migration0028: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -3310,6 +3401,15 @@ async function main(): Promise<void> {
           epic10CrossTenantDenial: 'PASS',
           epic10MissingContextDenial: 'PASS',
           epic10FixtureCleanup: 'PASS',
+          epic11Persistence: 'PASS',
+          epic11Rls: 'PASS',
+          epic11JourneyEventIdempotency: 'PASS',
+          epic11NextBestActionIdempotency: 'PASS',
+          epic11JourneyOutcomeIdempotency: 'PASS',
+          epic11CrossTenantDenial: 'PASS',
+          epic11MissingContextDenial: 'PASS',
+          epic11LearningIsolation: 'PASS',
+          epic11FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
@@ -3319,6 +3419,7 @@ async function main(): Promise<void> {
         epic08: epic08Proof,
         epic09: epic09Proof,
         epic10: epic10Proof,
+        epic11: epic11Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

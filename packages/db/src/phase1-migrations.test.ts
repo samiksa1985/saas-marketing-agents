@@ -67,6 +67,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0025_cross_channel_performance_optimization',
     '0026_customer_acquisition_revenue_intelligence',
     '0027_customer_conversations_ai_receptionist',
+    '0028_customer_journey_lifecycle_orchestration',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -244,6 +245,26 @@ test('0027 persists minimized customer conversations and AI receptionist intelli
   assert.match(schema, /export const customerConversationEvents = pgTable/);
   assert.match(schema, /export const aiReceptionistSessions = pgTable/);
   assert.match(schema, /export const conversationDiagnostics = pgTable/);
+});
+
+test('0028 persists tenant-scoped journey intelligence with explicit event, recommendation, and outcome idempotency', () => {
+  const migration = source('0028_customer_journey_lifecycle_orchestration.sql');
+  const customerSuccessMigration = source('0011_customer_success_intelligence.sql');
+  const schema = source('../src/schema.ts');
+  for (const table of ['customer_lifecycle_assessments', 'customer_journey_events', 'customer_journey_stage_assessments', 'journey_triggers', 'action_eligibility_assessments', 'next_best_action_recommendations', 'customer_journey_plans', 'customer_journey_plan_steps', 'retention_risk_assessments', 'renewal_assessments', 'expansion_opportunity_assessments', 'customer_journey_health_assessments', 'journey_blocker_diagnostics', 'contact_frequency_assessments', 'journey_orchestration_states', 'journey_action_outcomes', 'journey_learning_records']) assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  assert.match(migration, /customer_journey_event_tenant_idempotency_uidx/);
+  assert.match(migration, /next_best_action_recommendation_tenant_key_uidx/);
+  assert.match(migration, /journey_action_outcome_tenant_idempotency_uidx/);
+  assert.match(migration, /ALTER TABLE %I ENABLE ROW LEVEL SECURITY/);
+  assert.match(migration, /WITH CHECK \(tenant_id = NULLIF\(current_setting/);
+  assert.doesNotMatch(migration, /access_token|refresh_token|client_secret|developer_token|api_key|password|authorization/i);
+  assert.match(schema, /export const customerJourneyEvents = pgTable/);
+  assert.match(schema, /export const nextBestActionRecommendations = pgTable/);
+  assert.match(schema, /export const journeyActionOutcomes = pgTable/);
+  assert.match(schema, /export const customerJourneyHealthAssessments = pgTable\('customer_journey_health_assessments'/);
+  assert.doesNotMatch(migration, /CREATE TABLE IF NOT EXISTS customer_health_assessments/);
+  assert.match(customerSuccessMigration, /CREATE TABLE IF NOT EXISTS "customer_health_assessments" \([\s\S]*?"id" uuid PRIMARY KEY/);
+  assert.doesNotMatch(customerSuccessMigration, /customer_journey_health_assessments/);
 });
 
 test('EPIC05 PostgreSQL fixtures use the same controlled clock as their lease claims', () => {

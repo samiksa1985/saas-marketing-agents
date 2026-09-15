@@ -202,7 +202,7 @@ test('EPIC08 schema validation passes the SQL recorder as validationUnsafe third
   assert.doesNotMatch(epic08, /validationUnsafe\([\s\S]*?ANY\(\$1::text\[\]\)[\s\S]*?\[tables\], recordSql\)/);
 });
 
-test('EPIC08 observation concurrency handles only the canonical provider snapshot duplicate and proves one replay result', () => {
+test('EPIC08 separates provider-snapshot concurrency from idempotency replay so neither can race into the other constraint', () => {
   const harness = readFileSync(
     fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),
     'utf8',
@@ -216,10 +216,19 @@ test('EPIC08 observation concurrency handles only the canonical provider snapsho
     concurrency,
     /ON CONFLICT ON CONSTRAINT campaign_performance_observation_tenant_provider_snapshot_uidx\s+DO NOTHING RETURNING id/,
   );
-  assert.doesNotMatch(concurrency, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING/);
+  const naturalStart = concurrency.indexOf("recordStep('observation_idempotency_concurrency')");
+  const replayStart = concurrency.indexOf("recordStep('observation_idempotency_replay')");
+  const natural = concurrency.slice(naturalStart, replayStart);
+  const replay = concurrency.slice(replayStart);
+  assert.doesNotMatch(natural, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING/);
+  assert.match(natural, /\$\{naturalKey\}-\$\{attempt\}/);
+  assert.match(replay, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING RETURNING id/);
+  assert.match(replay, /provider-campaign-\$\{attempt\}/);
+  assert.match(replay, /snapshot-\$\{attempt\}/);
   assert.match(concurrency, /assert\.equal\(attempts\.length, 2/);
   assert.match(concurrency, /assert\.equal\(Number\(canonical\.total\), 1/);
-  assert.match(concurrency, /assert\.equal\(Number\(canonical\.idempotency_matches\), 1/);
+  assert.match(natural, /assert\.equal\(Number\(canonical\.persisted_idempotency_keys\), 1/);
+  assert.match(replay, /assert\.equal\(Number\(idempotencyCanonical\.total\), 1/);
 });
 
 test('EPIC09 harness seeds the persistence adapter with canonical lead data and proves idempotency through database context', () => {
@@ -429,4 +438,44 @@ test('billing harness builds Drizzle from the outer postgres client and preserve
   assert.match(concurrency, /recordStep\('concurrency'\)/);
   assert.match(concurrency, /recordStep\('idempotency'\)/);
   assert.match(harness, /\{ stepMarker: 'PHASE1_BILLING_STEP' \}/);
+});
+
+test('EPIC11 harness and evidence verifier require every journey proof before reporting pass', () => {
+  const harness = readFileSync(fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)), 'utf8');
+  const verifier = readFileSync(fileURLToPath(new URL('../../../scripts/verify-phase1-postgres-evidence.ps1', import.meta.url)), 'utf8');
+  assert.match(harness, /epic11_customer_journey_lifecycle_orchestration/); assert.match(harness, /PHASE1_EPIC11_STEP/);
+  for (const step of ['schema_and_migration_ledger', 'seed_tenant_rows', 'tenant_rls_cross_tenant_and_missing_context', 'journey_event_idempotency', 'next_best_action_idempotency', 'journey_outcome_idempotency', 'journey_learning_isolation', 'fixture_cleanup']) assert.match(harness, new RegExp(`recordStep\\('${step}'\\)`));
+  assert.match(harness, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING RETURNING id/); assert.match(harness, /ON CONFLICT \(tenant_id, deterministic_key\) DO NOTHING RETURNING id/);
+  for (const check of ['migration0028', 'epic11Persistence', 'epic11Rls', 'epic11JourneyEventIdempotency', 'epic11NextBestActionIdempotency', 'epic11JourneyOutcomeIdempotency', 'epic11CrossTenantDenial', 'epic11MissingContextDenial', 'epic11LearningIsolation', 'epic11FixtureCleanup']) assert.match(verifier, new RegExp(check));
+  assert.match(verifier, /migrationCount -ne 29/); assert.match(verifier, /PHASE1_EVIDENCE_VERIFICATION=PASS/);
+});
+
+test('EPIC11 cleanup map covers every 0028 table with schema-correct keys and child-before-parent deletion', () => {
+  const harness = readFileSync(fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)), 'utf8');
+  const migration = readFileSync(fileURLToPath(new URL('../drizzle/0028_customer_journey_lifecycle_orchestration.sql', import.meta.url)), 'utf8');
+  const start = harness.indexOf('async function testEpic11CustomerJourneyLifecycleOrchestration(');
+  const end = harness.indexOf('\nasync function main()', start);
+  const epic11 = harness.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'EPIC11 harness must exist');
+  const cleanupStart = epic11.indexOf('const cleanupMap: CleanupEntry[] = [');
+  const cleanupEnd = epic11.indexOf('const cleanupFixtures = async () =>', cleanupStart);
+  const cleanup = epic11.slice(cleanupStart, cleanupEnd);
+  assert.ok(cleanupStart >= 0 && cleanupEnd > cleanupStart, 'EPIC11 fixture cleanup helper must exist');
+  assert.doesNotMatch(cleanup, /\bid LIKE\b/);
+  assert.doesNotMatch(cleanup, /DELETE FROM \$\{table\}/);
+  const expected = new Map<string, string[]>([
+    ['customer_journey_plan_steps', ['tenant_id', 'plan_id']], ['customer_journey_plans', ['tenant_id', 'identity_id']], ['customer_journey_events', ['tenant_id', 'identity_id', 'idempotency_key']], ['customer_lifecycle_assessments', ['tenant_id', 'identity_id']], ['customer_journey_stage_assessments', ['tenant_id', 'identity_id']], ['journey_triggers', ['tenant_id', 'identity_id']], ['action_eligibility_assessments', ['tenant_id', 'identity_id']], ['next_best_action_recommendations', ['tenant_id', 'identity_id']], ['nurture_recommendations', ['tenant_id', 'identity_id']], ['reengagement_assessments', ['tenant_id', 'identity_id']], ['retention_risk_assessments', ['tenant_id', 'identity_id']], ['renewal_assessments', ['tenant_id', 'identity_id']], ['expansion_opportunity_assessments', ['tenant_id', 'identity_id']], ['customer_journey_health_assessments', ['tenant_id', 'identity_id']], ['journey_blocker_diagnostics', ['tenant_id', 'identity_id']], ['contact_frequency_assessments', ['tenant_id', 'identity_id']], ['journey_orchestration_states', ['tenant_id', 'identity_id']], ['journey_action_outcomes', ['tenant_id', 'identity_id']], ['journey_learning_records', ['tenant_id', 'identity_id']],
+  ]);
+  assert.equal(expected.size, 19);
+  for (const [table, columns] of expected) {
+    const definition = migration.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table} \\(([\\s\\S]*?)\\);`))?.[1] ?? '';
+    assert.ok(definition, `${table} must exist in 0028`);
+    assert.match(cleanup, new RegExp(`table: '${table}'`));
+    for (const column of columns) { assert.match(definition, new RegExp(`\\b${column}\\b`)); assert.match(cleanup, new RegExp(`'${column}'`)); }
+  }
+  assert.doesNotMatch(migration.match(/CREATE TABLE IF NOT EXISTS customer_journey_plan_steps \([\s\S]*?\);/)?.[0] ?? '', /identity_id/);
+  assert.doesNotMatch(migration, /CREATE TABLE IF NOT EXISTS customer_health_assessments/);
+  assert.ok(cleanup.indexOf("table: 'customer_journey_plan_steps'") < cleanup.indexOf("table: 'customer_journey_plans'"));
+  assert.match(epic11, /assertFixturesClean/);
+  assert.match(epic11, /EPIC11 acceptance fixtures must be removed/);
 });

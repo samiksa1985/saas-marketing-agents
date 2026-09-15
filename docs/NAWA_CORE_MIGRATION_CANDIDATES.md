@@ -24,6 +24,7 @@ IP. No Core runtime dependency is introduced here.
 | Customer-engagement transport ports | EPIC10 conversation ingestion, optional communication capability, contactability and provider metadata contracts | Conversation intelligence, qualification, handoff, journey and revenue-link semantics remain Growth IP | High / high | ConversationProvider, CommunicationProvider, ConsentProvider | Candidate only after a second product proves the same neutral contract |
 | Receptionist decision ports | EPIC10 receptionist profile/session/recommendation/handoff contracts | Growth-owned qualification, safety reasons, escalation policy and customer journey remain local | High / high | ModelProvider, PolicyProvider, AgentRuntimeProvider, ApprovalProvider | Contract candidate; no runtime extraction |
 | Conversation evidence and follow-up ports | EPIC10 structured evidence, recommendation, diagnostic, commitment and workflow-bound follow-up contracts | Customer-specific evidence interpretation and sales/support routing remain Growth IP | Medium / high | EvidenceProvider, AuditProvider, MemoryProvider, WorkflowProvider | Preserve local implementation until cross-product reuse is proven |
+| Journey orchestration decision ports | EPIC11 lifecycle, timeline, stage, eligibility, NBA, plan, outcome, and learning contracts | Lifecycle evidence interpretation, ranking, retention/renewal/expansion policy, and customer growth IP remain local | High / high | JourneyOrchestrationProvider, PolicyProvider, EvidenceProvider, ModelProvider, AgentRuntimeProvider, ApprovalProvider, AuditProvider, MemoryProvider, WorkflowProvider, ConsentProvider, CommunicationProvider, CapabilityProvider | Candidate only after a second product proves identical governed lifecycle semantics |
 
 ## Boundaries preserved
 
@@ -53,5 +54,13 @@ EPIC10 preserves narrow future `ConversationProvider`, `CommunicationProvider`,
 qualification, handoff, Arabic-language metadata, consent interpretation,
 conversation intelligence, and revenue-linkage rules remain Growth-domain IP.
 No NAWA Core migration, mandatory provider, or vendor dependency is performed.
+
+EPIC11 preserves narrow future `JourneyOrchestrationProvider`, `PolicyProvider`,
+`EvidenceProvider`, `ModelProvider`, `AgentRuntimeProvider`, `ApprovalProvider`,
+`AuditProvider`, `MemoryProvider`, `WorkflowProvider`, `ConsentProvider`,
+`CommunicationProvider`, and `CapabilityProvider` seams. Journey intelligence,
+lifecycle rules, ranking, and retention/renewal/expansion interpretation remain
+Growth-domain IP. No Core migration, provider execution, or vendor dependency
+is performed.
 
 Premature Core migration performed: **NO**.

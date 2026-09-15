@@ -126,6 +126,22 @@ persistence-scope, and fixture-cleanup evidence. Until a new local disposable
 run produces those exact checks as `PASS`, EPIC09 PostgreSQL evidence is
 `PENDING_LOCAL_RUN`.
 
+The journal also includes `0028_customer_journey_lifecycle_orchestration`. A
+future EPIC11 disposable proof must replay 0000–0028, verify RLS for every
+EPIC11 table (including missing context and cross-tenant denial), and
+demonstrate two attempts with one created/one duplicate for journey-event
+ingestion, deterministic next-best-action persistence, and journey-outcome
+ingestion. It must also prove tenant-scoped learning isolation and
+reverse-order fixture cleanup. Until that run has been captured and the
+verifier updated with matching required result fields, EPIC11 PostgreSQL
+evidence is `PENDING_LOCAL_RUN`.
+
+The verifier now requires the 29-entry chain through `0028`, explicit migration
+proof, nineteen-table EPIC11 RLS coverage, three two-attempt/one-create
+idempotency proofs, cross-tenant and missing-context denials, tenant learning
+isolation, and fixture cleanup. The result remains invalid until an actual
+local disposable runner invocation supplies those fields as `PASS`.
+
 The journal further includes `0027_customer_conversations_ai_receptionist`.
 The verifier requires migration count 28, latest migration 0027, and EPIC10
 twenty-two-table RLS coverage; conversation-ingestion and receptionist-session

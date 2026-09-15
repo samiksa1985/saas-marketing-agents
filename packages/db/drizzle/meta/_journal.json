@@ -197,6 +197,13 @@
       "when": 1788629864182,
       "tag": "0027_customer_conversations_ai_receptionist",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788629864183,
+      "tag": "0028_customer_journey_lifecycle_orchestration",
+      "breakpoints": true
     }
   ]
 }
