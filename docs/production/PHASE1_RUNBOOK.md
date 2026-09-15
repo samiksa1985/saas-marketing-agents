@@ -127,6 +127,7 @@ run produces those exact checks as `PASS`, EPIC09 PostgreSQL evidence is
 `PENDING_LOCAL_RUN`.
 
 The journal also includes `0028_customer_journey_lifecycle_orchestration`. A
+The journal includes `0029_governed_lifecycle_activation`; its disposable proof must verify the eight activation tables, tenant RLS, single-authority plan/candidate/execution/outcome idempotency, learning isolation, and schema-aware fixture cleanup. It remains pending until a real PostgreSQL run completes.
 future EPIC11 disposable proof must replay 0000–0028, verify RLS for every
 EPIC11 table (including missing context and cross-tenant denial), and
 demonstrate two attempts with one created/one duplicate for journey-event

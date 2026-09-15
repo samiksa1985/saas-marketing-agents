@@ -43,6 +43,7 @@ $expected = [ordered]@{
   'Migration 0026' = 'migration0026'
   'Migration 0027' = 'migration0027'
   'Migration 0028' = 'migration0028'
+  'Migration 0029' = 'migration0029'
   'RLS' = 'rls'
   'FORCE RLS' = 'forceRls'
   'Tenant isolation' = 'tenantIsolation'
@@ -105,6 +106,16 @@ $expected = [ordered]@{
   'EPIC-11 missing-context denial' = 'epic11MissingContextDenial'
   'EPIC-11 learning isolation' = 'epic11LearningIsolation'
   'EPIC-11 fixture cleanup' = 'epic11FixtureCleanup'
+  'EPIC-12 persistence' = 'epic12Persistence'
+  'EPIC-12 RLS' = 'epic12Rls'
+  'EPIC-12 plan idempotency' = 'epic12ActivationPlanIdempotency'
+  'EPIC-12 candidate idempotency' = 'epic12ActivationCandidateIdempotency'
+  'EPIC-12 execution idempotency' = 'epic12ActivationExecutionIdempotency'
+  'EPIC-12 outcome idempotency' = 'epic12ActivationOutcomeIdempotency'
+  'EPIC-12 cross-tenant denial' = 'epic12CrossTenantDenial'
+  'EPIC-12 missing-context denial' = 'epic12MissingContextDenial'
+  'EPIC-12 learning isolation' = 'epic12LearningIsolation'
+  'EPIC-12 fixture cleanup' = 'epic12FixtureCleanup'
 }
 
 foreach ($label in $expected.Keys) {
@@ -116,8 +127,8 @@ foreach ($label in $expected.Keys) {
   Write-Host "${label}: $value"
 }
 
-if ($result.migrationCount -ne 29 -or $result.latestMigration -ne '0028_customer_journey_lifecycle_orchestration') {
-  throw "EPIC-11 evidence does not prove the canonical 29-migration chain through 0028. Count=$($result.migrationCount); latest=$($result.latestMigration)"
+if ($result.migrationCount -ne 30 -or $result.latestMigration -ne '0029_governed_lifecycle_activation') {
+  throw "EPIC-12 evidence does not prove the canonical 30-migration chain through 0029. Count=$($result.migrationCount); latest=$($result.latestMigration)"
 }
 if (-not $result.epic03 -or $result.epic03.concurrency.successes -ne 1 -or $result.epic03.concurrency.conflicts -ne 1 -or $result.epic03.concurrency.unexpectedDuplicates -ne 0) {
   throw 'EPIC-03 concurrency evidence is missing or does not prove one owner, one conflict, and no duplicate.'
@@ -163,6 +174,15 @@ if (-not $result.epic11 -or $result.epic11.migrationLedgerEntries -ne 1 -or
     $result.epic11.crossTenantDenied -ne 'PASS' -or $result.epic11.missingContextDenied -ne 'PASS' -or
     $result.epic11.learningIsolation -ne 'PASS' -or $result.epic11.cleanup -ne 'PASS') {
   throw 'EPIC-11 evidence is missing or does not prove RLS, three idempotency paths, tenant denials, learning isolation, and fixture cleanup.'
+}
+if (-not $result.epic12 -or $result.epic12.migrationLedgerEntries -ne 1 -or
+    $result.epic12.rlsTables -ne 8 -or $result.epic12.plan.attempts -ne 2 -or
+    $result.epic12.plan.created -ne 1 -or $result.epic12.plan.duplicates -ne 1 -or
+    $result.epic12.candidate.created -ne 1 -or $result.epic12.execution.created -ne 1 -or
+    $result.epic12.outcome.created -ne 1 -or $result.epic12.crossTenantDenied -ne 'PASS' -or
+    $result.epic12.missingContextDenied -ne 'PASS' -or $result.epic12.learningIsolation -ne 'PASS' -or
+    $result.epic12.cleanup -ne 'PASS') {
+  throw 'EPIC-12 evidence is missing or does not prove RLS, single-authority idempotency, tenant denials, learning isolation, and fixture cleanup.'
 }
 
 Write-Host 'PHASE1_EVIDENCE_VERIFICATION=PASS'

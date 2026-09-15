@@ -1,5 +1,9 @@
 # NAWA Core Migration Candidates
 
+## EPIC12 governed lifecycle activation
+
+`lifecycle_activation_*` is a provider-neutral candidate for future NAWA Core extraction: it owns recommendation, simulation, policy/approval references, verification evidence, and learning links. It deliberately does not own provider credentials, transport, retries, or canonical approval/external-action execution.
+
 This is an architectural inventory, not a migration plan. NAWA Growth
 Intelligence OS remains independently deployable and retains all growth-domain
 IP. No Core runtime dependency is introduced here.

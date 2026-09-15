@@ -204,6 +204,13 @@
       "when": 1788629864183,
       "tag": "0028_customer_journey_lifecycle_orchestration",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788629864184,
+      "tag": "0029_governed_lifecycle_activation",
+      "breakpoints": true
     }
   ]
 }

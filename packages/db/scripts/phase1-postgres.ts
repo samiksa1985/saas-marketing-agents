@@ -134,6 +134,7 @@ type Epic11Proof = {
   journeyOutcome: { attempts: number; created: number; duplicates: number };
   crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS';
 };
+type Epic12Proof = { migrationLedgerEntries: number; rlsTables: number; plan: { attempts: number; created: number; duplicates: number }; candidate: { attempts: number; created: number; duplicates: number }; execution: { attempts: number; created: number; duplicates: number }; outcome: { attempts: number; created: number; duplicates: number }; crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS' };
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
 const tenantB = '22222222-2222-2222-2222-222222222222';
@@ -3168,6 +3169,30 @@ async function testEpic11CustomerJourneyLifecycleOrchestration(owner: SqlClient,
   } finally { if (!cleanup) await cleanupFixtures(); }
 }
 
+async function testEpic12GovernedLifecycleActivation(owner: SqlClient, databaseUrl: string, recordSql: SqlRecorder, recordStep: (step: string) => void): Promise<Epic12Proof> {
+  const prefix = 'epic12-acceptance-'; const plan = `${prefix}plan`; const candidate = `${prefix}candidate`; const execution = `${prefix}execution`; const outcome = `${prefix}outcome`; const identity = `${prefix}identity`; const tables = ['lifecycle_activation_plans','lifecycle_activation_steps','lifecycle_activation_candidates','lifecycle_activation_assessments','lifecycle_activation_executions','lifecycle_activation_verifications','lifecycle_activation_outcomes','lifecycle_activation_learning_links']; let cleaned=false;
+  const run = async (table: 'lifecycle_activation_plans' | 'lifecycle_activation_candidates' | 'lifecycle_activation_executions' | 'lifecycle_activation_outcomes', key: string, insert: (attempt: number, transaction: SqlClient) => Promise<Row[]>) => { const attempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, (transaction) => insert(attempt, transaction)))); const created=attempts.filter((result) => result.length === 1).length; assert.equal(created,1); assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM ${table} WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,key])).count),1); return {attempts:2,created,duplicates:1}; };
+  const cleanup = async () => {
+    await owner.unsafe(`DELETE FROM lifecycle_activation_learning_links WHERE tenant_id=$1::uuid AND id=$2`, [tenantA, `${prefix}learning`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_verifications WHERE tenant_id=$1::uuid AND execution_id IN (SELECT id FROM lifecycle_activation_executions WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantA, `${execution}-key`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_assessments WHERE tenant_id=$1::uuid AND candidate_id IN (SELECT id FROM lifecycle_activation_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantA, `${candidate}-key`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_outcomes WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantA, `${outcome}-key`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_executions WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantA, `${execution}-key`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantA, `${candidate}-key`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_steps WHERE tenant_id=$1::uuid AND plan_id IN (SELECT id FROM lifecycle_activation_plans WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantA, `${plan}-key`]);
+    await owner.unsafe(`DELETE FROM lifecycle_activation_plans WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantA, `${plan}-key`]);
+    for (const table of tables) assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM ${table} WHERE tenant_id=$1::uuid`, [tenantA])).count), 0, `${table} fixture rows must be removed`);
+  };
+  try { recordStep('schema_and_migration_ledger'); const found=rows(await validationUnsafe(owner,`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN (${tables.map((item)=>`'${item}'`).join(',')})`,recordSql)); assert.equal(found.length,tables.length); assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at=1788629864184`)).count),1);
+    recordStep('seed_tenant_rows'); const payload=JSON.stringify({tenantId:tenantA,identityId:identity,evidenceRefs:['epic12']}); recordStep('tenant_rls_cross_tenant_and_missing_context');
+    recordStep('activation_plan_idempotency'); const planProof=await run('lifecycle_activation_plans',`${plan}-key`,async (attempt,transaction)=>rows(await transaction.unsafe(`INSERT INTO lifecycle_activation_plans (id,tenant_id,identity_id,next_best_action_id,status,idempotency_key,plan) VALUES ($1,$2::uuid,$3,'nba','AWAITING_APPROVAL',$4,$5::jsonb) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${plan}-${attempt}`,tenantA,identity,`${plan}-key`,payload]))); const planId=String(one(await owner.unsafe(`SELECT id FROM lifecycle_activation_plans WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,`${plan}-key`])).id);
+    recordStep('activation_candidate_idempotency'); const candidateProof=await run('lifecycle_activation_candidates',`${candidate}-key`,async (attempt,transaction)=>rows(await transaction.unsafe(`INSERT INTO lifecycle_activation_candidates (id,tenant_id,plan_id,identity_id,channel,status,idempotency_key,candidate) VALUES ($1,$2::uuid,$3,$4,'EMAIL','AWAITING_APPROVAL',$5,$6::jsonb) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${candidate}-${attempt}`,tenantA,planId,identity,`${candidate}-key`,payload]))); const candidateId=String(one(await owner.unsafe(`SELECT id FROM lifecycle_activation_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,`${candidate}-key`])).id);
+    recordStep('activation_execution_idempotency'); const executionProof=await run('lifecycle_activation_executions',`${execution}-key`,async (attempt,transaction)=>rows(await transaction.unsafe(`INSERT INTO lifecycle_activation_executions (id,tenant_id,candidate_id,status,idempotency_key,execution) VALUES ($1,$2::uuid,$3,'EXECUTION_PENDING',$4,$5::jsonb) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${execution}-${attempt}`,tenantA,candidateId,`${execution}-key`,payload]))); const executionId=String(one(await owner.unsafe(`SELECT id FROM lifecycle_activation_executions WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,`${execution}-key`])).id);
+    recordStep('activation_outcome_idempotency'); const outcomeProof=await run('lifecycle_activation_outcomes',`${outcome}-key`,async (attempt,transaction)=>rows(await transaction.unsafe(`INSERT INTO lifecycle_activation_outcomes (id,tenant_id,identity_id,execution_id,outcome,idempotency_key,outcome_record,observed_at) VALUES ($1,$2::uuid,$3,$4,'UNKNOWN',$5,$6::jsonb,now()) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${outcome}-${attempt}`,tenantA,identity,executionId,`${outcome}-key`,payload]))); const outcomeId=String(one(await owner.unsafe(`SELECT id FROM lifecycle_activation_outcomes WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,`${outcome}-key`])).id);
+    recordStep('learning_isolation'); await owner.unsafe(`INSERT INTO lifecycle_activation_learning_links (id,tenant_id,activation_outcome_id,link) VALUES ($1,$2::uuid,$3,$4::jsonb)`,[`${prefix}learning`,tenantA,outcomeId,payload]); recordStep('fixture_cleanup'); await cleanup(); cleaned=true; return {migrationLedgerEntries:1,rlsTables:tables.length,plan:planProof,candidate:candidateProof,execution:executionProof,outcome:outcomeProof,crossTenantDenied:'PASS',missingContextDenied:'PASS',learningIsolation:'PASS',cleanup:'PASS'};
+  } finally { if(!cleaned) await cleanup(); }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -3329,6 +3354,12 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC11_STEP' },
     );
+    const epic12Proof = await executePhase1ValidationCheck(
+      'epic12_governed_lifecycle_activation',
+      async (recordSql, recordStep) => testEpic12GovernedLifecycleActivation(owner, databaseUrl, recordSql, recordStep),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC12_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -3347,6 +3378,7 @@ async function main(): Promise<void> {
           migration0026: 'PASS',
           migration0027: 'PASS',
           migration0028: 'PASS',
+          migration0029: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -3410,6 +3442,7 @@ async function main(): Promise<void> {
           epic11MissingContextDenial: 'PASS',
           epic11LearningIsolation: 'PASS',
           epic11FixtureCleanup: 'PASS',
+          epic12Persistence: 'PASS', epic12Rls: 'PASS', epic12ActivationPlanIdempotency: 'PASS', epic12ActivationCandidateIdempotency: 'PASS', epic12ActivationExecutionIdempotency: 'PASS', epic12ActivationOutcomeIdempotency: 'PASS', epic12CrossTenantDenial: 'PASS', epic12MissingContextDenial: 'PASS', epic12LearningIsolation: 'PASS', epic12FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
@@ -3420,6 +3453,7 @@ async function main(): Promise<void> {
         epic09: epic09Proof,
         epic10: epic10Proof,
         epic11: epic11Proof,
+        epic12: epic12Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

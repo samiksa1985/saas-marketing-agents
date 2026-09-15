@@ -447,7 +447,16 @@ test('EPIC11 harness and evidence verifier require every journey proof before re
   for (const step of ['schema_and_migration_ledger', 'seed_tenant_rows', 'tenant_rls_cross_tenant_and_missing_context', 'journey_event_idempotency', 'next_best_action_idempotency', 'journey_outcome_idempotency', 'journey_learning_isolation', 'fixture_cleanup']) assert.match(harness, new RegExp(`recordStep\\('${step}'\\)`));
   assert.match(harness, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING RETURNING id/); assert.match(harness, /ON CONFLICT \(tenant_id, deterministic_key\) DO NOTHING RETURNING id/);
   for (const check of ['migration0028', 'epic11Persistence', 'epic11Rls', 'epic11JourneyEventIdempotency', 'epic11NextBestActionIdempotency', 'epic11JourneyOutcomeIdempotency', 'epic11CrossTenantDenial', 'epic11MissingContextDenial', 'epic11LearningIsolation', 'epic11FixtureCleanup']) assert.match(verifier, new RegExp(check));
-  assert.match(verifier, /migrationCount -ne 29/); assert.match(verifier, /PHASE1_EVIDENCE_VERIFICATION=PASS/);
+  assert.match(verifier, /migrationCount -ne 30/); assert.match(verifier, /PHASE1_EVIDENCE_VERIFICATION=PASS/);
+});
+
+test('EPIC12 harness and evidence verifier fail closed on every activation proof', () => {
+  const harness = readFileSync(fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)), 'utf8'); const verifier = readFileSync(fileURLToPath(new URL('../../../scripts/verify-phase1-postgres-evidence.ps1', import.meta.url)), 'utf8');
+  assert.match(harness, /epic12_governed_lifecycle_activation/); assert.match(harness, /PHASE1_EPIC12_STEP/);
+  for (const step of ['schema_and_migration_ledger','seed_tenant_rows','tenant_rls_cross_tenant_and_missing_context','activation_plan_idempotency','activation_candidate_idempotency','activation_execution_idempotency','activation_outcome_idempotency','learning_isolation','fixture_cleanup']) assert.match(harness,new RegExp(`recordStep\\('${step}'\\)`));
+  for (const check of ['migration0029','epic12Persistence','epic12Rls','epic12ActivationPlanIdempotency','epic12ActivationCandidateIdempotency','epic12ActivationExecutionIdempotency','epic12ActivationOutcomeIdempotency','epic12CrossTenantDenial','epic12MissingContextDenial','epic12LearningIsolation','epic12FixtureCleanup']) assert.match(verifier,new RegExp(check)); assert.match(verifier,/migrationCount -ne 30/);
+  const start = harness.indexOf('async function testEpic12GovernedLifecycleActivation('); const end = harness.indexOf('\nasync function main()', start); const epic12 = harness.slice(start, end); assert.ok(start >= 0 && end > start); assert.doesNotMatch(epic12, /\bconcurrent\(/); assert.match(epic12, /withAppTransaction\(databaseUrl, tenantA/); for (const fixture of ['`${plan}-${attempt}`','`${candidate}-${attempt}`','`${execution}-${attempt}`','`${outcome}-${attempt}`']) assert.match(epic12, new RegExp(fixture.replace(/[${}]/g, '\\$&')));
+  assert.equal((epic12.match(/rows\(await transaction\.unsafe\(/g) ?? []).length, 4, 'each EPIC12 idempotency RETURNING result must be awaited before row classification'); assert.equal((epic12.match(/DO NOTHING RETURNING id/g) ?? []).length, 4, 'each EPIC12 race must classify created versus duplicate from RETURNING id');
 });
 
 test('EPIC11 cleanup map covers every 0028 table with schema-correct keys and child-before-parent deletion', () => {

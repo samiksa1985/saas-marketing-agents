@@ -287,6 +287,7 @@ export * from './performance-optimization.js';
 export * from './customer-acquisition-revenue.js';
 export * from './customer-engagement.js';
 export * from './customer-journey-lifecycle.js';
+export * from './lifecycle-activation.js';
 
 export * from './sales.js';
 
