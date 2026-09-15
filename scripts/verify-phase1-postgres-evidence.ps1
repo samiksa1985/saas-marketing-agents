@@ -41,6 +41,7 @@ $expected = [ordered]@{
   'Migration 0024' = 'migration0024'
   'Migration 0025' = 'migration0025'
   'Migration 0026' = 'migration0026'
+  'Migration 0027' = 'migration0027'
   'RLS' = 'rls'
   'FORCE RLS' = 'forceRls'
   'Tenant isolation' = 'tenantIsolation'
@@ -87,6 +88,13 @@ $expected = [ordered]@{
   'EPIC-09 missing-context denial' = 'epic09MissingContextDenial'
   'EPIC-09 revenue-event idempotency' = 'epic09RevenueEventIdempotency'
   'EPIC-09 fixture cleanup' = 'epic09FixtureCleanup'
+  'EPIC-10 persistence' = 'epic10Persistence'
+  'EPIC-10 RLS' = 'epic10Rls'
+  'EPIC-10 conversation ingestion' = 'epic10ConversationIngestion'
+  'EPIC-10 receptionist ingestion' = 'epic10ReceptionistIngestion'
+  'EPIC-10 cross-tenant denial' = 'epic10CrossTenantDenial'
+  'EPIC-10 missing-context denial' = 'epic10MissingContextDenial'
+  'EPIC-10 fixture cleanup' = 'epic10FixtureCleanup'
 }
 
 foreach ($label in $expected.Keys) {
@@ -98,8 +106,8 @@ foreach ($label in $expected.Keys) {
   Write-Host "${label}: $value"
 }
 
-if ($result.migrationCount -ne 27 -or $result.latestMigration -ne '0026_customer_acquisition_revenue_intelligence') {
-  throw "EPIC-09 evidence does not prove the canonical 27-migration chain through 0026. Count=$($result.migrationCount); latest=$($result.latestMigration)"
+if ($result.migrationCount -ne 28 -or $result.latestMigration -ne '0027_customer_conversations_ai_receptionist') {
+  throw "EPIC-10 evidence does not prove the canonical 28-migration chain through 0027. Count=$($result.migrationCount); latest=$($result.latestMigration)"
 }
 if (-not $result.epic03 -or $result.epic03.concurrency.successes -ne 1 -or $result.epic03.concurrency.conflicts -ne 1 -or $result.epic03.concurrency.unexpectedDuplicates -ne 0) {
   throw 'EPIC-03 concurrency evidence is missing or does not prove one owner, one conflict, and no duplicate.'
@@ -127,6 +135,14 @@ if (-not $result.epic09 -or $result.epic09.migrationLedgerEntries -ne 1 -or
     $result.epic09.missingContextDenied -ne 'PASS' -or $result.epic09.revenueEventIdempotency -ne 'PASS' -or
     $result.epic09.cleanup -ne 'PASS') {
   throw 'EPIC-09 evidence is missing or does not prove migration ledger, RLS, idempotency, tenant denials, and fixture cleanup.'
+}
+if (-not $result.epic10 -or $result.epic10.migrationLedgerEntries -ne 1 -or
+    $result.epic10.rlsTables -ne 22 -or $result.epic10.conversationIngestion.attempts -ne 2 -or
+    $result.epic10.conversationIngestion.created -ne 1 -or $result.epic10.conversationIngestion.duplicates -ne 1 -or
+    $result.epic10.receptionistIngestion.attempts -ne 2 -or $result.epic10.receptionistIngestion.created -ne 1 -or
+    $result.epic10.receptionistIngestion.duplicates -ne 1 -or $result.epic10.crossTenantDenied -ne 'PASS' -or
+    $result.epic10.missingContextDenied -ne 'PASS' -or $result.epic10.cleanup -ne 'PASS') {
+  throw 'EPIC-10 evidence is missing or does not prove RLS, idempotency, tenant denials, and fixture cleanup.'
 }
 
 Write-Host 'PHASE1_EVIDENCE_VERIFICATION=PASS'

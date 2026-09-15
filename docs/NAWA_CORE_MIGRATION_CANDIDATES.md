@@ -21,6 +21,9 @@ IP. No Core runtime dependency is introduced here.
 | Future customer-growth capability registry | EPIC08 design-only `FutureGrowthCapabilityRegistry` for CRM, lead management, conversations, AI receptionist, reputation/reviews, local presence, and multi-location growth | Customer lifecycle policy, provider mappings, and growth recommendations remain Growth IP | Medium / medium | capability provider registry | Contract-only; do not migrate or adopt a vendor yet |
 | Customer identity and CRM capability ports | EPIC09 canonical lead/identity graph, `CRMProvider`, tenant capability records, consent/evidence contracts | Identity resolution policy, qualification, acquisition, revenue, campaign linkage, CRM mapping, and routing remain Growth IP | High / high | identity provider, CRM capability provider, evidence provider | Candidate only after another product proves the same first-party lifecycle semantics |
 | Revenue intelligence evidence ports | EPIC09 opportunity, verified revenue event, attribution, funnel, diagnostic, and routing-recommendation contracts | Revenue semantics, currency policy, attribution limits, sales funnel diagnostics, and growth rules remain Growth IP | High / high | evidence/memory/audit provider | Preserve local implementation; no Core migration now |
+| Customer-engagement transport ports | EPIC10 conversation ingestion, optional communication capability, contactability and provider metadata contracts | Conversation intelligence, qualification, handoff, journey and revenue-link semantics remain Growth IP | High / high | ConversationProvider, CommunicationProvider, ConsentProvider | Candidate only after a second product proves the same neutral contract |
+| Receptionist decision ports | EPIC10 receptionist profile/session/recommendation/handoff contracts | Growth-owned qualification, safety reasons, escalation policy and customer journey remain local | High / high | ModelProvider, PolicyProvider, AgentRuntimeProvider, ApprovalProvider | Contract candidate; no runtime extraction |
+| Conversation evidence and follow-up ports | EPIC10 structured evidence, recommendation, diagnostic, commitment and workflow-bound follow-up contracts | Customer-specific evidence interpretation and sales/support routing remain Growth IP | Medium / high | EvidenceProvider, AuditProvider, MemoryProvider, WorkflowProvider | Preserve local implementation until cross-product reuse is proven |
 
 ## Boundaries preserved
 
@@ -42,5 +45,13 @@ EPIC09 preserves future `IdentityProvider`, `PolicyProvider`, `EvidenceProvider`
 `MemoryProvider` seams while retaining Growth-specific customer acquisition,
 qualification, CRM mapping, funnel, attribution, and revenue intelligence IP.
 No NAWA Core migration or vendor dependency is performed.
+
+EPIC10 preserves narrow future `ConversationProvider`, `CommunicationProvider`,
+`ConsentProvider`, `PolicyProvider`, `EvidenceProvider`, `ModelProvider`,
+`AgentRuntimeProvider`, `ApprovalProvider`, `AuditProvider`, `MemoryProvider`,
+`SecretProvider`, and `WorkflowProvider` seams. Customer-engagement,
+qualification, handoff, Arabic-language metadata, consent interpretation,
+conversation intelligence, and revenue-linkage rules remain Growth-domain IP.
+No NAWA Core migration, mandatory provider, or vendor dependency is performed.
 
 Premature Core migration performed: **NO**.

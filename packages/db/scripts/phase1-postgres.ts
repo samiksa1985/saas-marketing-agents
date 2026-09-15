@@ -117,6 +117,15 @@ type Epic09Proof = {
   revenueEventIdempotency: 'PASS';
   cleanup: 'PASS';
 };
+type Epic10Proof = {
+  migrationLedgerEntries: number;
+  rlsTables: number;
+  conversationIngestion: { attempts: number; created: number; duplicates: number };
+  receptionistIngestion: { attempts: number; created: number; duplicates: number };
+  crossTenantDenied: 'PASS';
+  missingContextDenied: 'PASS';
+  cleanup: 'PASS';
+};
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
 const tenantB = '22222222-2222-2222-2222-222222222222';
@@ -420,11 +429,15 @@ async function assertSchemaInvariants(owner: SqlClient, recordSql: SqlRecorder):
         'customer_lead_qualification_assessments', 'customer_conversation_threads', 'customer_conversation_participants',
         'revenue_opportunities', 'revenue_events', 'revenue_attribution_assessments', 'customer_funnel_transitions',
         'acquisition_revenue_diagnostics', 'lead_routing_recommendations', 'acquisition_data_quality_assessments',
-        'customer_provider_capabilities'
+        'customer_provider_capabilities',
+        'customer_conversation_events', 'customer_conversation_turns', 'customer_conversation_states', 'customer_conversation_intents', 'customer_conversation_summaries',
+        'conversation_buying_signals', 'lead_engagement_assessments', 'response_recommendations', 'contactability_assessments',
+        'ai_receptionist_profiles', 'ai_receptionist_sessions', 'ai_receptionist_turns', 'ai_receptionist_action_recommendations', 'ai_receptionist_handoffs', 'ai_receptionist_outcomes',
+        'customer_handoff_recommendations', 'customer_handoff_records', 'customer_meeting_intents', 'customer_follow_up_recommendations', 'customer_commitments', 'business_commitments', 'conversation_diagnostics'
       )
   `, recordSql),
   );
-  assert.equal(tables.length, 60, 'required canonical tables are missing');
+  assert.equal(tables.length, 82, 'required canonical tables are missing');
   const minorUnits = rows(
     await validationUnsafe(owner, `
     SELECT table_name, column_name, data_type
@@ -2997,6 +3010,83 @@ async function testEpic09CustomerAcquisitionRevenueIntelligence(
   } finally { if (!cleanup) for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]); }
 }
 
+/** Real PostgreSQL acceptance for EPIC10 minimized conversation and AI receptionist records. */
+async function testEpic10CustomerConversationsAiReceptionist(
+  owner: SqlClient,
+  databaseUrl: string,
+  recordSql: SqlRecorder,
+  recordStep: (step: string) => void,
+  recordDiagnostics: (diagnostics: Record<string, string | number | boolean | null>) => void,
+): Promise<Epic10Proof> {
+  const prefix = 'epic10-acceptance-';
+  const tables = ['customer_conversation_events', 'customer_conversation_turns', 'customer_conversation_states', 'customer_conversation_intents', 'customer_conversation_summaries', 'conversation_buying_signals', 'lead_engagement_assessments', 'response_recommendations', 'contactability_assessments', 'ai_receptionist_profiles', 'ai_receptionist_sessions', 'ai_receptionist_turns', 'ai_receptionist_action_recommendations', 'ai_receptionist_handoffs', 'ai_receptionist_outcomes', 'customer_handoff_recommendations', 'customer_handoff_records', 'customer_meeting_intents', 'customer_follow_up_recommendations', 'customer_commitments', 'business_commitments', 'conversation_diagnostics'] as const;
+  const fixture = (tenantId: string) => ({ conversation: `${prefix}${tenantId.slice(0, 8)}-conversation`, event: `${prefix}${tenantId.slice(0, 8)}-event`, session: `${prefix}${tenantId.slice(0, 8)}-session`, profile: `${prefix}${tenantId.slice(0, 8)}-profile` });
+  let cleanup = false;
+  try {
+    recordStep('schema_and_migration_ledger');
+    const found = rows(await validationUnsafe(owner, `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN (${tables.map((table) => `'${table}'`).join(', ')})`, recordSql));
+    assert.equal(found.length, tables.length, 'EPIC10 conversation tables are missing');
+    const ledger = one(await owner.unsafe(`SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at = 1788629864182`));
+    assert.equal(Number(ledger.count), 1, 'migration 0027 must have exactly one ledger record');
+
+    recordStep('seed_tenant_rows');
+    for (const tenantId of [tenantA, tenantB]) {
+      const item = fixture(tenantId); const event = { eventId: item.event, tenantId, conversationId: item.conversation, languageHints: ['ar-SA', 'en'], contentHash: 'fixture-hash' }; const session = { sessionId: item.session, tenantId, conversationId: item.conversation, profileId: item.profile, state: 'ACTIVE' };
+      await owner.unsafe(`INSERT INTO customer_conversation_events (id, tenant_id, conversation_id, provider, channel, external_message_id, direction, idempotency_key, content_hash, consent_status, language_hints, event, occurred_at) VALUES ($1, $2::uuid, $3, 'EPIC10', 'WEB_CHAT', $4, 'INBOUND', $5, 'fixture-hash', 'ALLOWED', '["ar-SA","en"]'::jsonb, $6::jsonb, now())`, [item.event, tenantId, item.conversation, `${item.event}-message`, `${item.event}-key`, JSON.stringify(event)]);
+      await owner.unsafe(`INSERT INTO customer_conversation_turns (id, tenant_id, conversation_id, event_id, direction, turn, occurred_at) VALUES ($1, $2::uuid, $3, $4, 'INBOUND', '{}'::jsonb, now())`, [`${item.event}-turn`, tenantId, item.conversation, item.event]);
+      await owner.unsafe(`INSERT INTO customer_conversation_states (id, tenant_id, conversation_id, state, state_record, updated_at) VALUES ($1, $2::uuid, $3, 'ACTIVE', '{}'::jsonb, now())`, [item.conversation, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO customer_conversation_intents (id, tenant_id, conversation_id, primary_intent, intent, detected_at) VALUES ($1, $2::uuid, $3, 'PRICING', '{}'::jsonb, now())`, [`${item.conversation}-intent`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO customer_conversation_summaries (id, tenant_id, conversation_id, summary) VALUES ($1, $2::uuid, $3, '{}'::jsonb)`, [`${item.conversation}-summary`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO conversation_buying_signals (id, tenant_id, conversation_id, signal_type, signal, occurred_at) VALUES ($1, $2::uuid, $3, 'PRICING_REQUEST', '{}'::jsonb, now())`, [`${item.conversation}-signal`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO lead_engagement_assessments (id, tenant_id, lead_id, state, assessment, assessed_at) VALUES ($1, $2::uuid, $3, 'ENGAGED', '{}'::jsonb, now())`, [`${item.conversation}-engagement`, tenantId, `${item.conversation}-lead`]);
+      await owner.unsafe(`INSERT INTO response_recommendations (id, tenant_id, conversation_id, action, expires_at, recommendation) VALUES ($1, $2::uuid, $3, 'HANDOFF_SALES', now() + interval '1 hour', '{}'::jsonb)`, [`${item.conversation}-recommendation`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO contactability_assessments (id, tenant_id, channel, purpose, status, assessment, assessed_at) VALUES ($1, $2::uuid, 'WEB_CHAT', 'SALES', 'ALLOWED', '{}'::jsonb, now())`, [`${item.conversation}-contactability`, tenantId]);
+      await owner.unsafe(`INSERT INTO ai_receptionist_profiles (id, tenant_id, enabled, profile) VALUES ($1, $2::uuid, false, '{}'::jsonb)`, [item.profile, tenantId]);
+      await owner.unsafe(`INSERT INTO ai_receptionist_sessions (id, tenant_id, conversation_id, profile_id, state, idempotency_key, session) VALUES ($1, $2::uuid, $3, $4, 'ACTIVE', $5, $6::jsonb)`, [item.session, tenantId, item.conversation, item.profile, `${item.session}-key`, JSON.stringify(session)]);
+      await owner.unsafe(`INSERT INTO ai_receptionist_turns (id, tenant_id, session_id, idempotency_key, turn, occurred_at) VALUES ($1, $2::uuid, $3, $4, '{}'::jsonb, now())`, [`${item.session}-turn`, tenantId, item.session, `${item.session}-turn-key`]);
+      await owner.unsafe(`INSERT INTO ai_receptionist_action_recommendations (id, tenant_id, session_id, action, recommendation) VALUES ($1, $2::uuid, $3, 'ESCALATE', '{}'::jsonb)`, [`${item.session}-action`, tenantId, item.session]);
+      await owner.unsafe(`INSERT INTO ai_receptionist_handoffs (id, tenant_id, session_id, target, status, handoff) VALUES ($1, $2::uuid, $3, 'HUMAN_AGENT', 'RECOMMENDED', '{}'::jsonb)`, [`${item.session}-handoff`, tenantId, item.session]);
+      await owner.unsafe(`INSERT INTO ai_receptionist_outcomes (id, tenant_id, session_id, outcome) VALUES ($1, $2::uuid, $3, '{}'::jsonb)`, [`${item.session}-outcome`, tenantId, item.session]);
+      await owner.unsafe(`INSERT INTO customer_handoff_recommendations (id, tenant_id, conversation_id, target, recommendation) VALUES ($1, $2::uuid, $3, 'SALES', '{}'::jsonb)`, [`${item.conversation}-handoff-recommendation`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO customer_handoff_records (id, tenant_id, conversation_id, target, status, handoff) VALUES ($1, $2::uuid, $3, 'SALES', 'RECOMMENDED', '{}'::jsonb)`, [`${item.conversation}-handoff-record`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO customer_meeting_intents (id, tenant_id, conversation_id, meeting_intent) VALUES ($1, $2::uuid, $3, '{}'::jsonb)`, [`${item.conversation}-meeting`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO customer_follow_up_recommendations (id, tenant_id, conversation_id, expires_at, recommendation) VALUES ($1, $2::uuid, $3, now() + interval '1 hour', '{}'::jsonb)`, [`${item.conversation}-followup`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO customer_commitments (id, tenant_id, conversation_id, commitment) VALUES ($1, $2::uuid, $3, '{}'::jsonb)`, [`${item.conversation}-customer-commitment`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO business_commitments (id, tenant_id, conversation_id, commitment) VALUES ($1, $2::uuid, $3, '{}'::jsonb)`, [`${item.conversation}-business-commitment`, tenantId, item.conversation]);
+      await owner.unsafe(`INSERT INTO conversation_diagnostics (id, tenant_id, conversation_id, severity, diagnostic, generated_at) VALUES ($1, $2::uuid, $3, 'WARNING', '{}'::jsonb, now())`, [`${item.conversation}-diagnostic`, tenantId, item.conversation]);
+    }
+
+    recordStep('tenant_rls_cross_tenant_and_missing_context');
+    for (const table of tables) for (const tenantId of [tenantA, tenantB]) await withAppTransaction(databaseUrl, tenantId, async (transaction) => { const visible = rows(await validationTransactionUnsafe(transaction, `SELECT tenant_id::text FROM ${table} WHERE id LIKE $1 ORDER BY id`, [`${prefix}%`], recordSql)); assert.deepEqual(visible.map((row) => row.tenant_id), [tenantId], `${table} must isolate ${tenantId}`); });
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(`INSERT INTO customer_conversation_events (id, tenant_id, conversation_id, provider, channel, direction, idempotency_key, content_hash, consent_status, language_hints, event, occurred_at) VALUES ('epic10-cross-tenant-event', $1::uuid, 'denied', 'EPIC10', 'WEB_CHAT', 'INBOUND', 'denied', 'hash', 'ALLOWED', '[]'::jsonb, '{}'::jsonb, now())`, [tenantB])));
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, tenantA, (transaction) => transaction.unsafe(`INSERT INTO ai_receptionist_sessions (id, tenant_id, conversation_id, profile_id, state, idempotency_key, session) VALUES ('epic10-cross-tenant-session', $1::uuid, 'denied', 'denied', 'ACTIVE', 'denied', '{}'::jsonb)`, [tenantB])));
+    await expectRlsDenied(() => withAppTransaction(databaseUrl, undefined, (transaction) => transaction.unsafe(`INSERT INTO customer_conversation_events (id, tenant_id, conversation_id, provider, channel, direction, idempotency_key, content_hash, consent_status, language_hints, event, occurred_at) VALUES ('epic10-missing-context', $1::uuid, 'denied', 'EPIC10', 'WEB_CHAT', 'INBOUND', 'missing', 'hash', 'ALLOWED', '[]'::jsonb, '{}'::jsonb, now())`, [tenantA])));
+
+    recordStep('conversation_ingestion_idempotency');
+    const conversationKey = `${prefix}concurrent-conversation`;
+    const conversationAttempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(`INSERT INTO customer_conversation_events (id, tenant_id, conversation_id, provider, channel, external_message_id, direction, idempotency_key, content_hash, consent_status, language_hints, event, occurred_at) VALUES ($1, $2::uuid, 'concurrent', 'EPIC10', 'WEB_CHAT', $3, 'INBOUND', $4, 'hash', 'ALLOWED', '[]'::jsonb, '{}'::jsonb, now()) ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`, [`${prefix}concurrent-event-${attempt}`, tenantA, `${prefix}concurrent-message-${attempt}`, conversationKey])))));
+    const conversationCreated = conversationAttempts.filter((result) => result.length === 1).length; assert.equal(conversationCreated, 1, 'conversation ingestion must create one canonical event');
+    const canonicalConversation = one(await owner.unsafe(`SELECT count(*)::int AS count FROM customer_conversation_events WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, conversationKey])); assert.equal(Number(canonicalConversation.count), 1, 'conversation ingestion must leave one persisted event');
+
+    recordStep('receptionist_idempotency');
+    const sessionKey = `${prefix}concurrent-session`;
+    const sessionAttempts = await Promise.all([0, 1].map((attempt) => withAppTransaction(databaseUrl, tenantA, async (transaction) => rows(await transaction.unsafe(`INSERT INTO ai_receptionist_sessions (id, tenant_id, conversation_id, profile_id, state, idempotency_key, session) VALUES ($1, $2::uuid, 'concurrent', 'profile', 'ACTIVE', $3, '{}'::jsonb) ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id`, [`${prefix}concurrent-session-${attempt}`, tenantA, sessionKey])))));
+    const sessionCreated = sessionAttempts.filter((result) => result.length === 1).length; assert.equal(sessionCreated, 1, 'receptionist ingestion must create one canonical session');
+    const canonicalSession = one(await owner.unsafe(`SELECT count(*)::int AS count FROM ai_receptionist_sessions WHERE tenant_id = $1::uuid AND idempotency_key = $2`, [tenantA, sessionKey])); assert.equal(Number(canonicalSession.count), 1, 'receptionist ingestion must leave one persisted session');
+
+    recordStep('identity_and_conversation_isolation');
+    await withAppTransaction(databaseUrl, tenantA, async (transaction) => { const blocked = rows(await validationTransactionUnsafe(transaction, `SELECT id FROM ai_receptionist_sessions WHERE id = $1`, [fixture(tenantB).session], recordSql)); assert.equal(blocked.length, 0, 'Tenant A must not read Tenant B receptionist state'); });
+    recordStep('recommendation_and_handoff_isolation');
+    await withAppTransaction(databaseUrl, tenantA, async (transaction) => { const blocked = rows(await validationTransactionUnsafe(transaction, `SELECT id FROM customer_handoff_records WHERE id = $1`, [`${fixture(tenantB).conversation}-handoff-record`], recordSql)); assert.equal(blocked.length, 0, 'Tenant A must not read Tenant B handoff state'); });
+    recordDiagnostics({ epic10ConversationAttempts: conversationAttempts.length, epic10ConversationCreated: conversationCreated, epic10ReceptionistAttempts: sessionAttempts.length, epic10ReceptionistCreated: sessionCreated });
+
+    recordStep('fixture_cleanup');
+    for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]);
+    const remaining = one(await owner.unsafe(`SELECT (${tables.map((table) => `(SELECT count(*) FROM ${table} WHERE id LIKE '${prefix}%')`).join(' + ')})::int AS count`)); assert.equal(Number(remaining.count), 0, 'EPIC10 acceptance fixtures must be removed'); cleanup = true;
+    return { migrationLedgerEntries: 1, rlsTables: tables.length, conversationIngestion: { attempts: conversationAttempts.length, created: conversationCreated, duplicates: conversationAttempts.length - conversationCreated }, receptionistIngestion: { attempts: sessionAttempts.length, created: sessionCreated, duplicates: sessionAttempts.length - sessionCreated }, crossTenantDenied: 'PASS', missingContextDenied: 'PASS', cleanup: 'PASS' };
+  } finally { if (!cleanup) for (const table of [...tables].reverse()) await owner.unsafe(`DELETE FROM ${table} WHERE id LIKE $1`, [`${prefix}%`]); }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -3014,6 +3104,7 @@ async function main(): Promise<void> {
   const index0024 = journal.findIndex((entry) => entry.tag === '0024_unified_campaign_orchestration');
   const index0025 = journal.findIndex((entry) => entry.tag === '0025_cross_channel_performance_optimization');
   const index0026 = journal.findIndex((entry) => entry.tag === '0026_customer_acquisition_revenue_intelligence');
+  const index0027 = journal.findIndex((entry) => entry.tag === '0027_customer_conversations_ai_receptionist');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
@@ -3022,6 +3113,7 @@ async function main(): Promise<void> {
   assert.equal(index0024, index0023 + 1, '0024 must directly follow 0023 in the canonical journal');
   assert.equal(index0025, index0024 + 1, '0025 must directly follow 0024 in the canonical journal');
   assert.equal(index0026, index0025 + 1, '0026 must directly follow 0025 in the canonical journal');
+  assert.equal(index0027, index0026 + 1, '0027 must directly follow 0026 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -3140,6 +3232,13 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC09_STEP' },
     );
+    const epic10Proof = await executePhase1ValidationCheck(
+      'epic10_customer_conversations_ai_receptionist',
+      async (recordSql, recordStep, _recordObservation, recordDiagnostics) =>
+        testEpic10CustomerConversationsAiReceptionist(owner, databaseUrl, recordSql, recordStep, recordDiagnostics),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC10_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -3156,6 +3255,7 @@ async function main(): Promise<void> {
           migration0024: 'PASS',
           migration0025: 'PASS',
           migration0026: 'PASS',
+          migration0027: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -3203,6 +3303,13 @@ async function main(): Promise<void> {
           epic09MissingContextDenial: 'PASS',
           epic09RevenueEventIdempotency: 'PASS',
           epic09FixtureCleanup: 'PASS',
+          epic10Persistence: 'PASS',
+          epic10Rls: 'PASS',
+          epic10ConversationIngestion: 'PASS',
+          epic10ReceptionistIngestion: 'PASS',
+          epic10CrossTenantDenial: 'PASS',
+          epic10MissingContextDenial: 'PASS',
+          epic10FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
@@ -3211,6 +3318,7 @@ async function main(): Promise<void> {
         epic07: epic07Proof,
         epic08: epic08Proof,
         epic09: epic09Proof,
+        epic10: epic10Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

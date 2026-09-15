@@ -33,6 +33,7 @@ import { ExternalActionsController } from './external-actions.controller.js';
 import { UnifiedCampaignsController } from './unified-campaigns.controller.js';
 import { PerformanceOptimizationController } from './performance-optimization.controller.js';
 import { CustomerAcquisitionRevenueController } from './customer-acquisition-revenue.controller.js';
+import { CustomerEngagementController } from './customer-engagement.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
 import {
   ExternalActionOperationsController,
@@ -55,6 +56,10 @@ import {
   CUSTOMER_ACQUISITION_REVENUE_APPLICATION_SERVICE,
   CustomerAcquisitionRevenueApplicationService,
 } from './customer-acquisition-revenue.application.js';
+import {
+  CUSTOMER_ENGAGEMENT_APPLICATION_SERVICE,
+  CustomerEngagementApplicationService,
+} from './customer-engagement.application.js';
 import { createApiAuthProvider } from './auth-provider.factory.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
@@ -158,7 +163,7 @@ const externalActionProviders = new ExternalActionProviderRegistry({
 });
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,ExternalActionPoliciesController,ExternalActionOperationsController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[
     AppService,
     RegistryService,
@@ -226,6 +231,16 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
     {
       provide: CUSTOMER_ACQUISITION_REVENUE_APPLICATION_SERVICE,
       useExisting: CustomerAcquisitionRevenueApplicationService,
+    },
+    {
+      provide: CustomerEngagementApplicationService,
+      useFactory: (databaseFacade: typeof tenantDatabase) =>
+        new CustomerEngagementApplicationService(databaseFacade),
+      inject: [API_TENANT_DATABASE],
+    },
+    {
+      provide: CUSTOMER_ENGAGEMENT_APPLICATION_SERVICE,
+      useExisting: CustomerEngagementApplicationService,
     },
     {
       provide: ExternalActionOperationsApplicationService,

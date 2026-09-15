@@ -126,6 +126,17 @@ persistence-scope, and fixture-cleanup evidence. Until a new local disposable
 run produces those exact checks as `PASS`, EPIC09 PostgreSQL evidence is
 `PENDING_LOCAL_RUN`.
 
+The journal further includes `0027_customer_conversations_ai_receptionist`.
+The verifier requires migration count 28, latest migration 0027, and EPIC10
+twenty-two-table RLS coverage; conversation-ingestion and receptionist-session
+idempotency (two attempts, one created record, one duplicate); Tenant A/B,
+cross-tenant and missing-context denials; and reverse-order fixture cleanup.
+The EPIC10 check emits
+`PHASE1_CHECK_START=epic10_customer_conversations_ai_receptionist` and may
+only emit its pass marker after every required assertion. Until a fresh local
+disposable run provides that evidence, EPIC10 PostgreSQL evidence is
+`PENDING_LOCAL_RUN`.
+
 The prior Phase-1 closeout evidence through 0021 remains valid for its bounded
 scope. A fresh fail-closed result through 0022 has now passed for EPIC-03;
 see `EPIC03_POSTGRESQL_EVIDENCE.md`. The runbook remains a reproducible

@@ -242,6 +242,22 @@ test('EPIC09 harness seeds the persistence adapter with canonical lead data and 
   assert.match(epic09, /caller-provided Tenant B context must not bypass Tenant A database RLS context/);
 });
 
+test('EPIC10 harness uses distinct natural keys, proves singleton records, scopes RLS, and cleans fixtures in reverse', () => {
+  const harness = readFileSync(fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)), 'utf8');
+  const start = harness.indexOf('async function testEpic10CustomerConversationsAiReceptionist(');
+  const end = harness.indexOf('\nasync function main()', start);
+  const epic10 = harness.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'EPIC10 harness must exist');
+  assert.match(epic10, /recordStep\('conversation_ingestion_idempotency'\)/);
+  assert.match(epic10, /ON CONFLICT \(tenant_id, idempotency_key\) DO NOTHING RETURNING id/);
+  assert.match(epic10, /concurrent-message-\$\{attempt\}/);
+  assert.match(epic10, /assert\.equal\(Number\(canonicalConversation\.count\), 1/);
+  assert.match(epic10, /recordStep\('receptionist_idempotency'\)/);
+  assert.match(epic10, /assert\.equal\(Number\(canonicalSession\.count\), 1/);
+  assert.match(epic10, /withAppTransaction\(databaseUrl, undefined/);
+  assert.match(epic10, /for \(const table of \[\.\.\.tables\]\.reverse\(\)\)/);
+});
+
 test('marketing CRUD harness scopes each RLS operation to a transaction and reports its step', () => {
   const harness = readFileSync(
     fileURLToPath(new URL('../scripts/phase1-postgres.ts', import.meta.url)),

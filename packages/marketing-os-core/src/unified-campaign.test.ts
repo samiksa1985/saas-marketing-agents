@@ -180,7 +180,7 @@ test('recommendations are deterministic, evidence-backed, approval-required, and
   const aggregate = aggregateCampaignPerformance(campaign.id, [
     snapshot(),
     snapshot({ id: 'snapshot-meta', channelId: 'meta', provider: 'META_ADS', metrics: { ...snapshot().metrics, roas: 1 } }),
-  ]);
+  ], () => '2026-09-14T00:00:00.000Z');
   const recommendations = recommendCampaignOptimization(campaign, aggregate, () => '2026-09-14T00:00:00.000Z');
   assert.equal(recommendations.length, 1);
   assert.equal(recommendations[0]!.type, 'SHIFT_BUDGET');

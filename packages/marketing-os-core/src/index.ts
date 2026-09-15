@@ -174,3 +174,4 @@ export * from './governed-external-action.js';
 export * from './unified-campaign.js';
 export * from './performance-optimization.js';
 export * from './customer-acquisition-revenue.js';
+export * from './customer-engagement.js';

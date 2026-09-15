@@ -206,7 +206,7 @@ export interface BuyingIntentAssessment {
 }
 
 export type CRMProviderName = 'NAWA_NATIVE' | 'VENDasta' | 'HUBSPOT' | 'SALESFORCE' | 'DYNAMICS_365' | 'CUSTOM';
-export type CustomerGrowthCapability = 'CRM' | 'LEAD_MANAGEMENT' | 'CONVERSATIONS' | 'AI_RECEPTIONIST' | 'REPUTATION_REVIEWS' | 'LOCAL_PRESENCE' | 'MULTI_LOCATION_GROWTH';
+export type CustomerGrowthCapability = 'CRM' | 'LEAD_MANAGEMENT' | 'CONVERSATIONS' | 'EMAIL' | 'SMS' | 'WHATSAPP' | 'WEB_CHAT' | 'VOICE' | 'SOCIAL_DM' | 'AI_RECEPTIONIST' | 'CALENDAR' | 'REPUTATION_REVIEWS' | 'LOCAL_PRESENCE' | 'MULTI_LOCATION_GROWTH';
 export interface CRMProviderCapabilities {
   provider: CRMProviderName;
   tenantId: string;
