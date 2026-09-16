@@ -14,3 +14,13 @@ console.log(
     databaseTenantScope: tenantDatabase.constructor.name,
   }),
 );
+
+let stopping = false;
+function shutdown(signal: string): void {
+  if (stopping) return;
+  stopping = true;
+  process.stdout.write(JSON.stringify({ service: 'worker', event: 'shutdown', signal }) + '\n');
+  process.exitCode = 0;
+}
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));

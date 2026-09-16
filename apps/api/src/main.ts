@@ -1,9 +1,10 @@
 import 'reflect-metadata';
-import { Controller, Get, Headers, Injectable, Module } from '@nestjs/common';
+import { Controller, Get, Headers, Injectable, Module, ServiceUnavailableException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
 import { createDb } from '@platform/db';
+import { sql } from 'drizzle-orm';
 import { createWorkflowRuntime } from '@platform/workflow-runtime';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
 import type { AuthProvider } from '@platform/auth';
@@ -89,33 +90,40 @@ import {
   GOOGLE_ADS_MUTATION_TYPES,
   META_ADS_MUTATION_TYPES,
 } from '@platform/marketing-os-core';
+import { configureProductionRuntime, sanitizedRuntimeSummary } from './production-runtime.js';
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
+const config=loadConfig();
+// This factory only creates a client; readiness opens a connection with SELECT 1.
+const database = createDb(config.databaseUrl);
+const tenantDatabase = new ApiTenantDatabase(database);
 
 @Injectable() class AppService {
-  health(){return {status:'ok',service:'api'};}
-  readiness(){return {status:'ready',database:'configured',workflow:'configured'};}
+  health(){return {status:'ok',service:'api',...sanitizedRuntimeSummary(config)};}
+  async readiness(){
+    try {
+      await database.execute(sql`SELECT 1`);
+      return {status:'ready',database:'reachable',workflow:config.workflowRuntimeMode,...sanitizedRuntimeSummary(config)};
+    } catch {
+      throw new ServiceUnavailableException('Runtime dependency unavailable');
+    }
+  }
 }
 @Controller() class AppController {
   constructor(private readonly app:AppService){}
   @Get('/health') health(){return this.app.health();}
   @Get('/ready') ready(){return this.app.readiness();}
+  @Get('/version') version(){return {service:'api',...sanitizedRuntimeSummary(config)};}
   @Get('/i18n/context') context(@Headers('accept-language') language?:string){
     const locale=(supportedLocales.find((item)=>language?.includes(item))??'en') as Locale;
     return createLocaleContext(locale);
   }
 }
-const config=loadConfig();
 // Build the single workflow provider before Nest composition. Temporal mode is
 // deliberately fail-closed until deployment injects both command and read adapters.
 const workflowRuntime = createWorkflowRuntime({
   mode: config.workflowRuntimeMode,
 });
-// This factory only creates a client; a connection is opened by an actual query.
-// Tenant-bound persistence code receives the scoped transaction through the
-// API_TENANT_DATABASE façade instead of using this client directly.
-const database = createDb(config.databaseUrl);
-const tenantDatabase = new ApiTenantDatabase(database);
 // Production, durable-workflow composition, and explicit local acceptance
 // rehearsal recover approvals after an API restart. The in-memory repository
 // remains the default local/dev fallback.
@@ -296,6 +304,10 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 })
 class AppModule {}
 const app=await NestFactory.create(AppModule);
-const swagger=new DocumentBuilder().setTitle('AI Marketing OS API').setVersion('1.0').build();
-SwaggerModule.setup('openapi',app,SwaggerModule.createDocument(app,swagger));
+configureProductionRuntime(app, config);
+app.enableShutdownHooks();
+if (config.nodeEnv !== 'production') {
+  const swagger=new DocumentBuilder().setTitle('AI Marketing OS API').setVersion('1.0').build();
+  SwaggerModule.setup('openapi',app,SwaggerModule.createDocument(app,swagger));
+}
 await app.listen(config.apiPort);

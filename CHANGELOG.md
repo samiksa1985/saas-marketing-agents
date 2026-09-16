@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added EPIC16 production/first-customer release hardening: fail-closed production configuration, API correlation/security/error controls, production database verification and migration procedure, auditable idempotent tenant bootstrap, provider-neutral deployment topology, backup/isolated-restore tooling, and operational runbooks. No migration, deployment, provider mutation, or credential was added.
 - Added EPIC15 commercial Growth OS pilot experience: one bilingual/RTL product shell, onboarding/readiness flow, customer-facing information architecture, typed read-only API mappings, and honest unavailable/unknown states. It adds no schema, provider mutation, credential exposure, or new authorization/execution authority.
 - Added EPIC12 governed lifecycle activation persistence, tenant RLS, deterministic recommendation evaluation, approval boundary evidence, and Phase1 acceptance/verifier contracts. No live provider activation is enabled.
 - Added EPIC13 deterministic customer-growth decisioning: tenant-RLS context/candidate/evidence/recommendation/outcome/learning persistence, a guarded recommendation-only API, and an EPIC12 activation-plan bridge. Learning requires independently verified evidence and records `causalClaim: NONE`; no provider, CRM, customer-contact, or execution capability is added.

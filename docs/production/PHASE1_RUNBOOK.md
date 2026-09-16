@@ -8,6 +8,8 @@ The current canonical Phase1 chain ends at migration `0031_provider_integration_
 
 EPIC15 is a frontend/application product-experience composition only. It adds no migration, PostgreSQL acceptance assertion, or provider mutation path; therefore it does not require a new disposable PostgreSQL gate.
 
+EPIC16 preserves migrations `0000`–`0031` and does not alter Phase1 acceptance code. It adds production procedures only; a fresh disposable Phase1 gate is therefore not required for this change. Production deployment must instead run the separate `production-migrate.ps1` and `production:verify` procedure documented in the production runbooks.
+
 ## Required environment
 
 | Variable                    | Purpose                                             | Secret |

@@ -11,6 +11,8 @@
     "test": "tsx --test src/**/*.test.ts",
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
+    "production:verify": "tsx src/production-verify.ts",
+    "pilot:bootstrap": "tsx src/bootstrap-pilot-tenant.ts",
     "phase1:postgres": "tsx scripts/phase1-postgres.ts",
     "check": "tsx src/check.ts"
   },

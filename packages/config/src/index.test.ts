@@ -14,7 +14,16 @@ const baseEnv = {
     'test',
 
   WEB_URL:
-    'http://localhost:3000',
+    'https://app.example.test',
+
+  RELEASE_VERSION:
+    '1.0.0-test',
+
+  CORS_ALLOWED_ORIGINS:
+    'https://app.example.test',
+
+  TRUST_PROXY:
+    'false',
 
   DATABASE_URL:
     'postgresql://test',
@@ -425,3 +434,10 @@ test(
     );
   },
 );
+
+test('production fails closed for missing CORS/trusted-proxy/release configuration', () => {
+  const production = { ...baseEnv, NODE_ENV: 'production', OIDC_ISSUER_URL: 'https://issuer.example.com', OIDC_AUDIENCE: 'platform-api' };
+  assert.throws(() => loadConfig({ ...production, CORS_ALLOWED_ORIGINS: '' }), /CORS_ALLOWED_ORIGINS/i);
+  assert.throws(() => loadConfig({ ...production, TRUST_PROXY: undefined }), /TRUST_PROXY/i);
+  assert.throws(() => loadConfig({ ...production, RELEASE_VERSION: 'latest' }), /RELEASE_VERSION/i);
+});

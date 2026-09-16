@@ -23,6 +23,11 @@ export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
   apiPort: number;
   webUrl: string;
+  releaseVersion: string;
+  corsAllowedOrigins: string[];
+  trustProxy: boolean;
+  apiRateLimitWindowMs: number;
+  apiRateLimitMax: number;
   databaseUrl: string;
   temporalAddress: string;
   temporalNamespace: string;
@@ -85,6 +90,31 @@ function optionalBoolean(name: string, value: string | undefined): boolean {
   if (value === 'true') return true;
   if (value === 'false') return false;
   throw new Error(`${name} must be true or false`);
+}
+
+function positiveInteger(name: string, value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`${name} must be a positive integer`);
+  return parsed;
+}
+
+function httpsOrigin(name: string, value: string): string {
+  let parsed: URL;
+  try { parsed = new URL(value); } catch { throw new Error(`${name} must be an absolute HTTPS origin`); }
+  if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+    throw new Error(`${name} must be an absolute HTTPS origin without a path`);
+  }
+  return parsed.origin;
+}
+
+function corsOrigins(value: string | undefined, production: boolean): string[] {
+  const raw = optional(value);
+  if (!raw) {
+    if (production) throw new Error('Missing required environment variable: CORS_ALLOWED_ORIGINS');
+    return [];
+  }
+  return [...new Set(raw.split(',').map((origin) => httpsOrigin('CORS_ALLOWED_ORIGINS', origin.trim())))];
 }
 
 function googleAdsCustomerId(name: string, value: string | undefined): string | undefined {
@@ -168,6 +198,18 @@ export function loadConfig(
     );
   }
 
+  const releaseVersion = optional(env.RELEASE_VERSION) ?? 'development';
+  if (nodeEnv === 'production' && !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(releaseVersion)) {
+    throw new Error('RELEASE_VERSION must be a semantic version in production');
+  }
+  const corsAllowedOrigins = corsOrigins(env.CORS_ALLOWED_ORIGINS, nodeEnv === 'production');
+  if (nodeEnv === 'production' && env.TRUST_PROXY === undefined) {
+    throw new Error('Missing required environment variable: TRUST_PROXY');
+  }
+  const trustProxy = optionalBoolean('TRUST_PROXY', env.TRUST_PROXY);
+  const apiRateLimitWindowMs = positiveInteger('API_RATE_LIMIT_WINDOW_MS', env.API_RATE_LIMIT_WINDOW_MS, 60_000);
+  const apiRateLimitMax = positiveInteger('API_RATE_LIMIT_MAX', env.API_RATE_LIMIT_MAX, 300);
+
   const oidcIssuerUrl =
     optional(
       env.OIDC_ISSUER_URL,
@@ -179,6 +221,7 @@ export function loadConfig(
     );
 
   if (nodeEnv === 'production') {
+    httpsOrigin('WEB_URL', required('WEB_URL', env.WEB_URL));
     if (!oidcIssuerUrl) {
       throw new Error(
         'Missing required environment variable: OIDC_ISSUER_URL',
@@ -321,6 +364,16 @@ export function loadConfig(
     nodeEnv,
 
     apiPort,
+
+    releaseVersion,
+
+    corsAllowedOrigins,
+
+    trustProxy,
+
+    apiRateLimitWindowMs,
+
+    apiRateLimitMax,
 
     webUrl: required(
       'WEB_URL',
