@@ -37,6 +37,7 @@ import { CustomerEngagementController } from './customer-engagement.controller.j
 import { CustomerJourneyController } from './customer-journey.controller.js';
 import { LifecycleActivationController } from './lifecycle-activation.controller.js';
 import { CustomerGrowthDecisionController } from './customer-growth-decisioning.controller.js';
+import { ProviderIntegrationsController } from './provider-integrations.controller.js';
 import { ExternalActionPoliciesController } from './external-action-policies.controller.js';
 import {
   ExternalActionOperationsController,
@@ -69,6 +70,7 @@ import {
 } from './customer-journey.application.js';
 import { LIFECYCLE_ACTIVATION_APPLICATION_SERVICE, LifecycleActivationApplicationService } from './lifecycle-activation.application.js';
 import { CUSTOMER_GROWTH_DECISION_APPLICATION_SERVICE, CustomerGrowthDecisionApplicationService } from './customer-growth-decisioning.application.js';
+import { PROVIDER_INTEGRATIONS_APPLICATION_SERVICE, ProviderIntegrationsApplicationService } from './provider-integrations.application.js';
 import { createApiAuthProvider } from './auth-provider.factory.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
@@ -172,7 +174,7 @@ const externalActionProviders = new ExternalActionProviderRegistry({
 });
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ExternalActionPoliciesController,ExternalActionOperationsController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[
     AppService,
     RegistryService,
@@ -265,6 +267,8 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
     { provide: LIFECYCLE_ACTIVATION_APPLICATION_SERVICE, useExisting: LifecycleActivationApplicationService },
     { provide: CustomerGrowthDecisionApplicationService, useFactory: (databaseFacade: typeof tenantDatabase, activation: LifecycleActivationApplicationService<any>) => new CustomerGrowthDecisionApplicationService(databaseFacade, activation), inject: [API_TENANT_DATABASE, LifecycleActivationApplicationService] },
     { provide: CUSTOMER_GROWTH_DECISION_APPLICATION_SERVICE, useExisting: CustomerGrowthDecisionApplicationService },
+    { provide: ProviderIntegrationsApplicationService, useFactory: (databaseFacade: typeof tenantDatabase) => new ProviderIntegrationsApplicationService(databaseFacade), inject: [API_TENANT_DATABASE] },
+    { provide: PROVIDER_INTEGRATIONS_APPLICATION_SERVICE, useExisting: ProviderIntegrationsApplicationService },
     {
       provide: ExternalActionOperationsApplicationService,
       useFactory: (databaseFacade: typeof tenantDatabase) =>

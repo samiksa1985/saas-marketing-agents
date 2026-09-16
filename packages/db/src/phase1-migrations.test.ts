@@ -70,6 +70,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0028_customer_journey_lifecycle_orchestration',
     '0029_governed_lifecycle_activation',
     '0030_customer_growth_decisioning',
+    '0031_provider_integration_runtime',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -95,6 +96,13 @@ test('0030 adds eight tenant-scoped, provider-neutral customer growth decisionin
   for (const mapping of ['growthDecisionContexts', 'growthActionCandidates', 'growthCandidateEligibilityAssessments', 'growthDecisionConflictAssessments', 'growthDecisionScores', 'growthDecisionRecommendations', 'growthDecisionOutcomes', 'growthDecisionLearningRecords']) assert.match(schema, new RegExp(`export const ${mapping} = pgTable`));
   assert.match(migration, /ALTER TABLE %I ENABLE ROW LEVEL SECURITY/);
   assert.doesNotMatch(migration, /api_key|secret|password|authorization|https?:/i);
+});
+
+test('0031 adds provider-binding runtime state without duplicating EPIC05 health or persisting secrets', () => {
+  const migration = source('0031_provider_integration_runtime.sql'); const schema = source('../src/schema.ts');
+  for (const table of ['tenant_provider_bindings','tenant_provider_capabilities','provider_integration_verifications']) assert.match(migration,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  for (const binding of ['tenantProviderBindings','tenantProviderCapabilities','providerIntegrationVerifications']) assert.match(schema,new RegExp(`export const ${binding} = pgTable`));
+  assert.match(migration,/tenant_provider_binding_tenant_key_uidx/); assert.match(migration,/tenant_provider_capability_tenant_key_uidx/); assert.match(migration,/provider_integration_verification_tenant_key_uidx/); assert.match(migration,/ENABLE ROW LEVEL SECURITY/); assert.doesNotMatch(migration,/access_token|refresh_token|client_secret|api_key/i);
 });
 
 test('0020 adds tenant-scoped Marketing OS plan and execution persistence forward-only', () => {

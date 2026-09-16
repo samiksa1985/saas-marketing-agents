@@ -4,6 +4,7 @@
 
 - Added EPIC12 governed lifecycle activation persistence, tenant RLS, deterministic recommendation evaluation, approval boundary evidence, and Phase1 acceptance/verifier contracts. No live provider activation is enabled.
 - Added EPIC13 deterministic customer-growth decisioning: tenant-RLS context/candidate/evidence/recommendation/outcome/learning persistence, a guarded recommendation-only API, and an EPIC12 activation-plan bridge. Learning requires independently verified evidence and records `causalClaim: NONE`; no provider, CRM, customer-contact, or execution capability is added.
+- Added EPIC14 tenant-scoped provider integration runtime bindings, capability routing, sanitized verification evidence, and guarded integration-management API. Existing Google/Meta governed paths are consolidated without enabling real mutations; CRM and communications use deterministic mock adapters only. EPIC05 remains the sole health/reliability authority.
 
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

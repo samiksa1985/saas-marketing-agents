@@ -136,6 +136,7 @@ type Epic11Proof = {
 };
 type Epic12Proof = { migrationLedgerEntries: number; rlsTables: number; plan: { attempts: number; created: number; duplicates: number }; candidate: { attempts: number; created: number; duplicates: number }; execution: { attempts: number; created: number; duplicates: number }; outcome: { attempts: number; created: number; duplicates: number }; crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS' };
 type Epic13Proof = { migrationLedgerEntries: number; rlsTables: number; context: { attempts: number; created: number; duplicates: number }; candidate: { attempts: number; created: number; duplicates: number }; recommendation: { attempts: number; created: number; duplicates: number }; outcome: { attempts: number; created: number; duplicates: number }; crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS' };
+type Epic14Proof = { migrationLedgerEntries:number; rlsTables:number; binding:{attempts:number;created:number;duplicates:number}; capability:{attempts:number;created:number;duplicates:number}; verification:{attempts:number;created:number;duplicates:number}; crossTenantDenied:'PASS'; missingContextDenied:'PASS'; evidenceIsolation:'PASS'; cleanup:'PASS' };
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
 const tenantB = '22222222-2222-2222-2222-222222222222';
@@ -3238,6 +3239,12 @@ async function testEpic13CustomerGrowthDecisioning(owner: SqlClient, databaseUrl
   } finally { if (!cleaned) await cleanup(); }
 }
 
+async function testEpic14ProviderIntegrationRuntime(owner: SqlClient,databaseUrl:string,recordSql:SqlRecorder,recordStep:(step:string)=>void):Promise<Epic14Proof>{
+  const prefix='epic14-acceptance-';const tables=['tenant_provider_bindings','tenant_provider_capabilities','provider_integration_verifications'];const bindingKey=`${prefix}binding-key`;const capabilityKey=`${prefix}capability-key`;const verificationKey=`${prefix}verification-key`;let cleaned=false;
+  const race=async(table:string,key:string,insert:(attempt:number,tx:SqlClient)=>Promise<Row[]>)=>{const attempts=await Promise.all([0,1].map(attempt=>withAppTransaction(databaseUrl,tenantA,tx=>insert(attempt,tx))));const created=attempts.filter(item=>item.length===1).length;assert.equal(created,1);assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM ${table} WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,key])).count),1);return{attempts:2,created,duplicates:1};};
+  const cleanup=async()=>{await owner.unsafe(`DELETE FROM provider_integration_verifications WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,verificationKey]);await owner.unsafe(`DELETE FROM tenant_provider_capabilities WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,capabilityKey]);await owner.unsafe(`DELETE FROM tenant_provider_bindings WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,bindingKey]);for(const [table,key] of [['provider_integration_verifications',verificationKey],['tenant_provider_capabilities',capabilityKey],['tenant_provider_bindings',bindingKey]] as const)assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM ${table} WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,key])).count),0,`${table} fixture rows must be removed`);};
+  try{recordStep('schema_and_migration_ledger');const found=rows(await validationUnsafe(owner,`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN (${tables.map(table=>`'${table}'`).join(',')})`,recordSql));assert.equal(found.length,tables.length);assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at=1788629864186`)).count),1);recordStep('seed_tenant_rows');recordStep('tenant_rls_cross_tenant_and_missing_context');recordStep('provider_binding_idempotency');const binding=await race('tenant_provider_bindings',bindingKey,(attempt,tx)=>tx.unsafe(`INSERT INTO tenant_provider_bindings (id,tenant_id,provider,environment,execution_mode,configured,enabled,idempotency_key,adapter_version) VALUES ($1,$2::uuid,'CRM_MOCK','SANDBOX','MOCK',true,true,$3,'v1') ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${prefix}binding-${attempt}`,tenantA,bindingKey]).then(rows));const bindingId=String(one(await owner.unsafe(`SELECT id FROM tenant_provider_bindings WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,bindingKey])).id);recordStep('capability_binding_idempotency');const capability=await race('tenant_provider_capabilities',capabilityKey,(attempt,tx)=>tx.unsafe(`INSERT INTO tenant_provider_capabilities (id,tenant_id,binding_id,capability,operation,supported,enabled,idempotency_key) VALUES ($1,$2::uuid,$3,'CRM_CONTACT_WRITE','EXTERNAL_CONSEQUENTIAL',true,true,$4) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${prefix}capability-${attempt}`,tenantA,bindingId,capabilityKey]).then(rows));recordStep('evidence_isolation');const verification=await race('provider_integration_verifications',verificationKey,(attempt,tx)=>tx.unsafe(`INSERT INTO provider_integration_verifications (id,tenant_id,binding_id,capability,state,evidence,idempotency_key) VALUES ($1,$2::uuid,$3,'CRM_CONTACT_WRITE','EXECUTED_UNVERIFIED','{}'::jsonb,$4) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${prefix}verification-${attempt}`,tenantA,bindingId,verificationKey]).then(rows));await withAppTransaction(databaseUrl,tenantB,async tx=>assert.equal(rows(await validationTransactionUnsafe(tx,`SELECT id FROM provider_integration_verifications WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,verificationKey],recordSql)).length,0));await withAppTransaction(databaseUrl,undefined,async tx=>assert.equal(rows(await validationTransactionUnsafe(tx,`SELECT id FROM tenant_provider_bindings WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,bindingKey],recordSql)).length,0));recordStep('fixture_cleanup');await cleanup();cleaned=true;return{migrationLedgerEntries:1,rlsTables:3,binding,capability,verification,crossTenantDenied:'PASS',missingContextDenied:'PASS',evidenceIsolation:'PASS',cleanup:'PASS'};}finally{if(!cleaned)await cleanup();}}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -3259,6 +3266,7 @@ async function main(): Promise<void> {
   const index0028 = journal.findIndex((entry) => entry.tag === '0028_customer_journey_lifecycle_orchestration');
   const index0029 = journal.findIndex((entry) => entry.tag === '0029_governed_lifecycle_activation');
   const index0030 = journal.findIndex((entry) => entry.tag === '0030_customer_growth_decisioning');
+  const index0031 = journal.findIndex((entry) => entry.tag === '0031_provider_integration_runtime');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
@@ -3271,6 +3279,7 @@ async function main(): Promise<void> {
   assert.equal(index0028, index0027 + 1, '0028 must directly follow 0027 in the canonical journal');
   assert.equal(index0029, index0028 + 1, '0029 must directly follow 0028 in the canonical journal');
   assert.equal(index0030, index0029 + 1, '0030 must directly follow 0029 in the canonical journal');
+  assert.equal(index0031, index0030 + 1, '0031 must directly follow 0030 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -3415,6 +3424,7 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC13_STEP' },
     );
+    const epic14Proof = await executePhase1ValidationCheck('epic14_provider_integration_runtime',async(recordSql,recordStep)=>testEpic14ProviderIntegrationRuntime(owner,databaseUrl,recordSql,recordStep),console.log,{stepMarker:'PHASE1_EPIC14_STEP'});
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -3435,6 +3445,7 @@ async function main(): Promise<void> {
           migration0028: 'PASS',
           migration0029: 'PASS',
           migration0030: 'PASS',
+          migration0031: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -3500,6 +3511,7 @@ async function main(): Promise<void> {
           epic11FixtureCleanup: 'PASS',
           epic12Persistence: 'PASS', epic12Rls: 'PASS', epic12ActivationPlanIdempotency: 'PASS', epic12ActivationCandidateIdempotency: 'PASS', epic12ActivationExecutionIdempotency: 'PASS', epic12ActivationOutcomeIdempotency: 'PASS', epic12CrossTenantDenial: 'PASS', epic12MissingContextDenial: 'PASS', epic12LearningIsolation: 'PASS', epic12FixtureCleanup: 'PASS',
           epic13Persistence: 'PASS', epic13Rls: 'PASS', epic13DecisionContextIdempotency: 'PASS', epic13CandidateIdempotency: 'PASS', epic13RecommendationIdempotency: 'PASS', epic13VerifiedOutcomeIdempotency: 'PASS', epic13CrossTenantDenial: 'PASS', epic13MissingContextDenial: 'PASS', epic13LearningIsolation: 'PASS', epic13FixtureCleanup: 'PASS',
+          epic14Persistence:'PASS',epic14Rls:'PASS',epic14BindingIdempotency:'PASS',epic14CapabilityIdempotency:'PASS',epic14EvidenceIsolation:'PASS',epic14CrossTenantDenial:'PASS',epic14MissingContextDenial:'PASS',epic14FixtureCleanup:'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
@@ -3512,6 +3524,7 @@ async function main(): Promise<void> {
         epic11: epic11Proof,
         epic12: epic12Proof,
         epic13: epic13Proof,
+        epic14: epic14Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

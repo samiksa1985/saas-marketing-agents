@@ -4,6 +4,10 @@
 
 ## EPIC13 customer growth decisioning
 
+## EPIC14 provider integration runtime
+
+The tenant provider-binding/capability-resolution contract is a future Core candidate only after a second product requires the same provider-neutral routing and sanitized readiness semantics. Growth retains provider selection, customer-growth capability policy, Google/Meta adapters, CRM/communication vocabularies, and all provider credentials. Existing EPIC03/05 governance, reliability, approval, and health records remain the reuse boundary; no Core runtime migration occurs now.
+
 `growth_decision_*` is a provider-neutral candidate for future Core extraction only after another product needs the same deterministic, recommendation-only evidence contract. Its lifecycle interpretation, scoring weights, suppression, consent/frequency policies, and customer-growth vocabulary remain Growth-domain IP. It does not own approval, execution, transport, credentials, verification authority, or causal inference.
 
 `lifecycle_activation_*` is a provider-neutral candidate for future NAWA Core extraction: it owns recommendation, simulation, policy/approval references, verification evidence, and learning links. It deliberately does not own provider credentials, transport, retries, or canonical approval/external-action execution.
