@@ -6,6 +6,8 @@ Run only against a disposable local PostgreSQL database. The harness requires bo
 
 The current canonical Phase1 chain ends at migration `0031_provider_integration_runtime` (32 migrations). EPIC14 verifies provider-binding, capability-binding, and sanitized verification-evidence tables with RLS, tenant/no-context boundaries, single-authority idempotency races, evidence isolation, and child-before-parent fixture cleanup. EPIC05 remains the provider-health and reliability authority; evidence verification fails closed without every structured EPIC14 field.
 
+EPIC15 is a frontend/application product-experience composition only. It adds no migration, PostgreSQL acceptance assertion, or provider mutation path; therefore it does not require a new disposable PostgreSQL gate.
+
 ## Required environment
 
 | Variable                    | Purpose                                             | Secret |

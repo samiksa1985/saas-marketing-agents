@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AI Marketing OS',
-  description: 'Tenant-scoped marketing operating system with governed AI execution.',
+  title: 'NAWA Growth OS',
+  description: 'Tenant-scoped Growth Operating System with governed AI recommendations and execution.',
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

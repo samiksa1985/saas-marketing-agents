@@ -13,7 +13,7 @@ export default async function SurfacePage({
 }>) {
   const { surface } = await params;
   const view = getProductView(surface);
-  if (!view || view.id === 'home') {
+  if (!view || view.id === 'overview') {
     notFound();
   }
   return <ProductShell initialView={view.id} />;

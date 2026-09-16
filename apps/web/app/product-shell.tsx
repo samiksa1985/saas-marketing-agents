@@ -27,27 +27,19 @@ const signedOutAccess: ProductAccess = {
 const ui = (locale: ProductLocale, en: string, ar: string) => (locale === 'ar-SA' ? ar : en);
 
 function SourcePanel({ view, locale }: { view: ProductView; locale: ProductLocale }) {
-  const source = view.dataSources[0]!;
   const unavailable = unavailableState(view);
-  const status =
-    source.status === 'available'
-      ? ui(locale, 'Available', 'متاح')
-      : ui(locale, 'Unavailable', 'غير متاح');
 
   return (
     <aside className="source-panel" aria-label={ui(locale, 'Source status', 'حالة المصدر')}>
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">{ui(locale, 'Canonical source', 'المصدر القانوني')}</p>
-          <h2>{copy(source.label, locale)}</h2>
+          <p className="eyebrow">{ui(locale, 'Authoritative data sources', 'مصادر البيانات الموثوقة')}</p>
+          <h2>{ui(locale, 'Data readiness', 'جاهزية البيانات')}</h2>
         </div>
-        <span className={`status-pill status-pill--${source.status}`}>{status}</span>
+        <span className="status-pill status-pill--composition-required">{ui(locale, 'Session required', 'تتطلب جلسة')}</span>
       </div>
-      <p>{copy(view.description, locale)}</p>
-      <code>{source.endpoint}</code>
-      {source.status === 'composition-required' && unavailable.kind === 'unavailable' ? (
-        <p className="honesty-note">{copy(unavailable.message, locale)}</p>
-      ) : null}
+      <p>{copy(unavailable.message, locale)}</p>
+      <ul className="source-list">{view.dataSources.map((source) => <li key={source.endpoint}><span>{copy(source.label, locale)}</span><code>{source.endpoint}</code></li>)}</ul>
     </aside>
   );
 }
@@ -133,15 +125,42 @@ function CommandCenter({ locale }: { locale: ProductLocale }) {
   );
 }
 
+function Onboarding({ locale }: { locale: ProductLocale }) {
+  const steps = locale === 'ar-SA'
+    ? ['مرحباً ومساحة العمل', 'ملف النشاط', 'أهداف النمو', 'السوق والجمهور', 'القنوات', 'تكاملات المزوّدين', 'تفضيلات الحوكمة', 'مراجعة الجاهزية', 'دخول مساحة عمل النمو']
+    : ['Welcome and workspace', 'Business profile', 'Growth goals', 'Market and audience', 'Channels', 'Provider integrations', 'Governance preferences', 'Readiness review', 'Enter Growth Workspace'];
+  return <section className="onboarding-card" aria-label={ui(locale, 'Onboarding steps', 'خطوات التهيئة')}><p className="eyebrow">{ui(locale, 'Pilot onboarding', 'تهيئة التجربة')}</p><h2>{ui(locale, 'Start with what is connected', 'ابدأ بما هو متصل')}</h2><p>{ui(locale, 'Partial integrations are supported. Status is evidence-bound: connected, needs configuration, unavailable, disabled, or requires approval.', 'التكاملات الجزئية مدعومة. الحالة مرتبطة بالأدلة: متصل أو يحتاج تهيئة أو غير متاح أو معطل أو يتطلب موافقة.')}</p><ol className="onboarding-steps">{steps.map((step, index) => <li key={step}><span>{index + 1}</span>{step}</li>)}</ol></section>;
+}
+
+function GrowthChain({ locale }: { locale: ProductLocale }) {
+  const stages = locale === 'ar-SA' ? ['راقب', 'شخّص', 'قرّر', 'حاكي', 'وافق', 'نفّذ', 'تحقق', 'تعلّم'] : ['Observe', 'Diagnose', 'Decide', 'Simulate', 'Approve', 'Execute', 'Verify', 'Learn'];
+  return <section className="growth-chain" aria-label={ui(locale, 'Governed growth chain', 'سلسلة النمو المحكومة')}><div className="panel-heading"><div><p className="eyebrow">{ui(locale, 'Growth operating system', 'نظام تشغيل النمو')}</p><h2>{ui(locale, 'Recommendation is not authorization', 'التوصية ليست تفويضاً')}</h2></div><span className="status-pill status-pill--composition-required">{ui(locale, 'Awaiting evidence', 'بانتظار الأدلة')}</span></div><p>{ui(locale, 'AI recommendation, human approval, executed action, and verified result are intentionally distinct states.', 'توصية الذكاء الاصطناعي والموافقة البشرية والإجراء المنفذ والنتيجة المتحقق منها حالات متميزة عمداً.')}</p><ol className="growth-stages">{stages.map((stage) => <li key={stage}>{stage}</li>)}</ol></section>;
+}
+
+function ApprovalStates({ locale }: { locale: ProductLocale }) {
+  const states = locale === 'ar-SA' ? ['معلق', 'معتمد', 'مرفوض', 'منتهٍ', 'منفذ', 'متحقق', 'فاشل', 'غير مؤكد'] : ['Pending', 'Approved', 'Rejected', 'Expired', 'Executed', 'Verified', 'Failed', 'Uncertain'];
+  return <section className="state-card" aria-label={ui(locale, 'Approval states', 'حالات الموافقة')}><h2>{ui(locale, 'Approval state', 'حالة الموافقة')}</h2><p>{ui(locale, 'Decisions are submitted only to the existing server-side approval authority.', 'تُرسل القرارات فقط إلى جهة الموافقة الحالية من جانب الخادم.')}</p><div className="state-list">{states.map((state) => <span key={state}>{state}</span>)}</div></section>;
+}
+
+function IntegrationStates({ locale }: { locale: ProductLocale }) {
+  const capabilities = locale === 'ar-SA' ? ['إعلام مدفوع', 'CRM', 'بريد إلكتروني', 'SMS', 'WhatsApp'] : ['Paid Media', 'CRM', 'Email', 'SMS', 'WhatsApp'];
+  return <section className="state-card" aria-label={ui(locale, 'Integration capabilities', 'قدرات التكامل')}><h2>{ui(locale, 'Capability readiness', 'جاهزية القدرة')}</h2><p>{ui(locale, 'No credential values are rendered. Google, Meta, CRM, and communications remain evidence-bound.', 'لا تُعرض قيم بيانات الاعتماد. تظل Google وMeta وCRM والاتصالات مرتبطة بالأدلة.')}</p><div className="state-list">{capabilities.map((capability) => <span key={capability}>{capability} · {ui(locale, 'Awaiting evidence', 'بانتظار الأدلة')}</span>)}</div></section>;
+}
+
 function ViewBody({ view, locale }: { view: ProductView; locale: ProductLocale }) {
-  if (view.id === 'home') {
+  if (view.id === 'overview') {
     return <ExecutiveBoard locale={locale} />;
   }
 
-  if (view.id === 'ai-command') {
-    return <CommandCenter locale={locale} />;
-  }
+  if (view.id === 'onboarding') return <Onboarding locale={locale} />;
+  if (view.id === 'growth-workspace') return <GrowthChain locale={locale} />;
+  if (view.id === 'approvals') return <><ApprovalStates locale={locale} /><SectionGrid view={view} locale={locale} /></>;
+  if (view.id === 'integrations') return <><IntegrationStates locale={locale} /><SectionGrid view={view} locale={locale} /></>;
 
+  return <SectionGrid view={view} locale={locale} />;
+}
+
+function SectionGrid({ view, locale }: { view: ProductView; locale: ProductLocale }) {
   return (
     <section className="content-grid" aria-label={copy(view.title, locale)}>
       {view.sections.map((section) => (
@@ -176,11 +195,10 @@ export function ProductShell({ initialView }: ProductShellProps) {
           <span className="brand-mark" aria-hidden="true">
             A
           </span>
-          <span>AI Marketing OS</span>
+          <span>NAWA Growth OS</span>
         </a>
-        <p className="workspace-label">
-          {locale === 'ar-SA' ? 'مساحة تشغيل مؤسسية' : 'Enterprise operating workspace'}
-        </p>
+        <p className="workspace-label">{locale === 'ar-SA' ? 'مساحة نمو محكومة' : 'Governed growth workspace'}</p>
+        <a className="onboarding-link" href="/onboarding">{ui(locale, 'Set up workspace', 'إعداد مساحة العمل')}</a>
         <nav>
           {productNavigation.map((group) => (
             <section className="nav-group" key={group.id} aria-label={copy(group.label, locale)}>
@@ -211,6 +229,7 @@ export function ProductShell({ initialView }: ProductShellProps) {
               {locale === 'ar-SA' ? 'لا توجد جلسة مستأجر نشطة' : 'No active tenant session'}
             </span>
           </div>
+          <span className="workspace-context">{ui(locale, 'Workspace: unavailable', 'مساحة العمل: غير متاحة')}</span>
           <button
             className="locale-switcher"
             onClick={() => setLocale((current) => (current === 'en-US' ? 'ar-SA' : 'en-US'))}
@@ -228,7 +247,7 @@ export function ProductShell({ initialView }: ProductShellProps) {
               <p>{copy(view.description, locale)}</p>
             </div>
             <div className="guard-card">
-              <span>{ui(locale, 'Canonical guard', 'حارس قانوني')}</span>
+              <span>{ui(locale, 'Access and evidence', 'الوصول والأدلة')}</span>
               <strong>
                 {access === 'available'
                   ? ui(locale, 'Available', 'متاح')

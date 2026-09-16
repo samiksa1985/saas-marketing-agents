@@ -1,95 +1,48 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { assessProductAccess, copy, directionFor, getProductView, productNavigation, productViews, unavailableState } from './product-model.js';
 
-import {
-  assessProductAccess,
-  copy,
-  directionFor,
-  getProductView,
-  productNavigation,
-  productViews,
-  unavailableState,
-} from './product-model.js';
-
-test('the unified navigation maps every declared product surface to one canonical route', () => {
-  const navigationIds = productNavigation.flatMap((group) => group.views);
-
-  assert.equal(productViews.length, 23);
-  assert.equal(new Set(navigationIds).size, productViews.length);
-  assert.equal(new Set(productViews.map((view) => view.route)).size, productViews.length);
-  assert.deepEqual(new Set(navigationIds), new Set(productViews.map((view) => view.id)));
-  assert.equal(getProductView('admin-governance')?.route, '/admin-governance');
+test('commercial navigation provides the ten primary Growth OS surfaces and five administrative surfaces', () => {
+  const primary = productNavigation.find((group) => group.id === 'primary')!;
+  const administration = productNavigation.find((group) => group.id === 'administration')!;
+  assert.deepEqual(primary.views, ['overview', 'growth-workspace', 'campaigns', 'customers', 'conversations', 'journeys', 'approvals', 'analytics', 'integrations', 'reports']);
+  assert.equal(administration.views.length, 5);
+  assert.equal(productViews.length, 16);
+  assert.equal(new Set(productViews.map((item) => item.route)).size, productViews.length);
+  assert.equal(getProductView('growth-workspace')?.route, '/growth-workspace');
   assert.equal(getProductView('not-a-route'), undefined);
 });
 
-test('Arabic and English use the canonical i18n direction with localized labels', () => {
-  const admin = getProductView('admin-governance')!;
-
+test('Arabic is first-class RTL copy for commercial navigation', () => {
+  const integrations = getProductView('integrations')!;
   assert.equal(directionFor('en-US'), 'ltr');
   assert.equal(directionFor('ar-SA'), 'rtl');
-  assert.equal(copy(admin.label, 'en-US'), 'Admin & Governance');
-  assert.equal(copy(admin.label, 'ar-SA'), 'الإدارة والحوكمة');
+  assert.equal(copy(integrations.label, 'en-US'), 'Integrations');
+  assert.equal(copy(integrations.label, 'ar-SA'), 'التكاملات');
 });
 
-test('permission and entitlement guards derive access from a tenant context, never a feature flag', () => {
+test('tenant permissions, not frontend visibility, control each product surface', () => {
   const approvals = getProductView('approvals')!;
-  const admin = getProductView('admin-governance')!;
-  const billing = getProductView('billing-usage')!;
-
-  assert.equal(
-    assessProductAccess(approvals, {
-      tenantContext: 'missing',
-      permissions: ['approval:decide'],
-      entitlements: [],
-    }),
-    'missing-context',
-  );
-  assert.equal(
-    assessProductAccess(approvals, {
-      tenantContext: 'available',
-      permissions: [],
-      entitlements: [],
-    }),
-    'permission-denied',
-  );
-  assert.equal(
-    assessProductAccess(admin, {
-      tenantContext: 'available',
-      permissions: ['organization:manage'],
-      entitlements: [],
-    }),
-    'available',
-  );
-  assert.equal(
-    assessProductAccess(billing, {
-      tenantContext: 'available',
-      permissions: ['billing:admin'],
-      entitlements: [],
-    }),
-    'entitlement-unavailable',
-  );
-  assert.equal(
-    assessProductAccess(billing, {
-      tenantContext: 'available',
-      permissions: ['billing:admin'],
-      entitlements: ['billing-usage'],
-    }),
-    'available',
-  );
-  assert.equal(admin.approvalSensitivity, 'decision-required');
-  assert.equal(
-    admin.sections[1]!.items.some((item) =>
-      item.en.includes('Feature flags never imply authorization'),
-    ),
-    true,
-  );
+  const billing = getProductView('billing-plan')!;
+  assert.equal(assessProductAccess(approvals, { tenantContext: 'missing', permissions: ['approval:decide'], entitlements: [] }), 'missing-context');
+  assert.equal(assessProductAccess(approvals, { tenantContext: 'available', permissions: [], entitlements: [] }), 'permission-denied');
+  assert.equal(assessProductAccess(billing, { tenantContext: 'available', permissions: ['billing:admin'], entitlements: [] }), 'entitlement-unavailable');
+  assert.equal(assessProductAccess(billing, { tenantContext: 'available', permissions: ['billing:admin'], entitlements: ['billing-usage'] }), 'available');
 });
 
-test('unavailable composition data remains explicit and does not become fabricated business state', () => {
-  const finance = getProductView('finance-cfo')!;
-  const state = unavailableState(finance);
-
+test('unknown is represented as unavailable instead of a fake zero or connection state', () => {
+  const overview = getProductView('overview')!;
+  const state = unavailableState(overview);
   assert.equal(state.kind, 'unavailable');
-  assert.equal(state.compositionEndpoint, '/product-surfaces/finance-cfo');
-  assert.match(state.message.en, /not available/i);
+  assert.equal(state.compositionEndpoint, 'GET /revenue-intelligence');
+  assert.match(state.message.en, /authoritative source/i);
+});
+
+test('commercial surfaces map to existing canonical API routes and never contain EPIC labels', () => {
+  for (const item of productViews) {
+    assert.ok(item.dataSources.length > 0);
+    assert.equal(item.title.en.includes('EPIC'), false);
+  }
+  assert.match(getProductView('integrations')!.dataSources.map((item) => item.endpoint).join('\n'), /provider-integrations/);
+  assert.match(getProductView('approvals')!.sections[0]!.description.en, /canonical backend approval authority/i);
 });

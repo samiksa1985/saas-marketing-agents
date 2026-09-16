@@ -25,6 +25,27 @@ export interface CanonicalWorkflowSummary {
   status: string;
 }
 
+/** Read-only endpoint shapes deliberately omit credentials and mutation calls. */
+export interface ProviderBindingSummary { id: string; provider: string; environment: string; configured: boolean; enabled: boolean; executionMode: string; }
+export interface ProviderCapabilitySummary { id: string; capability: string; enabled: boolean; operationClassification: string; }
+export interface ProviderVerificationSummary { id: string; capability: string; state: string; providerReference?: string; evidence?: unknown; }
+export interface LeadSummary { id: string; status?: string; identityId?: string; }
+export interface ConversationSummary { id: string; channel?: string; state?: string; }
+
+export type CanonicalReadEndpoint =
+  | '/approvals'
+  | '/leads'
+  | '/opportunities'
+  | '/funnel'
+  | '/revenue-intelligence'
+  | '/revenue-attribution'
+  | '/customer-engagement/conversations'
+  | '/customer-engagement/handoffs'
+  | '/customer-engagement/follow-ups'
+  | '/customer-engagement/analytics'
+  | '/provider-integrations/bindings'
+  | '/provider-integrations/capabilities';
+
 export class CanonicalApiError extends Error {
   constructor(
     public readonly status: number,
@@ -73,6 +94,23 @@ export class CanonicalApiClient {
   async productSurface(surface: string): Promise<ProductSurfaceComposition> {
     return this.get(`/product-surfaces/${encodeURIComponent(surface)}`);
   }
+
+  /** Single authenticated, typed read boundary for commercial product surfaces. */
+  async read<T>(path: CanonicalReadEndpoint): Promise<T> {
+    return this.get(path);
+  }
+
+  providerBindings(): Promise<ProviderBindingSummary[]> {
+    return this.read('/provider-integrations/bindings');
+  }
+
+  providerCapabilities(): Promise<ProviderCapabilitySummary[]> {
+    return this.read('/provider-integrations/capabilities');
+  }
+
+  leads(): Promise<LeadSummary[]> { return this.read('/leads'); }
+  conversations(): Promise<ConversationSummary[]> { return this.read('/customer-engagement/conversations'); }
+  revenueIntelligence(): Promise<unknown> { return this.read('/revenue-intelligence'); }
 
   private async get<T>(path: string, requiresAuth = true): Promise<T> {
     const response = await this.fetcher(`${this.session.baseUrl.replace(/\/+$/, '')}${path}`, {

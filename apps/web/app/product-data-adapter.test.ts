@@ -1,24 +1,31 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { CanonicalApiClient } from './canonical-api.js';
 import { loadProductSurface } from './product-data-adapter.js';
-import { productSurfaceEndpoint, productViews } from './product-model.js';
+import { getProductView } from './product-model.js';
 
 const access = { tenantContext: 'available' as const, permissions: ['tenant:read'], entitlements: [] };
 
-test('every product surface has one canonical typed backend route', () => {
-  assert.deepEqual(
-    productViews.map((view) => productSurfaceEndpoint(view.id)),
-    productViews.map((view) => `/product-surfaces/${view.id}`),
-  );
+test('a concrete commercial read uses its mapped canonical endpoint and preserves empty data', async () => {
+  const calls: string[] = [];
+  const client = new CanonicalApiClient({ baseUrl: 'https://canonical.example', accessToken: 'token' }, (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return new Response(JSON.stringify([]), { status: 200 });
+  }) as typeof fetch);
+  const state = await loadProductSurface(client, getProductView('overview')!, access);
+  assert.equal(state.kind, 'empty');
+  assert.deepEqual(calls, ['https://canonical.example/revenue-intelligence']);
 });
 
-test('surface adapter preserves an empty canonical response without inventing metrics', async () => {
-  const client = new CanonicalApiClient(
-    { baseUrl: 'https://canonical.example', accessToken: 'token' },
-    (async () => new Response(JSON.stringify({ surface: 'home', state: 'empty', source: 'canonical', reason: 'No records' }), { status: 200 })) as typeof fetch,
-  );
-  const state = await loadProductSurface(client, productViews[0]!, access);
-  assert.equal(state.kind, 'empty');
-  assert.equal(state.message.en, 'No records');
+test('an entity-key source stays explicitly unavailable instead of guessing a record', async () => {
+  const client = new CanonicalApiClient({ baseUrl: 'https://canonical.example', accessToken: 'token' });
+  const state = await loadProductSurface(client, getProductView('campaigns')!, { tenantContext: 'available', permissions: ['artifact:read'], entitlements: [] });
+  assert.equal(state.kind, 'unavailable');
+  assert.match(state.compositionEndpoint, /:campaignId/);
+});
+
+test('API failures become an honest screen error rather than fake metrics', async () => {
+  const client = new CanonicalApiClient({ baseUrl: 'https://canonical.example', accessToken: 'token' }, (async () => new Response('no', { status: 503 })) as typeof fetch);
+  const state = await loadProductSurface(client, getProductView('overview')!, access);
+  assert.equal(state.kind, 'error');
 });
