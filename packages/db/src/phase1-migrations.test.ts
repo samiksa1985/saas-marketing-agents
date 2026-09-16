@@ -69,6 +69,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0027_customer_conversations_ai_receptionist',
     '0028_customer_journey_lifecycle_orchestration',
     '0029_governed_lifecycle_activation',
+    '0030_customer_growth_decisioning',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -83,6 +84,17 @@ test('0029 adds collision-free tenant-scoped governed lifecycle activation witho
   for (const table of ['lifecycle_activation_plans', 'lifecycle_activation_steps', 'lifecycle_activation_candidates', 'lifecycle_activation_assessments', 'lifecycle_activation_executions', 'lifecycle_activation_verifications', 'lifecycle_activation_outcomes', 'lifecycle_activation_learning_links']) assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   for (const key of ['lifecycle_activation_plan_tenant_key_uidx', 'lifecycle_activation_candidate_tenant_key_uidx', 'lifecycle_activation_execution_tenant_key_uidx', 'lifecycle_activation_outcome_tenant_key_uidx']) assert.match(migration, new RegExp(key));
   assert.match(migration, /ALTER TABLE %I ENABLE ROW LEVEL SECURITY/); assert.match(schema, /export const lifecycleActivationPlans = pgTable/); assert.doesNotMatch(migration, /api_key|secret|password|authorization|vendasta|http:|https:/i);
+});
+
+test('0030 adds eight tenant-scoped, provider-neutral customer growth decisioning tables', () => {
+  const migration = source('0030_customer_growth_decisioning.sql');
+  const schema = source('../src/schema.ts');
+  const tables = ['growth_decision_contexts', 'growth_action_candidates', 'growth_candidate_eligibility_assessments', 'growth_decision_conflict_assessments', 'growth_decision_scores', 'growth_decision_recommendations', 'growth_decision_outcomes', 'growth_decision_learning_records'];
+  for (const table of tables) assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  for (const key of ['growth_decision_context_tenant_key_uidx', 'growth_action_candidate_tenant_key_uidx', 'growth_decision_recommendation_tenant_key_uidx', 'growth_decision_outcome_tenant_key_uidx', 'growth_decision_learning_tenant_outcome_uidx']) assert.match(migration, new RegExp(key));
+  for (const mapping of ['growthDecisionContexts', 'growthActionCandidates', 'growthCandidateEligibilityAssessments', 'growthDecisionConflictAssessments', 'growthDecisionScores', 'growthDecisionRecommendations', 'growthDecisionOutcomes', 'growthDecisionLearningRecords']) assert.match(schema, new RegExp(`export const ${mapping} = pgTable`));
+  assert.match(migration, /ALTER TABLE %I ENABLE ROW LEVEL SECURITY/);
+  assert.doesNotMatch(migration, /api_key|secret|password|authorization|https?:/i);
 });
 
 test('0020 adds tenant-scoped Marketing OS plan and execution persistence forward-only', () => {

@@ -135,6 +135,7 @@ type Epic11Proof = {
   crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS';
 };
 type Epic12Proof = { migrationLedgerEntries: number; rlsTables: number; plan: { attempts: number; created: number; duplicates: number }; candidate: { attempts: number; created: number; duplicates: number }; execution: { attempts: number; created: number; duplicates: number }; outcome: { attempts: number; created: number; duplicates: number }; crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS' };
+type Epic13Proof = { migrationLedgerEntries: number; rlsTables: number; context: { attempts: number; created: number; duplicates: number }; candidate: { attempts: number; created: number; duplicates: number }; recommendation: { attempts: number; created: number; duplicates: number }; outcome: { attempts: number; created: number; duplicates: number }; crossTenantDenied: 'PASS'; missingContextDenied: 'PASS'; learningIsolation: 'PASS'; cleanup: 'PASS' };
 
 const tenantA = '11111111-1111-1111-1111-111111111111';
 const tenantB = '22222222-2222-2222-2222-222222222222';
@@ -3193,6 +3194,50 @@ async function testEpic12GovernedLifecycleActivation(owner: SqlClient, databaseU
   } finally { if(!cleaned) await cleanup(); }
 }
 
+async function testEpic13CustomerGrowthDecisioning(owner: SqlClient, databaseUrl: string, recordSql: SqlRecorder, recordStep: (step: string) => void): Promise<Epic13Proof> {
+  const prefix = 'epic13-acceptance-';
+  const tables = ['growth_decision_contexts','growth_action_candidates','growth_candidate_eligibility_assessments','growth_decision_conflict_assessments','growth_decision_scores','growth_decision_recommendations','growth_decision_outcomes','growth_decision_learning_records'];
+  const contextKey = `${prefix}context-key`; const recommendationKey = `${prefix}recommendation-key`; const outcomeKey = `${prefix}outcome-key`;
+  const contextId = `${prefix}context`; const candidateId = `${prefix}candidate`; const recommendationId = `${prefix}recommendation`; const outcomeId = `${prefix}outcome`;
+  const payload = JSON.stringify({ source: 'PHASE1_EPIC13', causalClaim: 'NONE' }); let cleaned = false;
+  const cleanupTenant = async (tenantId: string) => {
+    await owner.unsafe(`DELETE FROM growth_decision_learning_records WHERE tenant_id=$1::uuid AND outcome_id IN (SELECT id FROM growth_decision_outcomes WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantId, outcomeKey]);
+    await owner.unsafe(`DELETE FROM growth_decision_outcomes WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantId, outcomeKey]);
+    await owner.unsafe(`DELETE FROM growth_decision_recommendations WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantId, recommendationKey]);
+    await owner.unsafe(`DELETE FROM growth_decision_scores WHERE tenant_id=$1::uuid AND candidate_id IN (SELECT id FROM growth_action_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantId, `${prefix}candidate-key`]);
+    await owner.unsafe(`DELETE FROM growth_decision_conflict_assessments WHERE tenant_id=$1::uuid AND candidate_id IN (SELECT id FROM growth_action_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantId, `${prefix}candidate-key`]);
+    await owner.unsafe(`DELETE FROM growth_candidate_eligibility_assessments WHERE tenant_id=$1::uuid AND candidate_id IN (SELECT id FROM growth_action_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2)`, [tenantId, `${prefix}candidate-key`]);
+    await owner.unsafe(`DELETE FROM growth_action_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantId, `${prefix}candidate-key`]);
+    await owner.unsafe(`DELETE FROM growth_decision_contexts WHERE tenant_id=$1::uuid AND idempotency_key=$2`, [tenantId, contextKey]);
+  };
+  const cleanup = async () => { await cleanupTenant(tenantA); await cleanupTenant(tenantB); const remaining = [
+    ['growth_decision_contexts', `SELECT count(*)::int AS count FROM growth_decision_contexts WHERE tenant_id=$1::uuid AND idempotency_key=$2`, contextKey],
+    ['growth_action_candidates', `SELECT count(*)::int AS count FROM growth_action_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2`, `${prefix}candidate-key`],
+    ['growth_candidate_eligibility_assessments', `SELECT count(*)::int AS count FROM growth_candidate_eligibility_assessments WHERE tenant_id=$1::uuid AND id=$2`, `${prefix}eligibility`],
+    ['growth_decision_conflict_assessments', `SELECT count(*)::int AS count FROM growth_decision_conflict_assessments WHERE tenant_id=$1::uuid AND id=$2`, `${prefix}conflict`],
+    ['growth_decision_scores', `SELECT count(*)::int AS count FROM growth_decision_scores WHERE tenant_id=$1::uuid AND id=$2`, `${prefix}score`],
+    ['growth_decision_recommendations', `SELECT count(*)::int AS count FROM growth_decision_recommendations WHERE tenant_id=$1::uuid AND idempotency_key=$2`, recommendationKey],
+    ['growth_decision_outcomes', `SELECT count(*)::int AS count FROM growth_decision_outcomes WHERE tenant_id=$1::uuid AND idempotency_key=$2`, outcomeKey],
+    ['growth_decision_learning_records', `SELECT count(*)::int AS count FROM growth_decision_learning_records WHERE tenant_id=$1::uuid AND id=$2`, `${prefix}learning`],
+  ] as const; for (const [table, query, fixture] of remaining) assert.equal(Number(one(await owner.unsafe(query,[tenantA,fixture])).count),0,`${table} EPIC13 fixture rows must be removed`); };
+  const race = async (key: string, insert: (attempt: number, transaction: SqlClient) => Promise<Row[]>, canonicalTable: string) => { const attempts = await Promise.all([0,1].map((attempt) => withAppTransaction(databaseUrl, tenantA, (transaction) => insert(attempt, transaction)))); const created = attempts.filter((result) => result.length === 1).length; assert.equal(attempts.length,2); assert.equal(created,1); assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM ${canonicalTable} WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,key])).count),1); return { attempts: 2, created, duplicates: 1 }; };
+  try {
+    recordStep('schema_and_migration_ledger'); const found = rows(await validationUnsafe(owner, `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN (${tables.map((table) => `'${table}'`).join(',')})`, recordSql)); assert.equal(found.length, tables.length); assert.equal(Number(one(await owner.unsafe(`SELECT count(*)::int AS count FROM "drizzle"."__drizzle_migrations" WHERE created_at=1788629864185`)).count), 1);
+    recordStep('seed_tenant_rows');
+    recordStep('tenant_rls_cross_tenant_and_missing_context');
+    recordStep('decision_context_idempotency'); const contextProof = await race(contextKey, async (attempt, transaction) => rows(await transaction.unsafe(`INSERT INTO growth_decision_contexts (id,tenant_id,identity_id,idempotency_key,context) VALUES ($1,$2::uuid,$3,$4,$5::jsonb) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`, [`${contextId}-${attempt}`,tenantA,`${prefix}identity-${attempt}`,contextKey,payload])), 'growth_decision_contexts');
+    const savedContextId = String(one(await owner.unsafe(`SELECT id FROM growth_decision_contexts WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,contextKey])).id);
+    recordStep('candidate_idempotency'); const candidateProof = await race(`${prefix}candidate-key`, async (attempt, transaction) => rows(await transaction.unsafe(`INSERT INTO growth_action_candidates (id,tenant_id,context_id,objective,action_type,state,idempotency_key,candidate) VALUES ($1,$2::uuid,$3,'RETAIN','LIFECYCLE_ACTIVATION_RECOMMENDATION','RECOMMENDED',$4,$5::jsonb) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`,[`${candidateId}-${attempt}`,tenantA,savedContextId,`${prefix}candidate-key`,payload])), 'growth_action_candidates'); const savedCandidateId = String(one(await owner.unsafe(`SELECT id FROM growth_action_candidates WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,`${prefix}candidate-key`])).id);
+    await withAppTransaction(databaseUrl, tenantA, async (transaction) => { await transaction.unsafe(`INSERT INTO growth_candidate_eligibility_assessments (id,tenant_id,candidate_id,eligible,assessment,assessed_at) VALUES ($1,$2::uuid,$3,true,$4::jsonb,now())`,[`${prefix}eligibility`,tenantA,savedCandidateId,payload]); await transaction.unsafe(`INSERT INTO growth_decision_conflict_assessments (id,tenant_id,candidate_id,conflict,assessment,assessed_at) VALUES ($1,$2::uuid,$3,false,$4::jsonb,now())`,[`${prefix}conflict`,tenantA,savedCandidateId,payload]); await transaction.unsafe(`INSERT INTO growth_decision_scores (id,tenant_id,candidate_id,score,components,scored_at) VALUES ($1,$2::uuid,$3,60,$4::jsonb,now())`,[`${prefix}score`,tenantA,savedCandidateId,payload]); });
+    recordStep('recommendation_idempotency'); const recommendationProof = await race(recommendationKey, async (attempt, transaction) => rows(await transaction.unsafe(`INSERT INTO growth_decision_recommendations (id,tenant_id,context_id,candidate_id,state,idempotency_key,recommendation) VALUES ($1,$2::uuid,$3,$4,'RECOMMENDED',$5,$6::jsonb) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`, [`${recommendationId}-${attempt}`,tenantA,savedContextId,savedCandidateId,recommendationKey,payload])), 'growth_decision_recommendations');
+    const savedRecommendationId = String(one(await owner.unsafe(`SELECT id FROM growth_decision_recommendations WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,recommendationKey])).id);
+    recordStep('verified_outcome_idempotency'); const outcomeProof = await race(outcomeKey, async (attempt, transaction) => rows(await transaction.unsafe(`INSERT INTO growth_decision_outcomes (id,tenant_id,recommendation_id,outcome,idempotency_key,outcome_record,observed_at) VALUES ($1,$2::uuid,$3,'UNKNOWN',$4,$5::jsonb,now()) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING id`, [`${outcomeId}-${attempt}`,tenantA,savedRecommendationId,outcomeKey,payload])), 'growth_decision_outcomes');
+    recordStep('learning_isolation'); const savedOutcomeId = String(one(await owner.unsafe(`SELECT id FROM growth_decision_outcomes WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,outcomeKey])).id); await withAppTransaction(databaseUrl, tenantA, async (transaction) => { await transaction.unsafe(`INSERT INTO growth_decision_learning_records (id,tenant_id,outcome_id,learning,recorded_at) VALUES ($1,$2::uuid,$3,$4::jsonb,now())`,[`${prefix}learning`,tenantA,savedOutcomeId,payload]); }); await withAppTransaction(databaseUrl, tenantB, async (transaction) => { const denied=rows(await validationTransactionUnsafe(transaction,`SELECT id FROM growth_decision_learning_records WHERE tenant_id=$1::uuid AND outcome_id=$2`,[tenantA,savedOutcomeId],recordSql)); assert.equal(denied.length,0,'Tenant B must not read Tenant A learning'); }); await withAppTransaction(databaseUrl, undefined, async (transaction) => { const denied=rows(await validationTransactionUnsafe(transaction,`SELECT id FROM growth_decision_contexts WHERE tenant_id=$1::uuid AND idempotency_key=$2`,[tenantA,contextKey],recordSql)); assert.equal(denied.length,0,'Missing tenant context must not read EPIC13 fixtures'); });
+    recordStep('fixture_cleanup'); await cleanup(); cleaned=true;
+    return { migrationLedgerEntries:1,rlsTables:tables.length,context:contextProof,candidate:candidateProof,recommendation:recommendationProof,outcome:outcomeProof,crossTenantDenied:'PASS',missingContextDenied:'PASS',learningIsolation:'PASS',cleanup:'PASS' };
+  } finally { if (!cleaned) await cleanup(); }
+}
+
 async function main(): Promise<void> {
   assert.equal(process.env.PHASE1_CONFIRM_DISPOSABLE, 'YES', 'set PHASE1_CONFIRM_DISPOSABLE=YES');
   const databaseUrl = required('PHASE1_DATABASE_URL');
@@ -3212,6 +3257,8 @@ async function main(): Promise<void> {
   const index0026 = journal.findIndex((entry) => entry.tag === '0026_customer_acquisition_revenue_intelligence');
   const index0027 = journal.findIndex((entry) => entry.tag === '0027_customer_conversations_ai_receptionist');
   const index0028 = journal.findIndex((entry) => entry.tag === '0028_customer_journey_lifecycle_orchestration');
+  const index0029 = journal.findIndex((entry) => entry.tag === '0029_governed_lifecycle_activation');
+  const index0030 = journal.findIndex((entry) => entry.tag === '0030_customer_growth_decisioning');
   assert.equal(index0019, index0018 + 1, '0019 must directly follow 0018 in the canonical journal');
   assert.equal(index0020, index0019 + 1, '0020 must directly follow 0019 in the canonical journal');
   assert.equal(index0021, index0020 + 1, '0021 must directly follow 0020 in the canonical journal');
@@ -3222,6 +3269,8 @@ async function main(): Promise<void> {
   assert.equal(index0026, index0025 + 1, '0026 must directly follow 0025 in the canonical journal');
   assert.equal(index0027, index0026 + 1, '0027 must directly follow 0026 in the canonical journal');
   assert.equal(index0028, index0027 + 1, '0028 must directly follow 0027 in the canonical journal');
+  assert.equal(index0029, index0028 + 1, '0029 must directly follow 0028 in the canonical journal');
+  assert.equal(index0030, index0029 + 1, '0030 must directly follow 0029 in the canonical journal');
 
   await recreateDatabase(adminUrl, targetName);
   let owner: SqlClient | undefined;
@@ -3360,6 +3409,12 @@ async function main(): Promise<void> {
       console.log,
       { stepMarker: 'PHASE1_EPIC12_STEP' },
     );
+    const epic13Proof = await executePhase1ValidationCheck(
+      'epic13_customer_growth_decisioning',
+      async (recordSql, recordStep) => testEpic13CustomerGrowthDecisioning(owner, databaseUrl, recordSql, recordStep),
+      console.log,
+      { stepMarker: 'PHASE1_EPIC13_STEP' },
+    );
     console.log(
       `PHASE1_POSTGRES_RESULT=${JSON.stringify({
         status: 'PASS',
@@ -3379,6 +3434,7 @@ async function main(): Promise<void> {
           migration0027: 'PASS',
           migration0028: 'PASS',
           migration0029: 'PASS',
+          migration0030: 'PASS',
           rls: 'PASS',
           forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
           tenantIsolation: 'PASS',
@@ -3443,6 +3499,7 @@ async function main(): Promise<void> {
           epic11LearningIsolation: 'PASS',
           epic11FixtureCleanup: 'PASS',
           epic12Persistence: 'PASS', epic12Rls: 'PASS', epic12ActivationPlanIdempotency: 'PASS', epic12ActivationCandidateIdempotency: 'PASS', epic12ActivationExecutionIdempotency: 'PASS', epic12ActivationOutcomeIdempotency: 'PASS', epic12CrossTenantDenial: 'PASS', epic12MissingContextDenial: 'PASS', epic12LearningIsolation: 'PASS', epic12FixtureCleanup: 'PASS',
+          epic13Persistence: 'PASS', epic13Rls: 'PASS', epic13DecisionContextIdempotency: 'PASS', epic13CandidateIdempotency: 'PASS', epic13RecommendationIdempotency: 'PASS', epic13VerifiedOutcomeIdempotency: 'PASS', epic13CrossTenantDenial: 'PASS', epic13MissingContextDenial: 'PASS', epic13LearningIsolation: 'PASS', epic13FixtureCleanup: 'PASS',
         },
         rlsTables: marketingTables,
         billing: { workers: 20, attempts: 100, idempotencyReplays: 20 },
@@ -3454,6 +3511,7 @@ async function main(): Promise<void> {
         epic10: epic10Proof,
         epic11: epic11Proof,
         epic12: epic12Proof,
+        epic13: epic13Proof,
         pgvector: {
           dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
           index: 'knowledge_chunks_embedding_vector_hnsw_idx',

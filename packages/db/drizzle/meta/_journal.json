@@ -211,6 +211,13 @@
       "when": 1788629864184,
       "tag": "0029_governed_lifecycle_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788629864185,
+      "tag": "0030_customer_growth_decisioning",
+      "breakpoints": true
     }
   ]
 }

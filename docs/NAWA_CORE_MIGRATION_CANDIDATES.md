@@ -2,6 +2,10 @@
 
 ## EPIC12 governed lifecycle activation
 
+## EPIC13 customer growth decisioning
+
+`growth_decision_*` is a provider-neutral candidate for future Core extraction only after another product needs the same deterministic, recommendation-only evidence contract. Its lifecycle interpretation, scoring weights, suppression, consent/frequency policies, and customer-growth vocabulary remain Growth-domain IP. It does not own approval, execution, transport, credentials, verification authority, or causal inference.
+
 `lifecycle_activation_*` is a provider-neutral candidate for future NAWA Core extraction: it owns recommendation, simulation, policy/approval references, verification evidence, and learning links. It deliberately does not own provider credentials, transport, retries, or canonical approval/external-action execution.
 
 This is an architectural inventory, not a migration plan. NAWA Growth

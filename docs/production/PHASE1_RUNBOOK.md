@@ -4,6 +4,8 @@
 
 Run only against a disposable local PostgreSQL database. The harness requires both a database name containing `phase1` and `PHASE1_CONFIRM_DISPOSABLE=YES`, then drops and recreates only that named database through the supplied admin URL. It never reads `DATABASE_URL` and does not operate on production.
 
+The current canonical Phase1 chain ends at migration `0030_customer_growth_decisioning` (31 migrations). EPIC13 verifies eight customer-growth decisioning tables, RLS tenant/no-context boundaries, exact context/recommendation/verified-outcome idempotency races, learning isolation, and child-before-parent fixture cleanup. Evidence verification fails closed without each structured EPIC13 field.
+
 ## Required environment
 
 | Variable                    | Purpose                                             | Secret |
