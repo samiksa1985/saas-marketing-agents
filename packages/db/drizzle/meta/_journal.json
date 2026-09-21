@@ -225,6 +225,13 @@
       "when": 1788629864186,
       "tag": "0031_provider_integration_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788629864187,
+      "tag": "0032_tenant_admin_rbac_seed",
+      "breakpoints": true
     }
   ]
 }

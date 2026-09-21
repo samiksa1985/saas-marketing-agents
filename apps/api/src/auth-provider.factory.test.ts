@@ -49,9 +49,13 @@ test('auth provider selection is OIDC first, then explicit local acceptance, the
     const productionConfig = loadConfig({
       ...baseEnv,
       NODE_ENV: 'production',
+      WEB_URL: 'https://web.example.com',
+      CORS_ALLOWED_ORIGINS: 'https://web.example.com',
+      TRUST_PROXY: 'false',
       OIDC_ISSUER_URL: 'https://issuer.example.com',
       OIDC_AUDIENCE: 'platform-api',
       WORKFLOW_RUNTIME_MODE: 'temporal',
+      RELEASE_VERSION: '1.0.0',
     });
     assert.ok(createApiAuthProvider(productionConfig) instanceof OidcAuthProvider);
   } finally {
