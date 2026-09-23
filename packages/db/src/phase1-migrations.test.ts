@@ -71,6 +71,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0029_governed_lifecycle_activation',
     '0030_customer_growth_decisioning',
     '0031_provider_integration_runtime',
+    '0032_tenant_admin_rbac_seed',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(
@@ -302,7 +303,7 @@ test('EPIC05 PostgreSQL fixtures use the same controlled clock as their lease cl
     'utf8',
   );
   const fixture = (
-    harness.match(/async function seedEpic05Outbox[\s\S]*?\n}\n\nasync function bootstrapMigrationLedger/)
+    harness.match(/async function seedEpic05Outbox[\s\S]*?\r?\n}\r?\n\r?\nasync function bootstrapMigrationLedger/)
       ?.[0]
   ) ?? '';
 
