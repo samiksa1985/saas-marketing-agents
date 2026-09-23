@@ -134,6 +134,10 @@ test('verifier fails closed when PASS evidence omits billing authority', () => {
         migration0025: 'PASS',
         migration0026: 'PASS',
         migration0027: 'PASS',
+        migration0028: 'PASS',
+        migration0029: 'PASS',
+        migration0030: 'PASS',
+        migration0031: 'PASS',
         rls: 'PASS',
         forceRls: 'NOT_REQUIRED_NON_OWNER_ROLE',
         tenantIsolation: 'PASS',
@@ -200,12 +204,16 @@ test('verifier fails closed when a PASS result does not prove migration 0024 and
   assert.match(`${result.stdout}\n${result.stderr}`, /Migration 0024 is not verified as PASS/);
 });
 
-test('verifier fails closed when a PASS result omits migration 0025/0026/0027 or EPIC-08/09/10 checks', () => {
+test('verifier keeps historical EPIC-08/09/10 checks in the current canonical chain', () => {
   const verifier = readFileSync(verifierPath, 'utf8');
   assert.match(verifier, /'Migration 0025' = 'migration0025'/);
   assert.match(verifier, /'Migration 0026' = 'migration0026'/);
   assert.match(verifier, /'Migration 0027' = 'migration0027'/);
-  assert.match(verifier, /EPIC-10 evidence does not prove the canonical 28-migration chain through 0027/);
+  assert.match(verifier, /'Migration 0028' = 'migration0028'/);
+  assert.match(verifier, /'Migration 0029' = 'migration0029'/);
+  assert.match(verifier, /'Migration 0030' = 'migration0030'/);
+  assert.match(verifier, /'Migration 0031' = 'migration0031'/);
+  assert.match(verifier, /EPIC-14 evidence does not prove the canonical 32-migration chain through 0031/);
   assert.match(verifier, /epic08ObservationIdempotency/);
   assert.match(verifier, /epic08\.rlsTables -ne 8/);
   assert.match(verifier, /epic09\.rlsTables -ne 20/);
