@@ -28,11 +28,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Pilot proxy unavailable in production' }, { status: 404 });
-  }
-  if (!PILOT_TOKEN) {
-    return NextResponse.json({ error: 'Pilot token not configured' }, { status: 503 });
+  // Fail closed unless the local pilot acceptance mode is explicitly enabled
+  // AND a server-side pilot token is configured.
+  if (process.env.LOCAL_ACCEPTANCE_AUTH_ENABLED !== 'true' || !PILOT_TOKEN) {
+    return NextResponse.json({ error: 'Pilot proxy unavailable' }, { status: 404 });
   }
 
   const { path } = await params;

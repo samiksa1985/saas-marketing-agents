@@ -5,6 +5,7 @@ const testToken = 'test-only-pilot-token';
 const testEnvironment = process.env as Record<string, string | undefined>;
 testEnvironment.NODE_ENV = 'test';
 process.env.PILOT_API_TOKEN = testToken;
+process.env.LOCAL_ACCEPTANCE_AUTH_ENABLED = 'true';
 
 const proxyPromise = import('./pilot/[...path]/route.js');
 
@@ -70,22 +71,31 @@ test('has no mutation handler and never returns the server-side token', async ()
   }
 });
 
-test('fails closed for production and upstream failure without fabricating success', async () => {
+test('fails closed when local acceptance mode is not enabled', async () => {
   const proxy = await proxyPromise;
-  const originalEnvironment = process.env.NODE_ENV;
+  const originalEnabled = testEnvironment.LOCAL_ACCEPTANCE_AUTH_ENABLED;
+  try {
+    delete testEnvironment.LOCAL_ACCEPTANCE_AUTH_ENABLED;
+    const missing = await proxy.GET(request('/approvals'), params('approvals'));
+    assert.equal(missing.status, 404);
+
+    testEnvironment.LOCAL_ACCEPTANCE_AUTH_ENABLED = 'false';
+    const disabled = await proxy.GET(request('/approvals'), params('approvals'));
+    assert.equal(disabled.status, 404);
+  } finally {
+    testEnvironment.LOCAL_ACCEPTANCE_AUTH_ENABLED = originalEnabled;
+  }
+});
+
+test('fails closed for upstream failure without fabricating success', async () => {
+  const proxy = await proxyPromise;
   const originalFetch = globalThis.fetch;
   try {
-    testEnvironment.NODE_ENV = 'production';
-    const production = await proxy.GET(request('/approvals'), params('approvals'));
-    assert.equal(production.status, 404);
-
-    testEnvironment.NODE_ENV = 'test';
     globalThis.fetch = (async () => { throw new Error('upstream down'); }) as typeof fetch;
     const failure = await proxy.GET(request('/approvals'), params('approvals'));
     assert.equal(failure.status, 502);
     assert.deepEqual(await body(failure), { error: 'Upstream request failed' });
   } finally {
-    testEnvironment.NODE_ENV = originalEnvironment;
     globalThis.fetch = originalFetch;
   }
 });
