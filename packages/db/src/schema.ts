@@ -1,6 +1,8 @@
-import {
+﻿import {
+  bigint,
   boolean,
   integer,
+  real,
   jsonb,
   pgEnum,
   pgTable,
@@ -10,10 +12,13 @@ import {
   uniqueIndex,
   uuid,
   varchar,
+  vector,
   index,
 } from 'drizzle-orm/pg-core';
 
 const id = () => uuid('id').defaultRandom().primaryKey();
+/** Canonical pgvector contract for durable knowledge chunks. */
+export const KNOWLEDGE_EMBEDDING_DIMENSIONS = 1536;
 const times = {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -653,3 +658,2194 @@ export const executionErrors = pgTable(
   },
   (table) => [index('execution_errors_tenant_execution_idx').on(table.tenantId, table.executionId)],
 );
+
+export const documentSourceTypeEnum = pgEnum('document_source_type', ['file', 'url', 'inline']);
+
+export const documentStatusEnum = pgEnum('document_status', [
+  'uploaded',
+  'processing',
+  'ready',
+  'failed',
+  'archived',
+]);
+
+export const knowledgeDocuments = pgTable(
+  'knowledge_documents',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    name: text('name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    storagePath: text('storage_path').notNull(),
+    sourceType: documentSourceTypeEnum('source_type').notNull().default('file'),
+    status: documentStatusEnum('status').notNull().default('uploaded'),
+    sizeBytes: integer('size_bytes'),
+    checksum: text('checksum'),
+    metadata: jsonb('metadata').notNull().default({}),
+    sourceUrl: text('source_url'),
+    pageCount: integer('page_count'),
+    wordCount: integer('word_count'),
+    errorMessage: text('error_message'),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    ...times,
+  },
+  (table) => [
+    index('knowledge_documents_tenant_status_idx').on(table.tenantId, table.status),
+    index('knowledge_documents_tenant_source_idx').on(table.tenantId, table.sourceType),
+    index('knowledge_documents_tenant_checksum_idx').on(table.tenantId, table.checksum),
+    uniqueIndex('knowledge_documents_tenant_id_id_uidx').on(table.tenantId, table.id),
+  ],
+);
+
+export const knowledgeDocumentChunks = pgTable(
+  'knowledge_document_chunks',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: 'cascade' }),
+    chunkIndex: integer('chunk_index').notNull(),
+    text: text('text').notNull(),
+    embedding: jsonb('embedding'),
+    embeddingVector: vector('embedding_vector', { dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS }),
+    embeddingProvider: varchar('embedding_provider', { length: 64 }),
+    embeddingModel: varchar('embedding_model', { length: 255 }),
+    embeddingVersion: varchar('embedding_version', { length: 255 }),
+    embeddedAt: timestamp('embedded_at', { withTimezone: true }),
+    pageNumber: integer('page_number'),
+    slideNumber: integer('slide_number'),
+    sheetName: text('sheet_name'),
+    sourceRef: text('source_ref'),
+    tokenCount: integer('token_count'),
+    metadata: jsonb('metadata').notNull().default({}),
+    ...times,
+  },
+  (table) => [
+    index('knowledge_chunks_tenant_idx').on(table.tenantId),
+    index('knowledge_chunks_document_idx').on(table.documentId, table.chunkIndex),
+    index('knowledge_chunks_document_page_idx').on(table.documentId, table.pageNumber),
+    index('knowledge_chunks_tenant_embedding_provenance_idx').on(
+      table.tenantId,
+      table.embeddingProvider,
+      table.embeddingModel,
+      table.embeddingVersion,
+    ),
+  ],
+);
+
+export const knowledgeDocumentCitations = pgTable(
+  'knowledge_document_citations',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: 'cascade' }),
+    chunkId: uuid('chunk_id').references(() => knowledgeDocumentChunks.id, {
+      onDelete: 'set null',
+    }),
+    agentRunId: uuid('agent_run_id'),
+    workflowRunId: uuid('workflow_run_id'),
+    query: text('query').notNull(),
+    excerpt: text('excerpt').notNull(),
+    relevanceScore: real('relevance_score').notNull(),
+    sourceRef: text('source_ref'),
+    ...times,
+  },
+  (table) => [
+    index('knowledge_citations_tenant_created_idx').on(table.tenantId, table.createdAt),
+    index('knowledge_citations_agent_run_idx').on(table.agentRunId),
+    index('knowledge_citations_workflow_run_idx').on(table.workflowRunId),
+  ],
+);
+export const marketingMemoryRecords = pgTable(
+  'marketing_memory_records',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    scope: varchar('scope', { length: 40 }).notNull(),
+    scopeId: uuid('scope_id').notNull(),
+    statement: text('statement').notNull(),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence'),
+    ...times,
+  },
+  (table) => [
+    index('marketing_memory_tenant_scope_idx').on(table.tenantId, table.scope, table.scopeId),
+    index('marketing_memory_tenant_updated_idx').on(table.tenantId, table.updatedAt),
+  ],
+);
+export const marketingOsPlanSnapshots = pgTable(
+  'marketing_os_plan_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    // Commander plan IDs are application-level deterministic identifiers, not UUIDs.
+    planId: varchar('plan_id', { length: 255 }).notNull(),
+    goal: text('goal').notNull(),
+    objective: varchar('objective', { length: 80 }).notNull(),
+    plan: jsonb('plan').notNull(),
+    context: jsonb('context').notNull(),
+    acquisition: jsonb('acquisition').notNull().default({}),
+    readiness: jsonb('readiness').notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('marketing_os_plan_tenant_plan_uidx').on(table.tenantId, table.planId),
+    index('marketing_os_plan_tenant_updated_idx').on(table.tenantId, table.updatedAt),
+  ],
+);
+export const marketingOsExecutionRecords = pgTable(
+  'marketing_os_execution_records',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    planId: varchar('plan_id', { length: 255 }).notNull(),
+    engagementId: varchar('engagement_id', { length: 255 }).notNull(),
+    locale: varchar('locale', { length: 16 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    workflowId: varchar('workflow_id', { length: 255 }),
+    approvalId: varchar('approval_id', { length: 255 }),
+    status: varchar('status', { length: 32 }).notNull(),
+    approved: boolean('approved').notNull().default(false),
+    reasons: jsonb('reasons').notNull().default([]),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('marketing_os_execution_tenant_plan_uidx').on(table.tenantId, table.planId),
+    uniqueIndex('marketing_os_execution_tenant_idempotency_uidx').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index('marketing_os_execution_tenant_updated_idx').on(table.tenantId, table.updatedAt),
+  ],
+);
+/** Durable backing store for the canonical ApprovalApiService. */
+export const marketingOsApprovalRecords = pgTable(
+  'marketing_os_approval_records',
+  {
+    // API approval identifiers are deterministic strings, not UUIDs.
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    artifactId: varchar('artifact_id', { length: 255 }).notNull(),
+    planId: varchar('plan_id', { length: 255 }),
+    workflowId: varchar('workflow_id', { length: 255 }),
+    executionBindingId: uuid('execution_binding_id').references(
+      () => marketingOsExecutionRecords.id,
+      { onDelete: 'set null' },
+    ),
+    requestedByUserId: varchar('requested_by_user_id', { length: 255 }),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('PENDING'),
+    decision: varchar('decision', { length: 32 }),
+    approverUserId: varchar('approver_user_id', { length: 255 }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    conditions: jsonb('conditions').notNull().default([]),
+    reason: text('reason'),
+    policyReference: varchar('policy_reference', { length: 255 }),
+    riskLevel: varchar('risk_level', { length: 64 }),
+    actionSummary: text('action_summary'),
+    creationIdempotencyKey: varchar('creation_idempotency_key', { length: 255 }).notNull(),
+    decisionIdempotencyKey: varchar('decision_idempotency_key', { length: 255 }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('marketing_os_approval_tenant_creation_idempotency_uidx').on(
+      table.tenantId,
+      table.creationIdempotencyKey,
+    ),
+    index('marketing_os_approval_tenant_plan_idx').on(table.tenantId, table.planId),
+    index('marketing_os_approval_tenant_workflow_idx').on(table.tenantId, table.workflowId),
+    index('marketing_os_approval_tenant_status_idx').on(table.tenantId, table.status),
+  ],
+);
+/**
+ * Provider-neutral durable intent for governed external side effects. Google
+ * Ads is the first adapter, not a special database model.
+ */
+export const externalMarketingActions = pgTable(
+  'external_marketing_actions',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    organizationId: varchar('organization_id', { length: 255 }).notNull(),
+    actor: varchar('actor', { length: 255 }).notNull(),
+    agentIdentity: varchar('agent_identity', { length: 255 }).notNull(),
+    workflowRunId: varchar('workflow_run_id', { length: 255 }).notNull(),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    accountId: varchar('account_id', { length: 255 }).notNull(),
+    campaignId: varchar('campaign_id', { length: 255 }),
+    actionType: varchar('action_type', { length: 96 }).notNull(),
+    targetLockKey: varchar('target_lock_key', { length: 640 }).notNull(),
+    proposal: jsonb('proposal').notNull(),
+    status: varchar('status', { length: 48 }).notNull(),
+    approvalId: varchar('approval_id', { length: 255 }),
+    simulation: jsonb('simulation'),
+    budgetDecision: jsonb('budget_decision'),
+    policyDecision: jsonb('policy_decision'),
+    // Denormalized for evidence queries; the full decision remains immutable
+    // JSON so its reasons and evaluated policy identity are retained together.
+    policyVersion: integer('policy_version'),
+    execution: jsonb('execution'),
+    verification: jsonb('verification'),
+    beforeState: jsonb('before_state'),
+    failureCode: varchar('failure_code', { length: 128 }),
+    failureMessage: text('failure_message'),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    version: integer('version').notNull().default(0),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_marketing_actions_tenant_provider_action_idempotency_uidx').on(
+      table.tenantId,
+      table.provider,
+      table.id,
+      table.idempotencyKey,
+    ),
+    index('external_marketing_actions_tenant_status_idx').on(table.tenantId, table.status),
+    index('external_marketing_actions_tenant_target_idx').on(
+      table.tenantId,
+      table.provider,
+      table.targetLockKey,
+    ),
+  ],
+);
+
+/** Append-only sanitized evidence for every governed decision and provider result. */
+export const externalMarketingActionEvidence = pgTable(
+  'external_marketing_action_evidence',
+  {
+    // Evidence identifiers originate with the canonical action executor and
+    // are opaque strings, so PostgreSQL must not impose a UUID-only contract.
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    actionId: varchar('action_id', { length: 255 })
+      .notNull()
+      .references(() => externalMarketingActions.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 128 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('external_marketing_action_evidence_tenant_action_idx').on(
+      table.tenantId,
+      table.actionId,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/**
+ * Tenant-owned source of truth for whether a provider side effect may occur.
+ * Credentials deliberately do not appear here; they resolve only in adapters.
+ */
+export const externalActionPolicies = pgTable(
+  'external_action_policies',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    organizationId: varchar('organization_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    enabled: boolean('enabled').notNull().default(false),
+    executionMode: varchar('execution_mode', { length: 16 }).notNull().default('DISABLED'),
+    allowedActionTypes: jsonb('allowed_action_types').notNull().default([]),
+    allowedAccounts: jsonb('allowed_accounts').notNull().default([]),
+    deniedAccounts: jsonb('denied_accounts').notNull().default([]),
+    allowedCampaigns: jsonb('allowed_campaigns').notNull().default([]),
+    deniedCampaigns: jsonb('denied_campaigns').notNull().default([]),
+    maxAbsoluteBudgetDelta: real('max_absolute_budget_delta').notNull(),
+    maxPercentageBudgetDelta: real('max_percentage_budget_delta').notNull(),
+    monthlySpendCeiling: real('monthly_spend_ceiling').notNull(),
+    minimumConfidence: real('minimum_confidence').notNull(),
+    requiredEvidence: boolean('required_evidence').notNull().default(true),
+    approvalMode: varchar('approval_mode', { length: 16 }).notNull().default('HUMAN'),
+    requiredApprovalRole: varchar('required_approval_role', { length: 128 }),
+    killSwitch: boolean('kill_switch').notNull().default(true),
+    dryRunOnly: boolean('dry_run_only').notNull().default(true),
+    executionHours: jsonb('execution_hours'),
+    version: integer('version').notNull().default(1),
+    createdBy: varchar('created_by', { length: 255 }).notNull(),
+    updatedBy: varchar('updated_by', { length: 255 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_action_policies_tenant_provider_uidx').on(table.tenantId, table.provider),
+    index('external_action_policies_tenant_provider_idx').on(table.tenantId, table.provider),
+  ],
+);
+
+/** Append-only policy revisions: administrators can be held accountable without retaining secrets. */
+export const externalActionPolicyAudit = pgTable(
+  'external_action_policy_audit',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    policyId: varchar('policy_id', { length: 255 })
+      .notNull()
+      .references(() => externalActionPolicies.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    actor: varchar('actor', { length: 255 }).notNull(),
+    eventType: varchar('event_type', { length: 64 }).notNull(),
+    snapshot: jsonb('snapshot').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('external_action_policy_audit_tenant_policy_idx').on(table.tenantId, table.policyId, table.version),
+  ],
+);
+
+/**
+ * Durable, tenant-scoped handoff from a terminal governed action to the
+ * existing workflow layer. Delivery workers can safely replay PENDING rows.
+ */
+export const externalActionWorkflowOutbox = pgTable(
+  'external_action_workflow_outbox',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    workflowRunId: varchar('workflow_run_id', { length: 255 }).notNull(),
+    externalActionId: varchar('external_action_id', { length: 255 })
+      .notNull()
+      .references(() => externalMarketingActions.id, { onDelete: 'cascade' }),
+    eventType: varchar('event_type', { length: 128 }).notNull(),
+    state: varchar('state', { length: 48 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    accountId: varchar('account_id', { length: 255 }).notNull(),
+    campaignId: varchar('campaign_id', { length: 255 }),
+    verificationStatus: varchar('verification_status', { length: 32 }),
+    correlationId: varchar('correlation_id', { length: 255 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 320 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    deliveryStatus: varchar('delivery_status', { length: 16 }).notNull().default('PENDING'),
+    deliveryAttempts: integer('delivery_attempts').notNull().default(0),
+    leaseId: varchar('lease_id', { length: 128 }),
+    leaseOwner: varchar('lease_owner', { length: 255 }),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    failureCode: varchar('failure_code', { length: 128 }),
+    failureReason: text('failure_reason'),
+    failedAt: timestamp('failed_at', { withTimezone: true }),
+    deadLetteredAt: timestamp('dead_lettered_at', { withTimezone: true }),
+    retryAfterAt: timestamp('retry_after_at', { withTimezone: true }),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_action_workflow_outbox_tenant_idempotency_uidx').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index('external_action_workflow_outbox_tenant_delivery_idx').on(
+      table.tenantId,
+      table.deliveryStatus,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/** Provider-neutral health. Operational state never contains credentials. */
+export const externalProviderHealth = pgTable(
+  'external_provider_health',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('UNKNOWN'),
+    rollingFailureCount: integer('rolling_failure_count').notNull().default(0),
+    lastSuccessfulAt: timestamp('last_successful_at', { withTimezone: true }),
+    lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
+    retryAfterAt: timestamp('retry_after_at', { withTimezone: true }),
+    cooldownUntil: timestamp('cooldown_until', { withTimezone: true }),
+    recoveryProbeLeaseUntil: timestamp('recovery_probe_lease_until', { withTimezone: true }),
+    lastErrorCode: varchar('last_error_code', { length: 128 }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_provider_health_tenant_provider_uidx').on(table.tenantId, table.provider),
+    index('external_provider_health_tenant_status_idx').on(table.tenantId, table.status),
+  ],
+);
+
+/** Lifecycle status only; credential material stays in the configured secret provider. */
+export const externalProviderCredentialHealth = pgTable(
+  'external_provider_credential_health',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('UNKNOWN'),
+    observedAt: timestamp('observed_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    lastRefreshAt: timestamp('last_refresh_at', { withTimezone: true }),
+    lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
+    disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
+    rotationRequired: boolean('rotation_required').notNull().default(false),
+    lastErrorCode: varchar('last_error_code', { length: 128 }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('external_provider_credential_health_tenant_provider_uidx').on(
+      table.tenantId,
+      table.provider,
+    ),
+  ],
+);
+
+/** Sanitized operational events and timings for governed external actions. */
+export const externalActionOperationalEvents = pgTable(
+  'external_action_operational_events',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    externalActionId: varchar('external_action_id', { length: 255 }).references(
+      () => externalMarketingActions.id,
+      { onDelete: 'cascade' },
+    ),
+    workflowRunId: varchar('workflow_run_id', { length: 255 }),
+    outboxEventId: varchar('outbox_event_id', { length: 255 }).references(
+      () => externalActionWorkflowOutbox.id,
+      { onDelete: 'cascade' },
+    ),
+    eventType: varchar('event_type', { length: 128 }).notNull(),
+    correlationId: varchar('correlation_id', { length: 255 }).notNull(),
+    latencyMs: integer('latency_ms'),
+    errorCode: varchar('error_code', { length: 128 }),
+    details: jsonb('details').notNull().default({}),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('external_action_operational_events_tenant_provider_occurred_idx').on(
+      table.tenantId,
+      table.provider,
+      table.occurredAt,
+    ),
+    index('external_action_operational_events_tenant_action_occurred_idx').on(
+      table.tenantId,
+      table.externalActionId,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/** EPIC07 provider-neutral campaign intent; no provider credentials or raw responses persist here. */
+export const unifiedCampaigns = pgTable(
+  'unified_campaigns',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    organizationId: varchar('organization_id', { length: 255 }).notNull(),
+    objective: varchar('objective', { length: 64 }).notNull(),
+    goal: text('goal').notNull(),
+    locale: varchar('locale', { length: 16 }).notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    totalBudgetMinor: bigint('total_budget_minor', { mode: 'number' }).notNull(),
+    minorUnitScale: integer('minor_unit_scale').notNull(),
+    lifecycle: varchar('lifecycle', { length: 32 }).notNull(),
+    definition: jsonb('definition').notNull(),
+    executionPlan: jsonb('execution_plan'),
+    workflowId: varchar('workflow_id', { length: 255 }),
+    evidenceReferences: jsonb('evidence_references').notNull().default([]),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('unified_campaigns_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+    index('unified_campaigns_tenant_lifecycle_idx').on(table.tenantId, table.lifecycle, table.updatedAt),
+  ],
+);
+
+export const unifiedCampaignExecutionSteps = pgTable(
+  'unified_campaign_execution_steps',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    accountId: varchar('account_id', { length: 255 }).notNull(),
+    campaignResourceId: varchar('campaign_resource_id', { length: 255 }).notNull(),
+    externalActionId: varchar('external_action_id', { length: 255 }).references(() => externalMarketingActions.id, { onDelete: 'set null' }),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    allocation: jsonb('allocation').notNull(),
+    proposal: jsonb('proposal').notNull(),
+    outcome: jsonb('outcome'),
+    status: varchar('status', { length: 32 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('unified_campaign_execution_steps_tenant_campaign_channel_uidx').on(table.tenantId, table.unifiedCampaignId, table.channelId),
+    uniqueIndex('unified_campaign_execution_steps_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+    index('unified_campaign_execution_steps_tenant_campaign_idx').on(table.tenantId, table.unifiedCampaignId, table.status),
+  ],
+);
+
+export const unifiedCampaignPerformanceSnapshots = pgTable(
+  'unified_campaign_performance_snapshots',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    metrics: jsonb('metrics').notNull(),
+    provenance: jsonb('provenance').notNull().default([]),
+    verification: varchar('verification', { length: 16 }).notNull(),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(),
+    freshnessExpiresAt: timestamp('freshness_expires_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('unified_campaign_performance_tenant_campaign_captured_idx').on(table.tenantId, table.unifiedCampaignId, table.capturedAt),
+  ],
+);
+
+export const unifiedCampaignRecommendations = pgTable(
+  'unified_campaign_recommendations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 64 }).notNull(),
+    recommendation: jsonb('recommendation').notNull(),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('unified_campaign_recommendations_tenant_campaign_id_uidx').on(table.tenantId, table.unifiedCampaignId, table.id),
+    index('unified_campaign_recommendations_tenant_campaign_created_idx').on(table.tenantId, table.unifiedCampaignId, table.createdAt),
+  ],
+);
+
+/** EPIC08 canonical performance evidence and governed optimization records. */
+export const campaignPerformanceObservations = pgTable(
+  'campaign_performance_observations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    providerCampaignId: varchar('provider_campaign_id', { length: 255 }).notNull(),
+    snapshotId: varchar('snapshot_id', { length: 255 }).notNull(),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    observation: jsonb('observation').notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    collectedAt: timestamp('collected_at', { withTimezone: true }).notNull(),
+    verificationState: varchar('verification_state', { length: 16 }).notNull(),
+    freshnessState: varchar('freshness_state', { length: 16 }).notNull(),
+    normalizationVersion: varchar('normalization_version', { length: 64 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_observation_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+    uniqueIndex('campaign_performance_observation_tenant_provider_snapshot_uidx').on(table.tenantId, table.provider, table.providerCampaignId, table.snapshotId, table.normalizationVersion),
+    index('campaign_performance_observation_tenant_campaign_period_idx').on(table.tenantId, table.unifiedCampaignId, table.periodEnd),
+  ],
+);
+
+export const campaignPerformanceAggregates = pgTable(
+  'campaign_performance_aggregates',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    aggregate: jsonb('aggregate').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_aggregate_tenant_campaign_id_uidx').on(table.tenantId, table.unifiedCampaignId, table.id),
+    index('campaign_performance_aggregate_tenant_campaign_generated_idx').on(table.tenantId, table.unifiedCampaignId, table.generatedAt),
+  ],
+);
+
+export const campaignPerformanceDiagnostics = pgTable(
+  'campaign_performance_diagnostics',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }),
+    type: varchar('type', { length: 80 }).notNull(),
+    diagnostic: jsonb('diagnostic').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_diagnostic_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_performance_diagnostic_tenant_campaign_generated_idx').on(table.tenantId, table.unifiedCampaignId, table.generatedAt),
+  ],
+);
+
+export const campaignPerformanceAnomalies = pgTable(
+  'campaign_performance_anomalies',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 64 }).notNull(),
+    anomaly: jsonb('anomaly').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_performance_anomaly_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_performance_anomaly_tenant_campaign_generated_idx').on(table.tenantId, table.unifiedCampaignId, table.generatedAt),
+  ],
+);
+
+export const campaignOptimizationRecommendations = pgTable(
+  'campaign_optimization_recommendations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 255 }),
+    provider: varchar('provider', { length: 64 }),
+    actionType: varchar('action_type', { length: 64 }).notNull(),
+    recommendation: jsonb('recommendation').notNull(),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_recommendation_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_optimization_recommendation_tenant_campaign_created_idx').on(table.tenantId, table.unifiedCampaignId, table.createdAt),
+  ],
+);
+
+export const campaignOptimizationSimulations = pgTable(
+  'campaign_optimization_simulations',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull().references(() => campaignOptimizationRecommendations.id, { onDelete: 'cascade' }),
+    simulation: jsonb('simulation').notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_simulation_tenant_recommendation_uidx').on(table.tenantId, table.recommendationId),
+  ],
+);
+
+export const campaignOptimizationOutcomes = pgTable(
+  'campaign_optimization_outcomes',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull().references(() => campaignOptimizationRecommendations.id, { onDelete: 'cascade' }),
+    externalActionId: varchar('external_action_id', { length: 255 }).notNull().references(() => externalMarketingActions.id, { onDelete: 'restrict' }),
+    outcome: jsonb('outcome').notNull(),
+    measuredAt: timestamp('measured_at', { withTimezone: true }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_outcome_tenant_action_uidx').on(table.tenantId, table.externalActionId),
+    index('campaign_optimization_outcome_tenant_campaign_measured_idx').on(table.tenantId, table.unifiedCampaignId, table.measuredAt),
+  ],
+);
+
+export const campaignOptimizationLearning = pgTable(
+  'campaign_optimization_learning',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    tenantId: tenant(() => tenants.id),
+    unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }).notNull().references(() => unifiedCampaigns.id, { onDelete: 'cascade' }),
+    recommendationId: varchar('recommendation_id', { length: 255 }).notNull().references(() => campaignOptimizationRecommendations.id, { onDelete: 'cascade' }),
+    learning: jsonb('learning').notNull(),
+    ruleVersion: varchar('rule_version', { length: 32 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('campaign_optimization_learning_tenant_id_uidx').on(table.tenantId, table.id),
+    index('campaign_optimization_learning_tenant_campaign_created_idx').on(table.tenantId, table.unifiedCampaignId, table.createdAt),
+  ],
+);
+
+// EPIC-09: provider-neutral customer acquisition and revenue intelligence.
+// PII remains tenant-scoped and is never projected into operational logs.
+export const customerIdentities = pgTable('customer_identities', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  tenantId: tenant(() => tenants.id),
+  identityType: varchar('identity_type', { length: 32 }).notNull(),
+  identity: jsonb('identity').notNull(),
+  ...times,
+}, (table) => [uniqueIndex('customer_identities_tenant_id_uidx').on(table.tenantId, table.id)]);
+
+export const customerIdentityIdentifiers = pgTable('customer_identity_identifiers', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  tenantId: tenant(() => tenants.id),
+  identityId: varchar('identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  identifierType: varchar('identifier_type', { length: 64 }).notNull(),
+  normalizedValue: text('normalized_value').notNull(),
+  identifier: jsonb('identifier').notNull(),
+  ...times,
+}, (table) => [
+  uniqueIndex('customer_identity_identifier_tenant_value_uidx').on(table.tenantId, table.identifierType, table.normalizedValue),
+  index('customer_identity_identifier_tenant_identity_idx').on(table.tenantId, table.identityId),
+]);
+
+export const customerIdentityEdges = pgTable('customer_identity_edges', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id),
+  fromIdentityId: varchar('from_identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  toIdentityId: varchar('to_identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  resolution: varchar('resolution', { length: 32 }).notNull(), reason: text('reason').notNull(), confidence: real('confidence').notNull(),
+  evidenceRefs: jsonb('evidence_refs').notNull(), resolverVersion: varchar('resolver_version', { length: 64 }).notNull(), createdAt: times.createdAt,
+}, (table) => [uniqueIndex('customer_identity_edges_tenant_pair_uidx').on(table.tenantId, table.fromIdentityId, table.toIdentityId)]);
+
+export const customerIdentityAliases = pgTable('customer_identity_aliases', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id),
+  identityId: varchar('identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }),
+  alias: text('alias').notNull(), reason: text('reason').notNull(), evidenceRefs: jsonb('evidence_refs').notNull(), ...times,
+}, (table) => [uniqueIndex('customer_identity_aliases_tenant_identity_alias_uidx').on(table.tenantId, table.identityId, table.alias)]);
+
+export const customerLeads = pgTable('customer_leads', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+  source: varchar('source', { length: 96 }).notNull(), sourceProvider: varchar('source_provider', { length: 96 }), sourceCampaignId: varchar('source_campaign_id', { length: 255 }),
+  unifiedCampaignId: varchar('unified_campaign_id', { length: 255 }), normalizedEmail: text('normalized_email'), normalizedPhone: text('normalized_phone'),
+  lead: jsonb('lead').notNull(), capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [
+  uniqueIndex('customer_leads_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey),
+  index('customer_leads_tenant_campaign_idx').on(table.tenantId, table.unifiedCampaignId),
+  index('customer_leads_tenant_email_idx').on(table.tenantId, table.normalizedEmail),
+  index('customer_leads_tenant_phone_idx').on(table.tenantId, table.normalizedPhone),
+]);
+
+export const customerLeadSources = pgTable('customer_lead_sources', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  source: varchar('source', { length: 96 }).notNull(), sourceProvider: varchar('source_provider', { length: 96 }), sourceCampaignId: varchar('source_campaign_id', { length: 255 }), sourceRecord: jsonb('source_record').notNull(), capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('customer_lead_sources_tenant_lead_source_uidx').on(table.tenantId, table.leadId, table.id)]);
+
+export const customerLeadIdentityLinks = pgTable('customer_lead_identity_links', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  identityId: varchar('identity_id', { length: 255 }).notNull().references(() => customerIdentities.id, { onDelete: 'cascade' }), resolution: varchar('resolution', { length: 32 }).notNull(),
+  reason: text('reason').notNull(), confidence: real('confidence').notNull(), evidenceRefs: jsonb('evidence_refs').notNull(), resolverVersion: varchar('resolver_version', { length: 64 }).notNull(), createdAt: times.createdAt,
+}, (table) => [uniqueIndex('customer_lead_identity_link_tenant_pair_uidx').on(table.tenantId, table.leadId, table.identityId)]);
+
+export const customerLeadEngagementSignals = pgTable('customer_lead_engagement_signals', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  signalType: varchar('signal_type', { length: 64 }).notNull(), channel: varchar('channel', { length: 32 }), source: varchar('source', { length: 96 }).notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), confidence: real('confidence').notNull(), evidenceRefs: jsonb('evidence_refs').notNull(), ...times,
+}, (table) => [index('customer_lead_engagement_tenant_lead_occurred_idx').on(table.tenantId, table.leadId, table.occurredAt)]);
+
+export const customerLeadQualificationAssessments = pgTable('customer_lead_qualification_assessments', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }),
+  assessment: jsonb('assessment').notNull(), ruleVersion: varchar('rule_version', { length: 64 }).notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('customer_lead_qualification_tenant_lead_uidx').on(table.tenantId, table.leadId)]);
+
+export const customerConversationThreads = pgTable('customer_conversation_threads', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), channel: varchar('channel', { length: 32 }).notNull(), externalThreadId: varchar('external_thread_id', { length: 255 }),
+  thread: jsonb('thread').notNull(), startedAt: timestamp('started_at', { withTimezone: true }).notNull(), lastMessageAt: timestamp('last_message_at', { withTimezone: true }), ...times,
+}, (table) => [uniqueIndex('customer_conversation_thread_tenant_external_uidx').on(table.tenantId, table.channel, table.externalThreadId)]);
+
+export const customerConversationParticipants = pgTable('customer_conversation_participants', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), threadId: varchar('thread_id', { length: 255 }).notNull().references(() => customerConversationThreads.id, { onDelete: 'cascade' }),
+  identityId: varchar('identity_id', { length: 255 }).references(() => customerIdentities.id, { onDelete: 'set null' }), externalParticipantId: varchar('external_participant_id', { length: 255 }), participant: jsonb('participant').notNull(), ...times,
+}, (table) => [index('customer_conversation_participant_tenant_thread_idx').on(table.tenantId, table.threadId)]);
+
+export const revenueOpportunities = pgTable('revenue_opportunities', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), externalOpportunityId: varchar('external_opportunity_id', { length: 255 }), provider: varchar('provider', { length: 64 }).notNull(),
+  stage: varchar('stage', { length: 32 }).notNull(), status: varchar('status', { length: 32 }).notNull(), amountMinor: bigint('amount_minor', { mode: 'number' }), currency: varchar('currency', { length: 3 }), opportunity: jsonb('opportunity').notNull(), closedAt: timestamp('closed_at', { withTimezone: true }), ...times,
+}, (table) => [uniqueIndex('revenue_opportunity_tenant_provider_external_uidx').on(table.tenantId, table.provider, table.externalOpportunityId), index('revenue_opportunity_tenant_stage_idx').on(table.tenantId, table.stage)]);
+
+export const revenueEvents = pgTable('revenue_events', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), opportunityId: varchar('opportunity_id', { length: 255 }).references(() => revenueOpportunities.id, { onDelete: 'set null' }),
+  eventType: varchar('event_type', { length: 48 }).notNull(), amountMinor: bigint('amount_minor', { mode: 'number' }), currency: varchar('currency', { length: 3 }), externalEventId: varchar('external_event_id', { length: 255 }), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), verificationState: varchar('verification_state', { length: 16 }).notNull(), event: jsonb('event').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('revenue_event_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey), index('revenue_event_tenant_opportunity_idx').on(table.tenantId, table.opportunityId)]);
+
+export const revenueAttributionAssessments = pgTable('revenue_attribution_assessments', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), revenueEventId: varchar('revenue_event_id', { length: 255 }).notNull().references(() => revenueEvents.id, { onDelete: 'cascade' }),
+  opportunityId: varchar('opportunity_id', { length: 255 }).references(() => revenueOpportunities.id, { onDelete: 'set null' }), model: varchar('model', { length: 48 }).notNull(), confidence: real('confidence').notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('revenue_attribution_tenant_event_model_uidx').on(table.tenantId, table.revenueEventId, table.model)]);
+
+export const customerFunnelTransitions = pgTable('customer_funnel_transitions', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).references(() => customerLeads.id, { onDelete: 'set null' }), opportunityId: varchar('opportunity_id', { length: 255 }).references(() => revenueOpportunities.id, { onDelete: 'set null' }), fromStage: varchar('from_stage', { length: 32 }), toStage: varchar('to_stage', { length: 32 }).notNull(), sourceCampaignId: varchar('source_campaign_id', { length: 255 }), transition: jsonb('transition').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [index('customer_funnel_transition_tenant_stage_idx').on(table.tenantId, table.toStage, table.occurredAt)]);
+
+export const acquisitionRevenueDiagnostics = pgTable('acquisition_revenue_diagnostics', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), diagnosticType: varchar('diagnostic_type', { length: 64 }).notNull(), severity: varchar('severity', { length: 16 }).notNull(), diagnostic: jsonb('diagnostic').notNull(), generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [index('acquisition_revenue_diagnostic_tenant_generated_idx').on(table.tenantId, table.generatedAt)]);
+
+export const leadRoutingRecommendations = pgTable('lead_routing_recommendations', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull().references(() => customerLeads.id, { onDelete: 'cascade' }), kind: varchar('kind', { length: 64 }).notNull(), recommendation: jsonb('recommendation').notNull(), createdAt: times.createdAt,
+}, (table) => [uniqueIndex('lead_routing_recommendation_tenant_lead_kind_uidx').on(table.tenantId, table.leadId, table.kind)]);
+
+export const acquisitionDataQualityAssessments = pgTable('acquisition_data_quality_assessments', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), subjectType: varchar('subject_type', { length: 32 }).notNull(), subjectId: varchar('subject_id', { length: 255 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [index('acquisition_data_quality_tenant_subject_idx').on(table.tenantId, table.subjectType, table.subjectId)]);
+
+export const customerProviderCapabilities = pgTable('customer_provider_capabilities', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), provider: varchar('provider', { length: 64 }).notNull(), enabled: boolean('enabled').notNull(), healthStatus: varchar('health_status', { length: 16 }).notNull(), capabilities: jsonb('capabilities').notNull(), ...times,
+}, (table) => [uniqueIndex('customer_provider_capability_tenant_provider_uidx').on(table.tenantId, table.provider)]);
+
+export const marketingOutcomeEvents = pgTable(
+  'marketing_outcome_events',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    type: varchar('type', { length: 60 }).notNull(),
+    metric: varchar('metric', { length: 120 }).notNull(),
+    value: integer('value').notNull(),
+    sourceEntityId: uuid('source_entity_id').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    attributes: jsonb('attributes').notNull(),
+    ...times,
+  },
+  (table) => [
+    index('marketing_outcomes_tenant_occurred_idx').on(table.tenantId, table.occurredAt),
+    index('marketing_outcomes_source_idx').on(table.tenantId, table.sourceEntityId),
+  ],
+);
+
+export const leadScoreTemperatureEnum = pgEnum('lead_score_temperature', ['HOT', 'WARM', 'COLD']);
+
+export const proposalArtifactStatusEnum = pgEnum('proposal_artifact_status', [
+  'DRAFT',
+  'PENDING_APPROVAL',
+  'APPROVED',
+  'REJECTED',
+]);
+
+export const salesForecastPeriodEnum = pgEnum('sales_forecast_period', [
+  'WEEK',
+  'MONTH',
+  'QUARTER',
+]);
+
+export const leadScoreSnapshots = pgTable(
+  'lead_score_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    leadId: uuid('lead_id').notNull(),
+    score: integer('score').notNull(),
+    temperature: leadScoreTemperatureEnum('temperature').notNull(),
+    fit: integer('fit').notNull(),
+    intent: integer('intent').notNull(),
+    engagement: integer('engagement').notNull(),
+    timing: integer('timing').notNull(),
+    factors: jsonb('factors').notNull().default({}),
+    recommendations: jsonb('recommendations').notNull().default([]),
+    model: varchar('model', { length: 120 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('lead_score_snapshots_tenant_lead_idx').on(table.tenantId, table.leadId, table.createdAt),
+    index('lead_score_snapshots_tenant_score_idx').on(table.tenantId, table.score),
+  ],
+);
+
+export const salesForecastSnapshots = pgTable(
+  'sales_forecast_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    period: salesForecastPeriodEnum('period').notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    opportunityCount: integer('opportunity_count').notNull(),
+    pipelineAmount: real('pipeline_amount').notNull(),
+    weightedAmount: real('weighted_amount').notNull(),
+    winProbability: integer('win_probability').notNull(),
+    confidence: integer('confidence').notNull(),
+    opportunityIds: jsonb('opportunity_ids').notNull().default([]),
+    ...times,
+  },
+  (table) => [
+    index('sales_forecast_snapshots_tenant_period_idx').on(
+      table.tenantId,
+      table.period,
+      table.periodStart,
+      table.periodEnd,
+    ),
+    index('sales_forecast_snapshots_tenant_created_idx').on(table.tenantId, table.createdAt),
+  ],
+);
+
+export const proposalArtifacts = pgTable(
+  'proposal_artifacts',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    opportunityId: uuid('opportunity_id').notNull(),
+    title: text('title').notNull(),
+    amount: real('amount'),
+    currency: varchar('currency', { length: 3 }),
+    status: proposalArtifactStatusEnum('status').notNull().default('DRAFT'),
+    content: jsonb('content').notNull().default({}),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    approvalId: uuid('approval_id'),
+    workflowId: uuid('workflow_id').references(() => workflows.id, {
+      onDelete: 'set null',
+    }),
+    ...times,
+  },
+  (table) => [
+    index('proposal_artifacts_tenant_opportunity_idx').on(table.tenantId, table.opportunityId),
+    index('proposal_artifacts_tenant_status_idx').on(table.tenantId, table.status, table.createdAt),
+    index('proposal_artifacts_approval_idx').on(table.tenantId, table.approvalId),
+  ],
+);
+
+export const companyIntelligenceProfiles = pgTable(
+  'company_intelligence_profiles',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    companyName: text('company_name').notNull(),
+    website: text('website'),
+    industry: text('industry'),
+    subIndustry: text('sub_industry'),
+    headquarters: text('headquarters'),
+    geographies: jsonb('geographies').notNull().default([]),
+    employeeBand: text('employee_band'),
+    revenueBand: text('revenue_band'),
+    businessModel: text('business_model'),
+    products: jsonb('products').notNull().default([]),
+    services: jsonb('services').notNull().default([]),
+    technologies: jsonb('technologies').notNull().default([]),
+    competitors: jsonb('competitors').notNull().default([]),
+    customers: jsonb('customers').notNull().default([]),
+    painPoints: jsonb('pain_points').notNull().default([]),
+    strategicPriorities: jsonb('strategic_priorities').notNull().default([]),
+    buyingSignals: jsonb('buying_signals').notNull().default([]),
+    risks: jsonb('risks').notNull().default([]),
+    opportunities: jsonb('opportunities').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [index('company_intelligence_tenant_updated_idx').on(table.tenantId, table.updatedAt)],
+);
+
+export const marketingIcpProfiles = pgTable(
+  'marketing_icp_profiles',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    name: text('name').notNull(),
+    industries: jsonb('industries').notNull().default([]),
+    companySizes: jsonb('company_sizes').notNull().default([]),
+    geographies: jsonb('geographies').notNull().default([]),
+    buyingTriggers: jsonb('buying_triggers').notNull().default([]),
+    painPoints: jsonb('pain_points').notNull().default([]),
+    desiredOutcomes: jsonb('desired_outcomes').notNull().default([]),
+    exclusions: jsonb('exclusions').notNull().default([]),
+    confidence: integer('confidence'),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    status: text('status').notNull().default('draft'),
+    ...times,
+  },
+  (table) => [index('marketing_icp_tenant_status_idx').on(table.tenantId, table.status)],
+);
+
+export const marketingAccounts = pgTable(
+  'marketing_accounts',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    name: text('name').notNull(),
+    website: text('website'),
+    industry: text('industry'),
+    geography: text('geography'),
+    employeeBand: text('employee_band'),
+    icpFit: integer('icp_fit'),
+    status: text('status').notNull().default('draft'),
+    ...times,
+  },
+  (table) => [index('marketing_accounts_tenant_status_idx').on(table.tenantId, table.status)],
+);
+
+export const icpAssessmentSnapshots = pgTable(
+  'icp_assessment_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    accountId: uuid('account_id').notNull(),
+    icpId: uuid('icp_id').notNull(),
+    score: integer('score').notNull(),
+    tier: text('tier').notNull(),
+    matchedIndustries: jsonb('matched_industries').notNull().default([]),
+    matchedGeographies: jsonb('matched_geographies').notNull().default([]),
+    matchedTriggers: jsonb('matched_triggers').notNull().default([]),
+    matchedPainPoints: jsonb('matched_pain_points').notNull().default([]),
+    exclusions: jsonb('exclusions').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    reasons: jsonb('reasons').notNull().default([]),
+    model: text('model').notNull(),
+    ...times,
+  },
+  (table) => [
+    index('icp_assessment_tenant_account_idx').on(table.tenantId, table.accountId, table.createdAt),
+  ],
+);
+
+export const marketIntelligenceSnapshots = pgTable(
+  'market_intelligence_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    researchQuestion: text('research_question').notNull(),
+    marketSummary: text('market_summary').notNull(),
+    customerSignals: jsonb('customer_signals').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [index('market_intelligence_tenant_created_idx').on(table.tenantId, table.createdAt)],
+);
+
+export const marketCompetitorProfiles = pgTable(
+  'market_competitor_profiles',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    snapshotId: uuid('snapshot_id')
+      .notNull()
+      .references(() => marketIntelligenceSnapshots.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    website: text('website'),
+    category: text('category'),
+    positioning: text('positioning'),
+    products: jsonb('products').notNull().default([]),
+    strengths: jsonb('strengths').notNull().default([]),
+    weaknesses: jsonb('weaknesses').notNull().default([]),
+    differentiators: jsonb('differentiators').notNull().default([]),
+    targetSegments: jsonb('target_segments').notNull().default([]),
+    channels: jsonb('channels').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [index('market_competitors_tenant_snapshot_idx').on(table.tenantId, table.snapshotId)],
+);
+
+export const marketTrendSnapshots = pgTable(
+  'market_trend_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    snapshotId: uuid('snapshot_id')
+      .notNull()
+      .references(() => marketIntelligenceSnapshots.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    direction: text('direction').notNull(),
+    relevance: integer('relevance').notNull(),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [index('market_trends_tenant_snapshot_idx').on(table.tenantId, table.snapshotId)],
+);
+
+export const marketOpportunitySnapshots = pgTable(
+  'market_opportunity_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    snapshotId: uuid('snapshot_id')
+      .notNull()
+      .references(() => marketIntelligenceSnapshots.id, {
+        onDelete: 'cascade',
+      }),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    type: text('type').notNull(),
+    impact: text('impact').notNull(),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [
+    index('market_opportunities_tenant_snapshot_idx').on(table.tenantId, table.snapshotId),
+  ],
+);
+
+export const marketThreatSnapshots = pgTable(
+  'market_threat_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    snapshotId: uuid('snapshot_id')
+      .notNull()
+      .references(() => marketIntelligenceSnapshots.id, {
+        onDelete: 'cascade',
+      }),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    type: text('type').notNull(),
+    severity: text('severity').notNull(),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [index('market_threats_tenant_snapshot_idx').on(table.tenantId, table.snapshotId)],
+);
+
+export const marketEvidenceRecords = pgTable(
+  'market_evidence_records',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    snapshotId: uuid('snapshot_id')
+      .notNull()
+      .references(() => marketIntelligenceSnapshots.id, {
+        onDelete: 'cascade',
+      }),
+    type: text('type').notNull(),
+    claim: text('claim').notNull(),
+    sourceRef: text('source_ref').notNull(),
+    sourceDate: timestamp('source_date', { withTimezone: true }),
+    confidence: integer('confidence').notNull().default(0),
+    ...times,
+  },
+  (table) => [
+    index('market_evidence_tenant_snapshot_idx').on(table.tenantId, table.snapshotId),
+    index('market_evidence_source_idx').on(table.tenantId, table.sourceRef),
+  ],
+);
+
+export const marketingStrategyStatusEnum = pgEnum('marketing_strategy_status', [
+  'DRAFT',
+  'PENDING_APPROVAL',
+  'APPROVED',
+  'SUPERSEDED',
+  'ARCHIVED',
+]);
+
+export const marketingStrategies = pgTable(
+  'marketing_strategies',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    title: text('title').notNull(),
+    currentVersion: integer('current_version').notNull().default(1),
+    status: marketingStrategyStatusEnum('status').notNull().default('DRAFT'),
+    ...times,
+  },
+  (table) => [
+    index('marketing_strategies_tenant_status_idx').on(
+      table.tenantId,
+      table.status,
+      table.updatedAt,
+    ),
+  ],
+);
+
+export const marketingStrategyVersions = pgTable(
+  'marketing_strategy_versions',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    strategyId: uuid('strategy_id')
+      .notNull()
+      .references(() => marketingStrategies.id, {
+        onDelete: 'cascade',
+      }),
+    version: integer('version').notNull(),
+    executiveSummary: text('executive_summary').notNull(),
+    objectiveIds: jsonb('objective_ids').notNull().default([]),
+    objectives: jsonb('objectives').notNull().default([]),
+    icpIds: jsonb('icp_ids').notNull().default([]),
+    positioning: text('positioning').notNull(),
+    messaging: jsonb('messaging').notNull().default([]),
+    channels: jsonb('channels').notNull().default([]),
+    offers: jsonb('offers').notNull().default([]),
+    campaigns: jsonb('campaigns').notNull().default([]),
+    contentPillars: jsonb('content_pillars').notNull().default([]),
+    kpis: jsonb('kpis').notNull().default([]),
+    roadmap: jsonb('roadmap').notNull().default([]),
+    priorities: jsonb('priorities').notNull().default([]),
+    assumptions: jsonb('assumptions').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    approvalId: uuid('approval_id'),
+    status: marketingStrategyStatusEnum('status').notNull().default('DRAFT'),
+    ...times,
+  },
+  (table) => [
+    index('marketing_strategy_versions_tenant_strategy_idx').on(
+      table.tenantId,
+      table.strategyId,
+      table.version,
+    ),
+    index('marketing_strategy_versions_status_idx').on(
+      table.tenantId,
+      table.status,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const customerHealthStatusEnum = pgEnum('customer_health_status', [
+  'HEALTHY',
+  'WATCH',
+  'AT_RISK',
+  'CRITICAL',
+]);
+
+export const customerChurnRiskEnum = pgEnum('customer_churn_risk', [
+  'LOW',
+  'MEDIUM',
+  'HIGH',
+  'CRITICAL',
+]);
+
+export const customerHealthAssessments = pgTable(
+  'customer_health_assessments',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    customerId: text('customer_id').notNull(),
+    accountId: text('account_id'),
+    score: integer('score').notNull(),
+    status: customerHealthStatusEnum('status').notNull(),
+    churnRisk: customerChurnRiskEnum('churn_risk').notNull(),
+    causes: jsonb('causes').notNull().default([]),
+    actions: jsonb('actions').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    model: text('model').notNull(),
+    assessedAt: timestamp('assessed_at', {
+      withTimezone: true,
+    }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('customer_health_tenant_customer_idx').on(
+      table.tenantId,
+      table.customerId,
+      table.assessedAt,
+    ),
+  ],
+);
+
+export const customerRenewalRecommendations = pgTable(
+  'customer_renewal_recommendations',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    customerId: text('customer_id').notNull(),
+    accountId: text('account_id'),
+    healthAssessmentId: text('health_assessment_id').notNull(),
+    daysToRenewal: integer('days_to_renewal'),
+    recommendation: text('recommendation').notNull(),
+    rationale: jsonb('rationale').notNull().default([]),
+    actions: jsonb('actions').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    ...times,
+  },
+  (table) => [
+    index('customer_renewal_tenant_customer_idx').on(
+      table.tenantId,
+      table.customerId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const customerExpansionAssessments = pgTable(
+  'customer_expansion_assessments',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    customerId: text('customer_id').notNull(),
+    accountId: text('account_id'),
+    healthAssessmentId: text('health_assessment_id').notNull(),
+    eligible: boolean('eligible').notNull(),
+    score: integer('score').notNull(),
+    rationale: jsonb('rationale').notNull().default([]),
+    recommendedActions: jsonb('recommended_actions').notNull().default([]),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    confidence: integer('confidence').notNull().default(0),
+    requiresApproval: boolean('requires_approval').notNull().default(true),
+    ...times,
+  },
+  (table) => [
+    index('customer_expansion_tenant_customer_idx').on(
+      table.tenantId,
+      table.customerId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const financialStatusEnum = pgEnum('financial_status', ['ACTUAL', 'ESTIMATED', 'MODELED']);
+
+export const cfoRecommendationPriorityEnum = pgEnum('cfo_recommendation_priority', [
+  'HIGH',
+  'MEDIUM',
+  'LOW',
+]);
+
+export const cfoRecommendationTypeEnum = pgEnum('cfo_recommendation_type', [
+  'MARGIN',
+  'COST',
+  'PRICING',
+  'FORECAST',
+  'RETENTION',
+  'GROWTH',
+]);
+
+export const clientProfitabilityAssessments = pgTable('client_profitability_assessments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  tenantId: tenant(() => tenants.id),
+
+  customerId: text('customer_id').notNull(),
+
+  accountId: text('account_id'),
+
+  periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+
+  periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+
+  revenue: jsonb('revenue').notNull(),
+
+  directCost: jsonb('direct_cost').notNull(),
+
+  grossContribution: jsonb('gross_contribution').notNull(),
+
+  grossMarginPct: jsonb('gross_margin_pct').notNull(),
+
+  operatingExpense: jsonb('operating_expense'),
+
+  operatingContribution: jsonb('operating_contribution'),
+
+  evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+
+  model: text('model').notNull(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Quarantine stores only bounded failure metadata; it intentionally excludes the malformed PII payload. */
+export const customerLeadCaptureQuarantine = pgTable('customer_lead_capture_quarantine', {
+  id: varchar('id', { length: 255 }).primaryKey(), tenantId: tenant(() => tenants.id), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+  code: varchar('code', { length: 64 }).notNull(), reason: varchar('reason', { length: 128 }).notNull(), capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(), ...times,
+}, (table) => [uniqueIndex('customer_lead_quarantine_tenant_idempotency_uidx').on(table.tenantId, table.idempotencyKey)]);
+
+export const financialScenarioSnapshots = pgTable('financial_scenario_snapshots', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  tenantId: tenant(() => tenants.id),
+
+  customerId: text('customer_id'),
+
+  projectedRevenue: jsonb('projected_revenue').notNull(),
+
+  projectedVariableCost: jsonb('projected_variable_cost').notNull(),
+
+  projectedFixedCost: jsonb('projected_fixed_cost').notNull(),
+
+  projectedContribution: jsonb('projected_contribution').notNull(),
+
+  projectedMarginPct: jsonb('projected_margin_pct').notNull(),
+
+  breakEvenRevenue: jsonb('break_even_revenue'),
+
+  evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+
+  model: text('model').notNull(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * CFO pipeline forecasts are persisted separately from modeled financial
+ * scenarios so their recorded opportunity and actual-revenue provenance remains
+ * auditable.
+ */
+export const financialForecastSnapshots = pgTable(
+  'financial_forecast_snapshots',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+
+    tenantId: tenant(() => tenants.id),
+
+    customerId: text('customer_id'),
+
+    period: salesForecastPeriodEnum('period').notNull(),
+
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+
+    actualRevenue: jsonb('actual_revenue').notNull(),
+
+    pipelineAmount: jsonb('pipeline_amount').notNull(),
+
+    weightedPipelineAmount: jsonb('weighted_pipeline_amount').notNull(),
+
+    forecastRevenue: jsonb('forecast_revenue').notNull(),
+
+    opportunityCount: integer('opportunity_count').notNull(),
+
+    stageSummaries: jsonb('stage_summaries').notNull(),
+
+    confidence: integer('confidence').notNull(),
+
+    evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+
+    model: text('model').notNull(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('financial_forecast_tenant_period_idx').on(
+      table.tenantId,
+      table.period,
+      table.periodStart,
+      table.periodEnd,
+    ),
+    index('financial_forecast_tenant_created_idx').on(table.tenantId, table.createdAt),
+  ],
+);
+
+export const cfoRecommendations = pgTable('cfo_recommendations', {
+  id: text('id').primaryKey(),
+
+  tenantId: tenant(() => tenants.id),
+
+  customerId: text('customer_id'),
+
+  type: cfoRecommendationTypeEnum('type').notNull(),
+
+  priority: cfoRecommendationPriorityEnum('priority').notNull(),
+
+  title: text('title').notNull(),
+
+  rationale: text('rationale').notNull(),
+
+  action: text('action').notNull(),
+
+  confidence: real('confidence').notNull(),
+
+  evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+
+  requiresApproval: boolean('requires_approval').default(true).notNull(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const marketingExperimentStatusEnum = pgEnum('marketing_experiment_status', [
+  'planned',
+  'running',
+  'won',
+  'lost',
+  'inconclusive',
+]);
+
+export const marketingAttributionModelEnum = pgEnum('marketing_attribution_model', [
+  'FIRST_TOUCH',
+  'LAST_TOUCH',
+  'LINEAR',
+  'TIME_DECAY',
+  'POSITION_BASED',
+]);
+
+export const marketingExperiments = pgTable(
+  'marketing_experiments',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    campaignId: uuid('campaign_id'),
+    contentId: uuid('content_id'),
+    name: varchar('name', {
+      length: 240,
+    }).notNull(),
+    hypothesis: text('hypothesis').notNull(),
+    metric: varchar('metric', {
+      length: 120,
+    }).notNull(),
+    status: marketingExperimentStatusEnum('status').notNull().default('planned'),
+    winningVariantId: uuid('winning_variant_id'),
+    evaluation: jsonb('evaluation'),
+    ...times,
+  },
+  (table) => [
+    index('marketing_experiments_tenant_status_idx').on(table.tenantId, table.status),
+    index('marketing_experiments_tenant_updated_idx').on(table.tenantId, table.updatedAt),
+  ],
+);
+
+export const marketingExperimentVariants = pgTable(
+  'marketing_experiment_variants',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    experimentId: uuid('experiment_id')
+      .notNull()
+      .references(() => marketingExperiments.id, {
+        onDelete: 'cascade',
+      }),
+    name: varchar('name', {
+      length: 160,
+    }).notNull(),
+    payload: jsonb('payload').notNull().default({}),
+    sampleSize: integer('sample_size'),
+    metricValue: real('metric_value'),
+    ...times,
+  },
+  (table) => [
+    index('marketing_experiment_variants_tenant_experiment_idx').on(
+      table.tenantId,
+      table.experimentId,
+    ),
+  ],
+);
+
+export const marketingAttributionSnapshots = pgTable(
+  'marketing_attribution_snapshots',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    sourceEntityId: uuid('source_entity_id').notNull(),
+    revenueOutcomeId: uuid('revenue_outcome_id').references(() => marketingOutcomeEvents.id, {
+      onDelete: 'set null',
+    }),
+    model: marketingAttributionModelEnum('model').notNull(),
+    totalAmount: real('total_amount').notNull(),
+    currency: varchar('currency', {
+      length: 12,
+    }),
+    allocations: jsonb('allocations').notNull(),
+    evidenceIds: jsonb('evidence_ids').notNull().default([]),
+    calculatedAt: timestamp('calculated_at', {
+      withTimezone: true,
+    }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('marketing_attribution_tenant_source_idx').on(table.tenantId, table.sourceEntityId),
+    index('marketing_attribution_tenant_calculated_idx').on(table.tenantId, table.calculatedAt),
+  ],
+);
+
+export const billingSubscriptionStatusEnum = pgEnum('billing_subscription_status', [
+  'TRIALING',
+  'ACTIVE',
+  'PAST_DUE',
+  'SUSPENDED',
+  'CANCELLED',
+  'EXPIRED',
+]);
+
+export const billingCycleEnum = pgEnum('billing_cycle', ['MONTHLY', 'YEARLY', 'CUSTOM']);
+
+export const billingInvoiceStatusEnum = pgEnum('billing_invoice_status', [
+  'DRAFT',
+  'OPEN',
+  'PAID',
+  'VOID',
+  'UNCOLLECTIBLE',
+]);
+
+export const billingPaymentStatusEnum = pgEnum('billing_payment_status', [
+  'PENDING',
+  'SUCCEEDED',
+  'FAILED',
+  'REFUNDED',
+]);
+
+export const billingPlans = pgTable(
+  'billing_plans',
+  {
+    id: id(),
+    code: varchar('code', {
+      length: 80,
+    }).notNull(),
+    name: varchar('name', {
+      length: 160,
+    }).notNull(),
+    description: text('description'),
+    currency: varchar('currency', {
+      length: 12,
+    }).notNull(),
+    priceMonthlyMinor: integer('price_monthly_minor'),
+    priceYearlyMinor: integer('price_yearly_minor'),
+    active: boolean('active').notNull().default(true),
+    ...times,
+  },
+  (table) => [uniqueIndex('billing_plans_code_uidx').on(table.code)],
+);
+
+export const billingPlanEntitlements = pgTable(
+  'billing_plan_entitlements',
+  {
+    id: id(),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => billingPlans.id, {
+        onDelete: 'cascade',
+      }),
+    key: varchar('key', {
+      length: 180,
+    }).notNull(),
+    value: jsonb('value').notNull(),
+    ...times,
+  },
+  (table) => [uniqueIndex('billing_plan_entitlements_plan_key_uidx').on(table.planId, table.key)],
+);
+
+export const billingSubscriptions = pgTable(
+  'billing_subscriptions',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => billingPlans.id),
+    status: billingSubscriptionStatusEnum('status').notNull(),
+    billingCycle: billingCycleEnum('billing_cycle').notNull(),
+    startedAt: timestamp('started_at', {
+      withTimezone: true,
+    }).notNull(),
+    currentPeriodStart: timestamp('current_period_start', {
+      withTimezone: true,
+    }).notNull(),
+    currentPeriodEnd: timestamp('current_period_end', {
+      withTimezone: true,
+    }).notNull(),
+    trialEndsAt: timestamp('trial_ends_at', {
+      withTimezone: true,
+    }),
+    cancelledAt: timestamp('cancelled_at', {
+      withTimezone: true,
+    }),
+    provider: varchar('provider', {
+      length: 80,
+    }),
+    providerSubscriptionId: varchar('provider_subscription_id', {
+      length: 240,
+    }),
+    ...times,
+  },
+  (table) => [
+    index('billing_subscriptions_tenant_status_idx').on(table.tenantId, table.status),
+    index('billing_subscriptions_tenant_period_idx').on(table.tenantId, table.currentPeriodEnd),
+  ],
+);
+
+export const billingOrganizationEntitlements = pgTable(
+  'billing_organization_entitlements',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    key: varchar('key', {
+      length: 180,
+    }).notNull(),
+    value: jsonb('value').notNull(),
+    reason: text('reason'),
+    expiresAt: timestamp('expires_at', {
+      withTimezone: true,
+    }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('billing_org_entitlements_tenant_key_uidx').on(table.tenantId, table.key),
+  ],
+);
+
+export const billingUsageCounters = pgTable(
+  'billing_usage_counters',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    key: varchar('key', {
+      length: 180,
+    }).notNull(),
+    periodStart: timestamp('period_start', {
+      withTimezone: true,
+    }).notNull(),
+    periodEnd: timestamp('period_end', {
+      withTimezone: true,
+    }).notNull(),
+    used: integer('used').notNull().default(0),
+    limit: integer('limit'),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('billing_usage_tenant_key_period_uidx').on(
+      table.tenantId,
+      table.key,
+      table.periodStart,
+      table.periodEnd,
+    ),
+  ],
+);
+
+export const billingInvoices = pgTable(
+  'billing_invoices',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    subscriptionId: uuid('subscription_id').references(() => billingSubscriptions.id, {
+      onDelete: 'set null',
+    }),
+    externalInvoiceId: varchar('external_invoice_id', {
+      length: 240,
+    }),
+    currency: varchar('currency', {
+      length: 12,
+    }).notNull(),
+    amountDueMinor: integer('amount_due_minor').notNull(),
+    amountPaidMinor: integer('amount_paid_minor').notNull().default(0),
+    status: billingInvoiceStatusEnum('status').notNull(),
+    issuedAt: timestamp('issued_at', {
+      withTimezone: true,
+    }).notNull(),
+    dueAt: timestamp('due_at', {
+      withTimezone: true,
+    }),
+    paidAt: timestamp('paid_at', {
+      withTimezone: true,
+    }),
+    ...times,
+  },
+  (table) => [index('billing_invoices_tenant_status_idx').on(table.tenantId, table.status)],
+);
+
+export const billingPayments = pgTable(
+  'billing_payments',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    invoiceId: uuid('invoice_id').references(() => billingInvoices.id, {
+      onDelete: 'set null',
+    }),
+    externalPaymentId: varchar('external_payment_id', {
+      length: 240,
+    }),
+    provider: varchar('provider', {
+      length: 80,
+    }),
+    currency: varchar('currency', {
+      length: 12,
+    }).notNull(),
+    amountMinor: integer('amount_minor').notNull(),
+    status: billingPaymentStatusEnum('status').notNull(),
+    occurredAt: timestamp('occurred_at', {
+      withTimezone: true,
+    }).notNull(),
+    ...times,
+  },
+  (table) => [index('billing_payments_tenant_status_idx').on(table.tenantId, table.status)],
+);
+
+export const billingUsageEvents = pgTable(
+  'billing_usage_events',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    key: varchar('key', {
+      length: 180,
+    }).notNull(),
+    amount: integer('amount').notNull(),
+    idempotencyKey: varchar('idempotency_key', {
+      length: 255,
+    }).notNull(),
+    source: varchar('source', {
+      length: 100,
+    }).notNull(),
+    agentRunId: varchar('agent_run_id', {
+      length: 255,
+    }),
+    workflowRunId: varchar('workflow_run_id', {
+      length: 255,
+    }),
+    periodStart: timestamp('period_start', {
+      withTimezone: true,
+    }).notNull(),
+    periodEnd: timestamp('period_end', {
+      withTimezone: true,
+    }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('billing_usage_events_tenant_idempotency_uidx').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index('billing_usage_events_tenant_key_period_idx').on(
+      table.tenantId,
+      table.key,
+      table.periodStart,
+      table.periodEnd,
+    ),
+  ],
+);
+
+export const automationDefinitions = pgTable(
+  'automation_definitions',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    name: varchar('name', { length: 200 }).notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    triggerType: varchar('trigger_type', { length: 30 }).notNull(),
+    triggerConfig: jsonb('trigger_config').notNull(),
+    conditionMode: varchar('condition_mode', { length: 10 }).notNull(),
+    conditions: jsonb('conditions').notNull(),
+    workflowReference: varchar('workflow_reference', { length: 240 }).notNull(),
+    locale: varchar('locale', { length: 12 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    index('automation_definitions_tenant_enabled_idx').on(table.tenantId, table.enabled),
+    index('automation_definitions_tenant_trigger_idx').on(table.tenantId, table.triggerType),
+  ],
+);
+
+export const automationExecutions = pgTable(
+  'automation_executions',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    automationId: uuid('automation_id')
+      .notNull()
+      .references(() => automationDefinitions.id, {
+        onDelete: 'cascade',
+      }),
+    idempotencyKey: varchar('idempotency_key', { length: 240 }).notNull(),
+    triggerType: varchar('trigger_type', { length: 30 }).notNull(),
+    status: varchar('status', { length: 30 }).notNull(),
+    workflowId: varchar('workflow_id', { length: 240 }),
+    payload: jsonb('payload').notNull(),
+    attempts: integer('attempts').notNull().default(1),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }).defaultNow().notNull(),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    error: text('error'),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('automation_executions_tenant_idempotency_uidx').on(
+      table.tenantId,
+      table.automationId,
+      table.idempotencyKey,
+    ),
+    index('automation_executions_tenant_status_idx').on(table.tenantId, table.status),
+  ],
+);
+
+export const marketingExecutionArtifacts = pgTable(
+  'marketing_execution_artifacts',
+  {
+    id: id(),
+
+    tenantId: tenant(() => tenants.id),
+
+    domain: varchar('domain', {
+      length: 30,
+    }).notNull(),
+
+    capabilityId: varchar('capability_id', {
+      length: 80,
+    }).notNull(),
+
+    workflowId: varchar('workflow_id', {
+      length: 240,
+    }).notNull(),
+
+    taskId: varchar('task_id', {
+      length: 240,
+    }).notNull(),
+
+    workstreamId: varchar('workstream_id', {
+      length: 240,
+    }).notNull(),
+
+    status: varchar('status', {
+      length: 40,
+    }).notNull(),
+
+    version: integer('version').notNull().default(1),
+
+    output: jsonb('output').notNull(),
+
+    evidenceIds: jsonb('evidence_ids').notNull(),
+
+    approvalId: varchar('approval_id', {
+      length: 240,
+    }),
+
+    approvedConditions: jsonb('approved_conditions'),
+
+    ...times,
+  },
+
+  (table) => [
+    index('marketing_execution_tenant_domain_idx').on(table.tenantId, table.domain),
+
+    index('marketing_execution_tenant_workflow_idx').on(table.tenantId, table.workflowId),
+
+    uniqueIndex('marketing_execution_tenant_artifact_version_uidx').on(
+      table.tenantId,
+      table.id,
+      table.version,
+    ),
+  ],
+);
+
+export const marketingExecutionApprovalBindings = pgTable(
+  'marketing_execution_approval_bindings',
+  {
+    id: id(),
+
+    tenantId: tenant(() => tenants.id),
+
+    artifactId: uuid('artifact_id')
+      .notNull()
+      .references(() => marketingExecutionArtifacts.id, {
+        onDelete: 'cascade',
+      }),
+
+    approvalId: varchar('approval_id', {
+      length: 240,
+    }).notNull(),
+
+    status: varchar('status', {
+      length: 40,
+    }).notNull(),
+
+    conditions: jsonb('conditions'),
+
+    ...times,
+  },
+
+  (table) => [
+    uniqueIndex('marketing_execution_approval_tenant_artifact_uidx').on(
+      table.tenantId,
+      table.artifactId,
+    ),
+
+    index('marketing_execution_approval_tenant_idx').on(table.tenantId),
+  ],
+);
+
+export const marketingExecutionWorkflowBindings = pgTable(
+  'marketing_execution_workflow_bindings',
+  {
+    id: id(),
+
+    tenantId: tenant(() => tenants.id),
+
+    artifactId: uuid('artifact_id')
+      .notNull()
+      .references(() => marketingExecutionArtifacts.id, {
+        onDelete: 'cascade',
+      }),
+
+    workflowId: varchar('workflow_id', {
+      length: 240,
+    }).notNull(),
+
+    taskId: varchar('task_id', {
+      length: 240,
+    }).notNull(),
+
+    workstreamId: varchar('workstream_id', {
+      length: 240,
+    }).notNull(),
+
+    fromDomain: varchar('from_domain', {
+      length: 30,
+    }).notNull(),
+
+    toDomain: varchar('to_domain', {
+      length: 30,
+    }),
+
+    ...times,
+  },
+
+  (table) => [
+    index('marketing_execution_binding_tenant_workflow_idx').on(table.tenantId, table.workflowId),
+
+    uniqueIndex('marketing_execution_binding_tenant_artifact_uidx').on(
+      table.tenantId,
+      table.artifactId,
+    ),
+  ],
+);
+
+export const governanceFeatureFlags = pgTable(
+  'governance_feature_flags',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    key: varchar('key', { length: 180 }).notNull(),
+    enabled: boolean('enabled').notNull().default(false),
+    description: text('description'),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('governance_feature_flags_tenant_key_uidx').on(table.tenantId, table.key),
+    index('governance_feature_flags_tenant_enabled_idx').on(table.tenantId, table.enabled),
+  ],
+);
+
+export const governanceDataExportRequests = pgTable(
+  'governance_data_export_requests',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => users.id),
+    resourceTypes: jsonb('resource_types').notNull().default([]),
+    filters: jsonb('filters').notNull().default({}),
+    status: varchar('status', { length: 40 }).notNull(),
+    approvalId: uuid('approval_id'),
+    ...times,
+  },
+  (table) => [
+    index('governance_data_export_requests_tenant_status_idx').on(table.tenantId, table.status),
+    index('governance_data_export_requests_tenant_created_idx').on(table.tenantId, table.createdAt),
+  ],
+);
+
+export const governanceDataDeletionRequests = pgTable(
+  'governance_data_deletion_requests',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => users.id),
+    resourceTypes: jsonb('resource_types').notNull().default([]),
+    selectors: jsonb('selectors').notNull().default({}),
+    reason: text('reason').notNull(),
+    status: varchar('status', { length: 40 }).notNull(),
+    approvalId: uuid('approval_id'),
+    ...times,
+  },
+  (table) => [
+    index('governance_data_deletion_requests_tenant_status_idx').on(table.tenantId, table.status),
+    index('governance_data_deletion_requests_tenant_created_idx').on(
+      table.tenantId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const governanceRetentionPolicies = pgTable(
+  'governance_retention_policies',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    resourceType: varchar('resource_type', { length: 180 }).notNull(),
+    retentionDays: integer('retention_days').notNull(),
+    disposition: varchar('disposition', { length: 40 }).notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('governance_retention_policies_tenant_resource_uidx').on(
+      table.tenantId,
+      table.resourceType,
+    ),
+    index('governance_retention_policies_tenant_enabled_idx').on(table.tenantId, table.enabled),
+  ],
+);
+
+export const governanceOrganizationOverrides = pgTable(
+  'governance_organization_overrides',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    key: varchar('key', { length: 180 }).notNull(),
+    value: jsonb('value').notNull(),
+    reason: text('reason'),
+    active: boolean('active').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('governance_organization_overrides_tenant_key_uidx').on(table.tenantId, table.key),
+    index('governance_organization_overrides_tenant_active_idx').on(table.tenantId, table.active),
+  ],
+);
+
+// Governance audit records use the established tenant-scoped audit_events table.
+export const governanceAuditEvents = auditEvents;
+
+// EPIC-10 conversation intelligence keeps minimized provider-neutral payloads.
+export const customerConversationEvents = pgTable('customer_conversation_events', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), provider: varchar('provider', { length: 96 }).notNull(), channel: varchar('channel', { length: 32 }).notNull(), externalThreadId: varchar('external_thread_id', { length: 255 }), externalMessageId: varchar('external_message_id', { length: 255 }), direction: varchar('direction', { length: 24 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), contentReference: varchar('content_reference', { length: 512 }), contentHash: varchar('content_hash', { length: 255 }), redactedExcerpt: varchar('redacted_excerpt', { length: 512 }), consentStatus: varchar('consent_status', { length: 24 }).notNull(), languageHints: jsonb('language_hints').notNull(), event: jsonb('event').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('customer_conversation_event_tenant_idempotency_uidx').on(t.tenantId, t.idempotencyKey), uniqueIndex('customer_conversation_event_tenant_provider_message_uidx').on(t.tenantId, t.provider, t.externalMessageId), index('customer_conversation_events_tenant_conversation_idx').on(t.tenantId, t.conversationId, t.occurredAt)]);
+export const customerConversationTurns = pgTable('customer_conversation_turns', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), eventId: varchar('event_id', { length: 255 }).notNull(), direction: varchar('direction', { length: 24 }).notNull(), contentReference: varchar('content_reference', { length: 512 }), contentHash: varchar('content_hash', { length: 255 }), redactedExcerpt: varchar('redacted_excerpt', { length: 512 }), turn: jsonb('turn').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times });
+export const customerConversationStates = pgTable('customer_conversation_states', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), state: varchar('state', { length: 32 }).notNull(), stateRecord: jsonb('state_record').notNull(), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(), createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow() }, (t) => [uniqueIndex('customer_conversation_state_tenant_conversation_uidx').on(t.tenantId, t.conversationId)]);
+export const customerConversationIntents = pgTable('customer_conversation_intents', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), primaryIntent: varchar('primary_intent', { length: 64 }).notNull(), intent: jsonb('intent').notNull(), detectedAt: timestamp('detected_at', { withTimezone: true }).notNull(), ...times });
+export const customerConversationSummaries = pgTable('customer_conversation_summaries', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), summary: jsonb('summary').notNull(), ...times }, (t) => [uniqueIndex('customer_conversation_summary_tenant_conversation_uidx').on(t.tenantId, t.conversationId)]);
+export const conversationBuyingSignals = pgTable('conversation_buying_signals', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), leadId: varchar('lead_id', { length: 255 }), signalType: varchar('signal_type', { length: 64 }).notNull(), signal: jsonb('signal').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times });
+export const leadEngagementAssessments = pgTable('lead_engagement_assessments', { id: id(), tenantId: tenant(() => tenants.id), leadId: varchar('lead_id', { length: 255 }).notNull(), state: varchar('state', { length: 32 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('lead_engagement_assessment_tenant_lead_uidx').on(t.tenantId, t.leadId)]);
+export const responseRecommendations = pgTable('response_recommendations', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), action: varchar('action', { length: 64 }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), recommendation: jsonb('recommendation').notNull(), ...times });
+export const contactabilityAssessments = pgTable('contactability_assessments', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }), leadId: varchar('lead_id', { length: 255 }), channel: varchar('channel', { length: 32 }).notNull(), purpose: varchar('purpose', { length: 32 }).notNull(), status: varchar('status', { length: 24 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }), ...times });
+export const aiReceptionistProfiles = pgTable('ai_receptionist_profiles', { id: id(), tenantId: tenant(() => tenants.id), enabled: boolean('enabled').notNull().default(false), profile: jsonb('profile').notNull(), ...times });
+export const aiReceptionistSessions = pgTable('ai_receptionist_sessions', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), profileId: varchar('profile_id', { length: 255 }).notNull(), state: varchar('state', { length: 32 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), session: jsonb('session').notNull(), ...times }, (t) => [uniqueIndex('ai_receptionist_session_tenant_idempotency_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const aiReceptionistTurns = pgTable('ai_receptionist_turns', { id: id(), tenantId: tenant(() => tenants.id), sessionId: varchar('session_id', { length: 255 }).notNull(), eventId: varchar('event_id', { length: 255 }), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), turn: jsonb('turn').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('ai_receptionist_turn_tenant_idempotency_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const aiReceptionistActionRecommendations = pgTable('ai_receptionist_action_recommendations', { id: id(), tenantId: tenant(() => tenants.id), sessionId: varchar('session_id', { length: 255 }).notNull(), action: varchar('action', { length: 64 }).notNull(), recommendation: jsonb('recommendation').notNull(), ...times });
+export const aiReceptionistHandoffs = pgTable('ai_receptionist_handoffs', { id: id(), tenantId: tenant(() => tenants.id), sessionId: varchar('session_id', { length: 255 }).notNull(), target: varchar('target', { length: 64 }).notNull(), status: varchar('status', { length: 32 }).notNull(), handoff: jsonb('handoff').notNull(), ...times });
+export const aiReceptionistOutcomes = pgTable('ai_receptionist_outcomes', { id: id(), tenantId: tenant(() => tenants.id), sessionId: varchar('session_id', { length: 255 }).notNull(), outcome: jsonb('outcome').notNull(), ...times });
+export const customerHandoffRecommendations = pgTable('customer_handoff_recommendations', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), target: varchar('target', { length: 64 }).notNull(), recommendation: jsonb('recommendation').notNull(), ...times });
+export const customerHandoffRecords = pgTable('customer_handoff_records', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), target: varchar('target', { length: 64 }).notNull(), status: varchar('status', { length: 32 }).notNull(), handoff: jsonb('handoff').notNull(), ...times });
+export const customerMeetingIntents = pgTable('customer_meeting_intents', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), meetingIntent: jsonb('meeting_intent').notNull(), ...times });
+export const customerFollowUpRecommendations = pgTable('customer_follow_up_recommendations', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), recommendation: jsonb('recommendation').notNull(), ...times });
+export const customerCommitments = pgTable('customer_commitments', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), commitment: jsonb('commitment').notNull(), ...times });
+export const businessCommitments = pgTable('business_commitments', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), commitment: jsonb('commitment').notNull(), ...times });
+export const conversationDiagnostics = pgTable('conversation_diagnostics', { id: id(), tenantId: tenant(() => tenants.id), conversationId: varchar('conversation_id', { length: 255 }).notNull(), severity: varchar('severity', { length: 16 }).notNull(), diagnostic: jsonb('diagnostic').notNull(), generatedAt: timestamp('generated_at', { withTimezone: true }).notNull(), ...times });
+// EPIC-11 stores canonical journey evidence and governed recommendations only; none of these tables authorizes provider execution.
+export const customerLifecycleAssessments = pgTable('customer_lifecycle_assessments', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), leadId: varchar('lead_id', { length: 255 }), opportunityId: varchar('opportunity_id', { length: 255 }), currentState: varchar('current_state', { length: 48 }).notNull(), previousState: varchar('previous_state', { length: 48 }), assessment: jsonb('assessment').notNull(), effectiveAt: timestamp('effective_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('customer_lifecycle_assessment_tenant_identity_uidx').on(t.tenantId, t.identityId)]);
+export const customerJourneyEvents = pgTable('customer_journey_events', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }), leadId: varchar('lead_id', { length: 255 }), eventType: varchar('event_type', { length: 64 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), event: jsonb('event').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('customer_journey_event_tenant_idempotency_uidx').on(t.tenantId, t.idempotencyKey), index('customer_journey_events_tenant_identity_occurred_idx').on(t.tenantId, t.identityId, t.occurredAt)]);
+export const customerJourneyStageAssessments = pgTable('customer_journey_stage_assessments', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), currentState: varchar('current_state', { length: 48 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('customer_journey_stage_assessment_tenant_identity_uidx').on(t.tenantId, t.identityId)]);
+export const journeyTriggers = pgTable('journey_triggers', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), triggerType: varchar('trigger_type', { length: 64 }).notNull(), deterministicKey: varchar('deterministic_key', { length: 255 }).notNull(), trigger: jsonb('trigger').notNull(), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('journey_trigger_tenant_key_uidx').on(t.tenantId, t.deterministicKey)]);
+export const actionEligibilityAssessments = pgTable('action_eligibility_assessments', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), action: varchar('action', { length: 80 }).notNull(), result: varchar('result', { length: 32 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times });
+export const nextBestActionRecommendations = pgTable('next_best_action_recommendations', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), action: varchar('action', { length: 80 }).notNull(), deterministicKey: varchar('deterministic_key', { length: 255 }).notNull(), eligibility: varchar('eligibility', { length: 32 }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), recommendation: jsonb('recommendation').notNull(), ...times }, (t) => [uniqueIndex('next_best_action_recommendation_tenant_key_uidx').on(t.tenantId, t.deterministicKey)]);
+export const customerJourneyPlans = pgTable('customer_journey_plans', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), lifecycleState: varchar('lifecycle_state', { length: 48 }).notNull(), plan: jsonb('plan').notNull(), ...times });
+export const customerJourneyPlanSteps = pgTable('customer_journey_plan_steps', { id: id(), tenantId: tenant(() => tenants.id), planId: varchar('plan_id', { length: 255 }).notNull(), sequence: integer('sequence').notNull(), action: varchar('action', { length: 80 }).notNull(), status: varchar('status', { length: 32 }).notNull(), step: jsonb('step').notNull(), ...times }, (t) => [uniqueIndex('customer_journey_plan_step_sequence_uidx').on(t.tenantId, t.planId, t.sequence)]);
+export const customerJourneyHealthAssessments = pgTable('customer_journey_health_assessments', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), health: varchar('health', { length: 32 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times });
+export const journeyActionOutcomes = pgTable('journey_action_outcomes', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), outcomeType: varchar('outcome_type', { length: 64 }).notNull(), outcome: jsonb('outcome').notNull(), observedAt: timestamp('observed_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('journey_action_outcome_tenant_idempotency_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const journeyLearningRecords = pgTable('journey_learning_records', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), learning: jsonb('learning').notNull(), recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull(), ...times });
+// EPIC-12 records governed lifecycle activation only; execution remains behind the canonical external-action boundary.
+export const lifecycleActivationPlans = pgTable('lifecycle_activation_plans', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), nextBestActionId: varchar('next_best_action_id', { length: 255 }).notNull(), status: varchar('status', { length: 32 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), plan: jsonb('plan').notNull(), ...times }, (t) => [uniqueIndex('lifecycle_activation_plan_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const lifecycleActivationSteps = pgTable('lifecycle_activation_steps', { id: id(), tenantId: tenant(() => tenants.id), planId: varchar('plan_id', { length: 255 }).notNull(), sequence: integer('sequence').notNull(), status: varchar('status', { length: 32 }).notNull(), step: jsonb('step').notNull(), ...times }, (t) => [uniqueIndex('lifecycle_activation_step_tenant_plan_sequence_uidx').on(t.tenantId, t.planId, t.sequence)]);
+export const lifecycleActivationCandidates = pgTable('lifecycle_activation_candidates', { id: id(), tenantId: tenant(() => tenants.id), planId: varchar('plan_id', { length: 255 }).notNull(), identityId: varchar('identity_id', { length: 255 }).notNull(), channel: varchar('channel', { length: 64 }).notNull(), status: varchar('status', { length: 32 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), candidate: jsonb('candidate').notNull(), ...times }, (t) => [uniqueIndex('lifecycle_activation_candidate_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const lifecycleActivationAssessments = pgTable('lifecycle_activation_assessments', { id: id(), tenantId: tenant(() => tenants.id), candidateId: varchar('candidate_id', { length: 255 }).notNull(), assessmentType: varchar('assessment_type', { length: 32 }).notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull(), ...times });
+export const lifecycleActivationExecutions = pgTable('lifecycle_activation_executions', { id: id(), tenantId: tenant(() => tenants.id), candidateId: varchar('candidate_id', { length: 255 }).notNull(), status: varchar('status', { length: 32 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), execution: jsonb('execution').notNull(), ...times }, (t) => [uniqueIndex('lifecycle_activation_execution_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const lifecycleActivationVerifications = pgTable('lifecycle_activation_verifications', { id: id(), tenantId: tenant(() => tenants.id), executionId: varchar('execution_id', { length: 255 }).notNull(), status: varchar('status', { length: 32 }).notNull(), verification: jsonb('verification').notNull(), verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(), ...times });
+export const lifecycleActivationOutcomes = pgTable('lifecycle_activation_outcomes', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), executionId: varchar('execution_id', { length: 255 }), outcome: varchar('outcome', { length: 16 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), outcomeRecord: jsonb('outcome_record').notNull(), observedAt: timestamp('observed_at', { withTimezone: true }).notNull(), ...times }, (t) => [uniqueIndex('lifecycle_activation_outcome_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const lifecycleActivationLearningLinks = pgTable('lifecycle_activation_learning_links', { id: id(), tenantId: tenant(() => tenants.id), activationOutcomeId: varchar('activation_outcome_id', { length: 255 }).notNull(), journeyOutcomeId: varchar('journey_outcome_id', { length: 255 }), journeyLearningId: varchar('journey_learning_id', { length: 255 }), link: jsonb('link').notNull(), ...times }, (t) => [uniqueIndex('lifecycle_activation_learning_link_tenant_outcome_uidx').on(t.tenantId, t.activationOutcomeId)]);
+export const growthDecisionContexts = pgTable('growth_decision_contexts', { id: id(), tenantId: tenant(() => tenants.id), identityId: varchar('identity_id', { length: 255 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), context: jsonb('context').notNull(), ...times }, (t) => [uniqueIndex('growth_decision_context_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const growthActionCandidates = pgTable('growth_action_candidates', { id: id(), tenantId: tenant(() => tenants.id), contextId: varchar('context_id', { length: 255 }).notNull().references(() => growthDecisionContexts.id, { onDelete: 'cascade' }), objective: varchar('objective', { length: 32 }).notNull(), actionType: varchar('action_type', { length: 64 }).notNull(), state: varchar('state', { length: 32 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), candidate: jsonb('candidate').notNull(), ...times }, (t) => [uniqueIndex('growth_action_candidate_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const growthDecisionRecommendations = pgTable('growth_decision_recommendations', { id: id(), tenantId: tenant(() => tenants.id), contextId: varchar('context_id', { length: 255 }).notNull().references(() => growthDecisionContexts.id, { onDelete: 'cascade' }), candidateId: varchar('candidate_id', { length: 255 }).notNull().references(() => growthActionCandidates.id, { onDelete: 'cascade' }), state: varchar('state', { length: 32 }).notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), recommendation: jsonb('recommendation').notNull(), ...times }, (t) => [uniqueIndex('growth_decision_recommendation_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const growthCandidateEligibilityAssessments = pgTable('growth_candidate_eligibility_assessments', { id: id(), tenantId: tenant(() => tenants.id), candidateId: varchar('candidate_id', { length: 255 }).notNull().references(() => growthActionCandidates.id, { onDelete: 'cascade' }), eligible: boolean('eligible').notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at',{withTimezone:true}).notNull(), ...times });
+export const growthDecisionConflictAssessments = pgTable('growth_decision_conflict_assessments', { id: id(), tenantId: tenant(() => tenants.id), candidateId: varchar('candidate_id', { length: 255 }).notNull().references(() => growthActionCandidates.id, { onDelete: 'cascade' }), conflict: boolean('conflict').notNull(), assessment: jsonb('assessment').notNull(), assessedAt: timestamp('assessed_at',{withTimezone:true}).notNull(), ...times });
+export const growthDecisionScores = pgTable('growth_decision_scores', { id: id(), tenantId: tenant(() => tenants.id), candidateId: varchar('candidate_id', { length: 255 }).notNull().references(() => growthActionCandidates.id, { onDelete: 'cascade' }), score: integer('score').notNull(), components: jsonb('components').notNull(), scoredAt: timestamp('scored_at',{withTimezone:true}).notNull(), ...times });
+export const growthDecisionOutcomes = pgTable('growth_decision_outcomes', { id: id(), tenantId: tenant(() => tenants.id), recommendationId: varchar('recommendation_id',{length:255}).notNull().references(() => growthDecisionRecommendations.id, { onDelete: 'cascade' }), outcome: varchar('outcome',{length:16}).notNull(), idempotencyKey: varchar('idempotency_key',{length:255}).notNull(), outcomeRecord: jsonb('outcome_record').notNull(), observedAt: timestamp('observed_at',{withTimezone:true}).notNull(), ...times },(t)=>[uniqueIndex('growth_decision_outcome_tenant_key_uidx').on(t.tenantId,t.idempotencyKey)]);
+export const growthDecisionLearningRecords = pgTable('growth_decision_learning_records', { id: id(), tenantId: tenant(() => tenants.id), outcomeId: varchar('outcome_id',{length:255}).notNull().references(() => growthDecisionOutcomes.id, { onDelete: 'cascade' }), learning: jsonb('learning').notNull(), recordedAt: timestamp('recorded_at',{withTimezone:true}).notNull(), ...times },(t)=>[uniqueIndex('growth_decision_learning_tenant_outcome_uidx').on(t.tenantId,t.outcomeId)]);
+/** EPIC-14 bindings store only secret references; EPIC-05 remains health/evidence authority. */
+export const tenantProviderBindings = pgTable('tenant_provider_bindings', { id: id(), tenantId: tenant(() => tenants.id), provider: varchar('provider', { length: 64 }).notNull(), environment: varchar('environment', { length: 16 }).notNull(), executionMode: varchar('execution_mode', { length: 16 }).notNull(), configured: boolean('configured').notNull(), enabled: boolean('enabled').notNull(), credentialReference: varchar('credential_reference', { length: 255 }), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), adapterVersion: varchar('adapter_version', { length: 64 }).notNull(), ...times }, (t) => [uniqueIndex('tenant_provider_binding_tenant_provider_environment_uidx').on(t.tenantId, t.provider, t.environment), uniqueIndex('tenant_provider_binding_tenant_key_uidx').on(t.tenantId, t.idempotencyKey)]);
+export const tenantProviderCapabilities = pgTable('tenant_provider_capabilities', { id: id(), tenantId: tenant(() => tenants.id), bindingId: varchar('binding_id', { length: 255 }).notNull().references(() => tenantProviderBindings.id, { onDelete: 'cascade' }), capability: varchar('capability', { length: 64 }).notNull(), operation: varchar('operation', { length: 32 }).notNull(), supported: boolean('supported').notNull(), enabled: boolean('enabled').notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), ...times }, (t) => [uniqueIndex('tenant_provider_capability_tenant_key_uidx').on(t.tenantId, t.idempotencyKey), uniqueIndex('tenant_provider_capability_tenant_binding_capability_uidx').on(t.tenantId, t.bindingId, t.capability), index('tenant_provider_capabilities_tenant_binding_idx').on(t.tenantId, t.bindingId)]);
+export const providerIntegrationVerifications = pgTable('provider_integration_verifications', { id: id(), tenantId: tenant(() => tenants.id), bindingId: varchar('binding_id', { length: 255 }).notNull().references(() => tenantProviderBindings.id, { onDelete: 'cascade' }), capability: varchar('capability', { length: 64 }).notNull(), state: varchar('state', { length: 32 }).notNull(), providerReference: varchar('provider_reference', { length: 255 }), evidence: jsonb('evidence').notNull(), idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(), verifiedAt: timestamp('verified_at', { withTimezone: true }), ...times }, (t) => [uniqueIndex('provider_integration_verification_tenant_key_uidx').on(t.tenantId, t.idempotencyKey), index('provider_integration_verifications_tenant_binding_idx').on(t.tenantId, t.bindingId, t.createdAt)]);

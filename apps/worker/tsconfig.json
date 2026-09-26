@@ -1,6 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "references": [{ "path": "../../packages/config" }],
+  "references": [
+    { "path": "../../packages/config" },
+    { "path": "../../packages/db" },
+    { "path": "../../packages/marketing-os-persistence" }
+  ],
   "include": ["src/**/*.ts"]
 }

@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?required}
+      POSTGRES_USER: ${POSTGRES_USER:?required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports: []
+  api:
+    build: { context: ../.., dockerfile: infra/docker/Dockerfile }
+    command: ['node', 'apps/api/dist/main.js']
+    restart: unless-stopped
+    env_file: [.env.production]
+    depends_on: { postgres: { condition: service_healthy } }
+    ports: ['127.0.0.1:4000:4000']
+  worker:
+    build: { context: ../.., dockerfile: infra/docker/Dockerfile }
+    command: ['node', 'apps/worker/dist/main.js']
+    restart: unless-stopped
+    env_file: [.env.production]
+    depends_on: { postgres: { condition: service_healthy } }
+  web:
+    build: { context: ../.., dockerfile: infra/docker/Dockerfile }
+    command: ['npm', '--workspace', 'apps/web', 'run', 'start']
+    restart: unless-stopped
+    environment: [NODE_ENV=production]
+    depends_on: [api]
+    ports: ['127.0.0.1:3000:3000']
+volumes: { postgres-data: {} }

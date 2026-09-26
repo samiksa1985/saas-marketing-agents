@@ -1,17 +1,56 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
-  },
-  "references": [
-    { "path": "../../packages/config" },
-    { "path": "../../packages/i18n" },
-    { "path": "../../packages/domain" },
-    { "path": "../../packages/registry" },
-    { "path": "../../packages/workflow-runtime" }
-  ],
-  "include": ["src/**/*.ts"]
+﻿{
+    "extends":  "../../tsconfig.base.json",
+    "compilerOptions":  {
+                            "rootDir":  "src",
+                            "outDir":  "dist",
+                            "experimentalDecorators":  true,
+                            "emitDecoratorMetadata":  true
+                        },
+    "references":  [
+                       {
+                           "path":  "../../packages/config"
+                       },
+                       {
+                           "path":  "../../packages/contracts"
+                       },
+                       {
+                           "path": "../../packages/approvals"
+                       },
+                       {
+                           "path": "../../packages/billing-entitlements"
+                       },
+                       {
+                           "path":  "../../packages/db"
+                       },
+                       {
+                           "path":  "../../packages/i18n"
+                       },
+                       {
+                           "path":  "../../packages/domain"
+                       },
+                       {
+                           "path":  "../../packages/registry"
+                       },
+                       {
+                           "path":  "../../packages/workflow-runtime"
+                       },
+                       {
+                           "path":  "../../packages/context-engine"
+                       },
+                       {
+                           "path":  "../../packages/acquisition-graph"
+                       },
+                       {
+                           "path":  "../../packages/marketing-os-core"
+                       },
+                       {
+                           "path":  "../../packages/marketing-os-persistence"
+                       },
+                       {
+                           "path": "../../packages/tool-gateway"
+                       }
+                   ],
+    "include":  [
+                    "src/**/*.ts"
+                ]
 }

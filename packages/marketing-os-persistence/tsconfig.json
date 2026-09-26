@@ -1,0 +1,27 @@
+﻿{
+    "extends":  "../../tsconfig.base.json",
+    "compilerOptions":  {
+                            "rootDir":  "src",
+                            "outDir":  "dist"
+                        },
+    "references":  [
+                       {
+                           "path":  "../contracts"
+                       },
+                       {
+                           "path": "../approvals"
+                       },
+                       {
+                           "path":  "../context-engine"
+                       },
+                       {
+                           "path":  "../db"
+                       },
+                       {
+                           "path":  "../marketing-os-core"
+                       }
+                   ],
+    "include":  [
+                    "src/**/*.ts"
+                ]
+}

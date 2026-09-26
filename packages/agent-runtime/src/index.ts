@@ -176,3 +176,7 @@ export interface AgentRunner {
 export function assertExecutionTenant(context: AgentExecutionContext): void {
   if (!context.tenantContext?.tenantId) throw new Error('Agent execution requires tenant context');
 }
+
+export * from './proposal-approval-integration.js';
+
+export * from './entitlement-aware-executor.js';

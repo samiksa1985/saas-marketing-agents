@@ -1,0 +1,10 @@
+{
+  "version": "V2.3",
+  "docker_postgres_pgvector": true,
+  "env_example": true,
+  "bootstrap_scripts": true,
+  "developer_setup": true,
+  "runtime_contract": true,
+  "status": "ENVIRONMENT_READY_FOR_EXTERNAL_RUNTIME",
+  "local_build_certified": false
+}

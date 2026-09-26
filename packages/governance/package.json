@@ -1,0 +1,25 @@
+{
+  "name": "@platform/governance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@platform/approvals": "0.1.0",
+    "@platform/contracts": "0.1.0",
+    "@platform/domain": "0.1.0",
+    "@platform/marketing-os-persistence": "0.1.0"
+  }
+}

@@ -1,28 +1,38 @@
-{
-  "name": "@platform/api",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "build": "tsc -b",
-    "typecheck": "tsc -b --pretty false",
-    "lint": "prettier --check src",
-    "test": "node --test",
-    "dev": "tsx watch src/main.ts",
-    "start": "node dist/main.js"
-  },
-  "dependencies": {
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
-    "@nestjs/swagger": "^11.0.0",
-    "@platform/auth": "0.1.0",
-    "@platform/config": "0.1.0",
-    "@platform/i18n": "0.1.0",
-    "@platform/domain": "0.1.0",
-    "@platform/registry": "0.1.0",
-    "@platform/workflow-runtime": "0.1.0",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
-  }
+﻿{
+    "name":  "@platform/api",
+    "private":  true,
+    "version":  "0.1.0",
+    "type":  "module",
+    "scripts":  {
+                    "build":  "tsc -b",
+                    "typecheck":  "tsc -b --pretty false",
+                    "lint":  "prettier --check src",
+                    "test":  "tsx --test src/**/*.test.ts",
+                    "dev":  "tsx watch src/main.ts",
+                    "start":  "node dist/main.js"
+                },
+    "dependencies":  {
+                         "@nestjs/common":  "^11.0.0",
+                         "@nestjs/core":  "^11.0.0",
+                         "@nestjs/platform-express":  "^11.0.0",
+                         "@nestjs/swagger":  "^11.0.0",
+                         "@platform/auth":  "0.1.0",
+                         "@platform/approvals": "0.1.0",
+                         "@platform/billing-entitlements": "0.1.0",
+                         "@platform/config":  "0.1.0",
+                         "@platform/contracts": "0.1.0",
+                         "@platform/db": "0.1.0",
+                         "@platform/i18n":  "0.1.0",
+                         "@platform/domain":  "0.1.0",
+                         "@platform/registry":  "0.1.0",
+                         "@platform/workflow-runtime":  "0.1.0",
+                         "reflect-metadata":  "^0.2.2",
+                         "rxjs":  "^7.8.1",
+                         "@platform/context-engine":  "0.1.0",
+                         "@platform/acquisition-graph":  "0.1.0",
+                         "@platform/marketing-os-core":  "0.1.0",
+                         "@platform/marketing-os-persistence": "0.1.0",
+                         "@platform/tool-gateway": "0.1.0",
+                         "tsx":  "^4.19.4"
+                     }
 }

@@ -1,0 +1,697 @@
+export type ProductLocale = 'en-US' | 'ar-SA';
+export type ProductDirection = 'ltr' | 'rtl';
+export interface LocalizedText {
+  en: string;
+  ar: string;
+}
+export type ProductViewId =
+  | 'overview'
+  | 'growth-workspace'
+  | 'campaigns'
+  | 'customers'
+  | 'conversations'
+  | 'journeys'
+  | 'approvals'
+  | 'analytics'
+  | 'integrations'
+  | 'reports'
+  | 'admin'
+  | 'onboarding'
+  | 'workspace-settings'
+  | 'users-roles'
+  | 'ai-governance'
+  | 'billing-plan'
+  | 'audit-evidence';
+export type ProductDataState<T> =
+  | { kind: 'loading' }
+  | { kind: 'empty'; message: LocalizedText }
+  | { kind: 'unavailable'; message: LocalizedText; compositionEndpoint: string }
+  | { kind: 'permission-denied'; permission: string }
+  | { kind: 'entitlement-unavailable'; entitlement: string }
+  | { kind: 'error'; message: LocalizedText }
+  | { kind: 'ready'; data: T };
+export interface ProductAccess {
+  tenantContext: 'missing' | 'available';
+  permissions: readonly string[];
+  entitlements: readonly string[];
+}
+export type ProductAccessState =
+  'missing-context' | 'permission-denied' | 'entitlement-unavailable' | 'available';
+export interface ProductSection {
+  title: LocalizedText;
+  description: LocalizedText;
+  items: LocalizedText[];
+}
+export interface ProductDataSource {
+  label: LocalizedText;
+  endpoint: string;
+  status: 'available' | 'requires-session' | 'not-supported';
+}
+export interface ProductView {
+  id: ProductViewId;
+  group: ProductNavigationGroupId;
+  route: string;
+  label: LocalizedText;
+  title: LocalizedText;
+  description: LocalizedText;
+  requiredPermission: string;
+  entitlement?: string;
+  approvalSensitivity: 'none' | 'read' | 'decision-required';
+  dataSources: ProductDataSource[];
+  sections: ProductSection[];
+}
+export type ProductNavigationGroupId = 'primary' | 'administration';
+export interface ProductNavigationGroup {
+  id: ProductNavigationGroupId;
+  label: LocalizedText;
+  views: ProductViewId[];
+}
+
+const text = (en: string, ar: string): LocalizedText => ({ en, ar });
+const source = (
+  en: string,
+  ar: string,
+  endpoint: string,
+  status: ProductDataSource['status'] = 'requires-session',
+): ProductDataSource => ({ label: text(en, ar), endpoint, status });
+const section = (
+  en: string,
+  ar: string,
+  descriptionEn: string,
+  descriptionAr: string,
+  items: Array<[string, string]>,
+): ProductSection => ({
+  title: text(en, ar),
+  description: text(descriptionEn, descriptionAr),
+  items: items.map(([a, b]) => text(a, b)),
+});
+const view = (
+  id: ProductViewId,
+  group: ProductNavigationGroupId,
+  route: string,
+  label: [string, string],
+  title: [string, string],
+  description: [string, string],
+  requiredPermission: string,
+  sources: ProductDataSource[],
+  sections: ProductSection[],
+  approvalSensitivity: ProductView['approvalSensitivity'] = 'read',
+  entitlement?: string,
+): ProductView => ({
+  id,
+  group,
+  route,
+  label: text(...label),
+  title: text(...title),
+  description: text(...description),
+  requiredPermission,
+  dataSources: sources,
+  sections,
+  approvalSensitivity,
+  ...(entitlement ? { entitlement } : {}),
+});
+
+export const productNavigation: ProductNavigationGroup[] = [
+  {
+    id: 'primary',
+    label: text('Growth OS', 'نظام النمو'),
+    views: [
+      'overview',
+      'growth-workspace',
+      'campaigns',
+      'customers',
+      'conversations',
+      'journeys',
+      'approvals',
+      'analytics',
+      'integrations',
+      'reports',
+      'admin',
+    ],
+  },
+  {
+    id: 'administration',
+    label: text('Workspace administration', 'إدارة مساحة العمل'),
+    views: ['workspace-settings', 'users-roles', 'ai-governance', 'billing-plan', 'audit-evidence'],
+  },
+];
+
+export const productViews: ProductView[] = [
+  view(
+    'overview',
+    'primary',
+    '/',
+    ['Command Center', 'مركز الأوامر'],
+    ['Growth Command Center', 'مركز أوامر النمو'],
+    [
+      'A truthful executive view of growth, risks, approvals, and provider readiness.',
+      'عرض تنفيذي موثوق للنمو والمخاطر والموافقات وجاهزية المزوّدين.',
+    ],
+    'tenant:read',
+    [
+      source('Revenue and funnel', 'الإيرادات ومسار التحويل', 'GET /revenue-intelligence'),
+      source('Acquisition funnel', 'مسار الاكتساب', 'GET /funnel'),
+      source('Acquisition diagnostics', 'تشخيصات الاكتساب', 'GET /acquisition-diagnostics'),
+      source('Lead routing recommendations', 'توصيات توجيه العملاء المحتملين', 'GET /lead-routing-recommendations'),
+      source('Approvals', 'الموافقات', 'GET /approvals'),
+      source('Provider bindings', 'ارتباطات المزوّدين', 'GET /provider-integrations/bindings'),
+    ],
+    [
+      section(
+        'What needs attention',
+        'ما يحتاج إلى اهتمام',
+        'Signals preserve source state: unknown is never rendered as zero.',
+        'تحافظ الإشارات على حالة المصدر: المجهول لا يُعرض كصفر.',
+        [
+          ['Open recommendations and approvals', 'التوصيات والموافقات المفتوحة'],
+          ['Provider and credential health metadata', 'بيانات صحة المزوّد وبيانات الاعتماد'],
+          ['Growth risks and evidence limitations', 'مخاطر النمو وحدود الأدلة'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'growth-workspace',
+    'primary',
+    '/growth-workspace',
+    ['Growth Workspace', 'مساحة عمل النمو'],
+    ['Observe, decide, govern, learn', 'راقب، قرّر، احكم، وتعلّم'],
+    [
+      'One business workspace for evidence-bound AI recommendations and human-governed change.',
+      'مساحة أعمال واحدة لتوصيات ذكاء اصطناعي مرتبطة بالأدلة وتغيير تحكمه الموافقة البشرية.',
+    ],
+    'artifact:read',
+    [
+      source('Growth decisions', 'قرارات النمو', 'GET /customer-growth-decisioning/contexts/:key'),
+      source(
+        'Journey recommendations',
+        'توصيات الرحلة',
+        'GET /customer-journey/:identityId/next-best-actions',
+      ),
+      source('Approval records', 'سجلات الموافقة', 'GET /approvals'),
+    ],
+    [
+      section(
+        'Decision chain',
+        'سلسلة القرار',
+        'AI may recommend and simulate. A person authorizes consequential action through the existing approval authority.',
+        'قد يوصي الذكاء الاصطناعي ويُحاكي. ويصرّح شخص بالإجراء المؤثر عبر جهة الموافقة الحالية.',
+        [
+          ['Recommendation with evidence and confidence', 'توصية مع الأدلة والثقة'],
+          ['Simulation, limitations, and expected impact', 'محاكاة وحدود وأثر متوقع'],
+          [
+            'Human approval, execution, verification, and outcome',
+            'موافقة بشرية وتنفيذ وتحقق ونتيجة',
+          ],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'campaigns',
+    'primary',
+    '/campaigns',
+    ['Campaigns', 'الحملات'],
+    ['Campaign performance and governed optimization', 'أداء الحملات والتحسين المحكوم'],
+    [
+      'Campaign planning, simulation, readiness, execution evidence, and outcomes in one view.',
+      'تخطيط الحملة والمحاكاة والجاهزية وأدلة التنفيذ والنتائج في عرض واحد.',
+    ],
+    'artifact:read',
+    [
+      source('Campaign revenue intelligence', 'استخبارات إيرادات الحملة', 'GET /revenue-intelligence'),
+      source('Campaign detail', 'تفاصيل الحملة', 'GET /campaigns/unified/:campaignId'),
+      source('Provider readiness', 'جاهزية المزوّد', 'POST /provider-integrations/readiness'),
+    ],
+    [
+      section(
+        'Channel-aware delivery',
+        'تسليم واعٍ بالقنوات',
+        'Google and Meta are shown only from actual readiness; disconnected providers are not presented as live.',
+        'يتم عرض Google وMeta فقط من الجاهزية الفعلية؛ ولا تُعرض المزوّدات غير المتصلة على أنها مباشرة.',
+        [
+          [
+            'Budget, performance, diagnostics, and recommendations',
+            'الميزانية والأداء والتشخيصات والتوصيات',
+          ],
+          ['Simulation before governed action', 'محاكاة قبل الإجراء المحكوم'],
+          ['Execution and verification evidence', 'أدلة التنفيذ والتحقق'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'customers',
+    'primary',
+    '/customers',
+    ['Customers', 'العملاء'],
+    ['Customers, leads, and opportunity context', 'سياق العملاء والعملاء المحتملين والفرص'],
+    [
+      'A privacy-respecting view of qualification, engagement, funnel, and revenue context.',
+      'عرض يحترم الخصوصية للتأهيل والتفاعل ومسار التحويل وسياق الإيرادات.',
+    ],
+    'artifact:read',
+    [
+      source('Leads', 'العملاء المحتملون', 'GET /leads'),
+      source('Opportunities', 'الفرص', 'GET /opportunities'),
+      source('Funnel', 'مسار التحويل', 'GET /funnel'),
+    ],
+    [
+      section(
+        'Customer context',
+        'سياق العميل',
+        'Only the minimum business identity and provenance needed for the pilot are displayed.',
+        'يتم عرض الحد الأدنى فقط من هوية الأعمال والمنشأ اللازمين للتجربة.',
+        [
+          ['Qualification and identity summary', 'ملخص التأهيل والهوية'],
+          ['Opportunity and funnel state', 'حالة الفرصة ومسار التحويل'],
+          ['Journey stage and growth opportunities', 'مرحلة الرحلة وفرص النمو'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'conversations',
+    'primary',
+    '/conversations',
+    ['Conversations', 'المحادثات'],
+    ['Conversation intelligence', 'استخبارات المحادثات'],
+    [
+      'Intent, signals, handoffs, and recommended follow-up without an implied send action.',
+      'النية والإشارات والتسليم والمتابعة الموصى بها دون إجراء إرسال ضمني.',
+    ],
+    'artifact:read',
+    [
+      source('Conversations', 'المحادثات', 'GET /customer-engagement/conversations'),
+      source('Handoffs', 'عمليات التسليم', 'GET /customer-engagement/handoffs'),
+      source('Follow-ups', 'المتابعات', 'GET /customer-engagement/follow-ups'),
+    ],
+    [
+      section(
+        'Recommendation-only assistance',
+        'مساعدة بالتوصية فقط',
+        'Suggested responses remain recommendations. There is no direct live-send control in this product surface.',
+        'تبقى الردود المقترحة توصيات. لا يوجد عنصر إرسال مباشر في سطح المنتج هذا.',
+        [
+          ['Channel, intent, and qualification signals', 'القناة والنية وإشارات التأهيل'],
+          ['Handoff and commitment context', 'سياق التسليم والالتزام'],
+          ['Recommended next action', 'الإجراء التالي الموصى به'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'journeys',
+    'primary',
+    '/journeys',
+    ['Journeys', 'الرحلات'],
+    ['Customer lifecycle journeys', 'رحلات دورة حياة العميل'],
+    [
+      'Lifecycle state, plans, eligibility, suppression, approval, outcomes, and learning made business-readable.',
+      'حالة دورة الحياة والخطط والأهلية والكبت والموافقة والنتائج والتعلم بلغة مفهومة للأعمال.',
+    ],
+    'artifact:read',
+    [
+      source('Journey analytics', 'تحليلات الرحلة', 'GET /customer-journey/analytics'),
+      source('Journey overview', 'نظرة عامة على الرحلة', 'GET /customer-journey/:identityId'),
+      source('Lifecycle activation', 'تفعيل دورة الحياة', 'GET /lifecycle-activation/plans/:key'),
+      source('Journey analytics', 'تحليلات الرحلة', 'GET /customer-journey/analytics'),
+    ],
+    [
+      section(
+        'Lifecycle visibility',
+        'وضوح دورة الحياة',
+        'A plan is not an execution, and an execution is not a verified outcome.',
+        'الخطة ليست تنفيذاً، والتنفيذ ليس نتيجة تم التحقق منها.',
+        [
+          ['Timeline and current lifecycle state', 'الخط الزمني وحالة دورة الحياة الحالية'],
+          ['Eligibility, suppression, and frequency context', 'سياق الأهلية والكبت والتكرار'],
+          [
+            'Approval, execution, verification, outcome, and learning',
+            'الموافقة والتنفيذ والتحقق والنتيجة والتعلم',
+          ],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'approvals',
+    'primary',
+    '/approvals',
+    ['Approvals', 'الموافقات'],
+    ['Approval Center', 'مركز الموافقات'],
+    [
+      'A first-class, tenant-safe review queue for consequential actions and their audit trail.',
+      'قائمة مراجعة أولية وآمنة للمستأجر للإجراءات المؤثرة وسجل التدقيق الخاص بها.',
+    ],
+    'approval:decide',
+    [source('Approval records', 'سجلات الموافقة', 'GET /approvals')],
+    [
+      section(
+        'Human authorization',
+        'التفويض البشري',
+        'Only the canonical backend approval authority decides consequential actions; the interface never self-approves.',
+        'تقرر جهة الموافقة الخلفية القانونية وحدها الإجراءات المؤثرة؛ ولا تعتمد الواجهة نفسها أبداً.',
+        [
+          [
+            'Pending, approved, rejected, expired, executed, verified, failed, and uncertain',
+            'معلق ومعتمد ومرفوض ومنتهٍ ومنفذ ومتحقق وفاشل وغير مؤكد',
+          ],
+          [
+            'Reason, impact, risk, budget, policy, and evidence',
+            'السبب والأثر والمخاطر والميزانية والسياسة والأدلة',
+          ],
+          ['Requesting workflow and complete audit trail', 'سير العمل الطالب وسجل التدقيق الكامل'],
+        ],
+      ),
+    ],
+    'decision-required',
+  ),
+  view(
+    'analytics',
+    'primary',
+    '/analytics',
+    ['Analytics', 'التحليلات'],
+    ['Growth analytics', 'تحليلات النمو'],
+    [
+      'Performance, funnel, revenue, lifecycle, and decision outcomes with stated confidence and limits.',
+      'الأداء ومسار التحويل والإيرادات ودورة الحياة ونتائج القرار مع ثقة وحدود معلنة.',
+    ],
+    'artifact:read',
+    [
+      source('Revenue intelligence', 'استخبارات الإيرادات', 'GET /revenue-intelligence'),
+      source('Attribution', 'الإسناد', 'GET /revenue-attribution'),
+      source('Engagement analytics', 'تحليلات التفاعل', 'GET /customer-engagement/analytics'),
+    ],
+    [
+      section(
+        'Evidence-aware analysis',
+        'تحليل واعٍ بالأدلة',
+        'Correlation is not presented as causal attribution without backend evidence.',
+        'لا يُعرض الارتباط كإسناد سببي دون أدلة خلفية.',
+        [
+          ['Campaign efficiency and channel comparison', 'كفاءة الحملة ومقارنة القنوات'],
+          ['Funnel, revenue, and lifecycle context', 'سياق مسار التحويل والإيرادات ودورة الحياة'],
+          ['Diagnostics, confidence, and limitations', 'التشخيصات والثقة والحدود'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'integrations',
+    'primary',
+    '/integrations',
+    ['Integrations', 'التكاملات'],
+    ['Integration readiness', 'جاهزية التكاملات'],
+    [
+      'Capability-centric readiness for paid media, CRM, and communications—never credentials.',
+      'جاهزية محورها القدرات للإعلام المدفوع وCRM والاتصالات — وليس بيانات الاعتماد.',
+    ],
+    'artifact:read',
+    [
+      source('Provider bindings', 'ارتباطات المزوّدين', 'GET /provider-integrations/bindings'),
+      source('Capabilities', 'القدرات', 'GET /provider-integrations/capabilities'),
+      source(
+        'Verification evidence',
+        'أدلة التحقق',
+        'GET /provider-integrations/verifications/:bindingId',
+      ),
+    ],
+    [
+      section(
+        'Capability readiness',
+        'جاهزية القدرة',
+        'Connected, needs configuration, unavailable, disabled, and requires approval derive from backend readiness evidence.',
+        'تُشتق حالات متصل ويحتاج تهيئة وغير متاح ومعطل ويتطلب موافقة من دليل الجاهزية الخلفي.',
+        [
+          ['Paid Media: Google and Meta', 'الإعلام المدفوع: Google وMeta'],
+          ['CRM: customer and opportunity context', 'CRM: سياق العميل والفرصة'],
+          ['Email, SMS, and WhatsApp communications', 'اتصالات البريد والرسائل القصيرة وWhatsApp'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'reports',
+    'primary',
+    '/reports',
+    ['Reports', 'التقارير'],
+    ['Pilot reporting', 'تقارير التجربة'],
+    [
+      'Export-ready in-app report concepts assembled from existing authoritative views.',
+      'مفاهيم تقارير داخل التطبيق جاهزة للتصدير ومجمعة من العروض الموثوقة الحالية.',
+    ],
+    'artifact:read',
+    [
+      source('Revenue and performance', 'الإيرادات والأداء', 'GET /revenue-intelligence'),
+      source('Approval summary', 'ملخص الموافقات', 'GET /approvals'),
+    ],
+    [
+      section(
+        'Pilot report set',
+        'مجموعة تقارير التجربة',
+        'Reports remain in-app views until an authoritative export service exists.',
+        'تبقى التقارير عروضاً داخل التطبيق حتى تتوفر خدمة تصدير موثوقة.',
+        [
+          ['Executive Growth Report', 'تقرير النمو التنفيذي'],
+          ['Campaign Performance and Revenue/Funnel', 'أداء الحملة والإيرادات/مسار التحويل'],
+          ['Customer Journey and Governance Summary', 'ملخص رحلة العميل والحوكمة'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'admin',
+    'administration',
+    '/admin',
+    ['Admin', 'الإدارة'],
+    ['Workspace administration', 'إدارة مساحة العمل'],
+    [
+      'Read-only governance, audit, membership, and runtime status from existing backend authorities.',
+      'الحوكمة والتدقيق والعضوية وحالة التشغيل للقراءة فقط من الجهات الخلفية الحالية.',
+    ],
+    'audit:read',
+    [source('Approval and audit evidence', 'أدلة الموافقة والتدقيق', 'GET /approvals')],
+    [
+      section(
+        'Safe administration',
+        'إدارة آمنة',
+        'Credentials, RLS controls, provider activation, and arbitrary database controls are not available in this interface.',
+        'بيانات الاعتماد وضوابط RLS وتفعيل المزوّد وعناصر التحكم التعسفية بقاعدة البيانات غير متاحة في هذه الواجهة.',
+        [
+          ['Governance and approval evidence', 'أدلة الحوكمة والموافقة'],
+          ['Tenant-safe audit visibility', 'رؤية تدقيق آمنة للمستأجر'],
+          ['Runtime status without secrets', 'حالة التشغيل دون أسرار'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'onboarding',
+    'primary',
+    '/onboarding',
+    ['Onboarding', 'التهيئة'],
+    ['Set up your Growth Workspace', 'إعداد مساحة عمل النمو'],
+    [
+      'A guided readiness review that accepts partial provider setup.',
+      'مراجعة جاهزية إرشادية تقبل إعداداً جزئياً للمزوّدين.',
+    ],
+    'tenant:read',
+    [source('Provider readiness', 'جاهزية المزوّد', 'POST /provider-integrations/readiness')],
+    [
+      section(
+        'Readiness review',
+        'مراجعة الجاهزية',
+        'No provider is marked connected until backend evidence confirms its binding and health.',
+        'لا يُعلَّم أي مزوّد كمتصل حتى يؤكد الدليل الخلفي ارتباطه وصحته.',
+        [
+          ['Workspace and business profile', 'مساحة العمل وملف النشاط'],
+          ['Goals, market, audience, and channels', 'الأهداف والسوق والجمهور والقنوات'],
+          ['Integrations and governance preferences', 'التكاملات وتفضيلات الحوكمة'],
+        ],
+      ),
+    ],
+    'none',
+  ),
+  view(
+    'workspace-settings',
+    'administration',
+    '/workspace-settings',
+    ['Workspace Settings', 'إعدادات مساحة العمل'],
+    ['Workspace settings', 'إعدادات مساحة العمل'],
+    [
+      'Workspace profile and business configuration from the existing tenant authority.',
+      'ملف مساحة العمل وتكوين النشاط من جهة المستأجر الحالية.',
+    ],
+    'organization:read',
+    [source('Tenant context', 'سياق المستأجر', 'GET /i18n/context')],
+    [
+      section(
+        'Business configuration',
+        'تكوين النشاط',
+        'Controls only appear when the matching backend capability exists.',
+        'تظهر عناصر التحكم فقط عند وجود القدرة الخلفية المطابقة.',
+        [
+          ['Workspace profile', 'ملف مساحة العمل'],
+          ['Business configuration', 'تكوين النشاط'],
+          ['Locale and regional preferences', 'تفضيلات اللغة والمنطقة'],
+        ],
+      ),
+    ],
+  ),
+  view(
+    'users-roles',
+    'administration',
+    '/users-roles',
+    ['Users & Roles', 'المستخدمون والأدوار'],
+    ['Users and roles', 'المستخدمون والأدوار'],
+    [
+      'Server-side RBAC remains the authorization authority.',
+      'يبقى التحكم في الوصول القائم على الأدوار من جانب الخادم جهة التفويض.',
+    ],
+    'organization:manage',
+    [source('Governance composition', 'تجميع الحوكمة', 'GET /product-surfaces/admin-governance')],
+    [
+      section(
+        'Access governance',
+        'حوكمة الوصول',
+        'Hiding a navigation item is not authorization.',
+        'إخفاء عنصر تنقل ليس تفويضاً.',
+        [
+          ['Membership and roles', 'العضوية والأدوار'],
+          ['Permissions and approval roles', 'الصلاحيات وأدوار الموافقة'],
+          ['Tenant-safe access review', 'مراجعة وصول آمنة للمستأجر'],
+        ],
+      ),
+    ],
+    'decision-required',
+  ),
+  view(
+    'ai-governance',
+    'administration',
+    '/ai-governance',
+    ['AI & Governance', 'الذكاء الاصطناعي والحوكمة'],
+    ['AI and governance', 'الذكاء الاصطناعي والحوكمة'],
+    [
+      'Governance, audit, and approval requirements without a second policy engine.',
+      'الحوكمة والتدقيق ومتطلبات الموافقة دون محرك سياسة ثانٍ.',
+    ],
+    'organization:manage',
+    [
+      source(
+        'External action policies',
+        'سياسات الإجراءات الخارجية',
+        'GET /external-action-policies',
+      ),
+    ],
+    [
+      section(
+        'Trust controls',
+        'ضوابط الثقة',
+        'AI recommendations stay distinct from human decisions and verified outcomes.',
+        'تبقى توصيات الذكاء الاصطناعي متميزة عن القرارات البشرية والنتائج المتحقق منها.',
+        [
+          ['Policies and approval requirements', 'السياسات ومتطلبات الموافقة'],
+          ['Evidence and audit trail', 'الأدلة وسجل التدقيق'],
+          ['Provider execution guardrails', 'ضوابط تنفيذ المزوّد'],
+        ],
+      ),
+    ],
+    'decision-required',
+  ),
+  view(
+    'billing-plan',
+    'administration',
+    '/billing-plan',
+    ['Billing / Plan', 'الفوترة / الخطة'],
+    ['Billing and plan', 'الفوترة والخطة'],
+    [
+      'Plan visibility is unavailable until its authoritative billing read model is connected.',
+      'تكون رؤية الخطة غير متاحة حتى يتم ربط نموذج قراءة الفوترة الموثوق.',
+    ],
+    'billing:admin',
+    [
+      source(
+        'Billing entitlement',
+        'استحقاق الفوترة',
+        'GET /product-surfaces/billing-usage',
+        'not-supported',
+      ),
+    ],
+    [
+      section(
+        'Commercial state',
+        'الحالة التجارية',
+        'This pilot does not fabricate subscriptions, invoices, or payment success.',
+        'لا تفبرك هذه التجربة اشتراكات أو فواتير أو نجاح دفع.',
+        [
+          ['Plan and entitlements', 'الخطة والاستحقاقات'],
+          ['Usage when authoritative data exists', 'الاستخدام عند وجود بيانات موثوقة'],
+          ['Billing connection status', 'حالة اتصال الفوترة'],
+        ],
+      ),
+    ],
+    'read',
+    'billing-usage',
+  ),
+  view(
+    'audit-evidence',
+    'administration',
+    '/audit-evidence',
+    ['Audit & Evidence', 'التدقيق والأدلة'],
+    ['Audit and evidence', 'التدقيق والأدلة'],
+    [
+      'Inspect evidence, verification, and governed decision history through existing read authorities.',
+      'فحص الأدلة والتحقق وسجل القرار المحكوم عبر جهات القراءة الحالية.',
+    ],
+    'audit:read',
+    [
+      source(
+        'Verification evidence',
+        'أدلة التحقق',
+        'GET /provider-integrations/verifications/:bindingId',
+      ),
+      source('Approval history', 'سجل الموافقات', 'GET /approvals'),
+    ],
+    [
+      section(
+        'Evidence trail',
+        'مسار الأدلة',
+        'Evidence metadata is visible; credential values and authorization headers are never rendered.',
+        'تظهر بيانات الأدلة الوصفية؛ ولا تُعرض قيم بيانات الاعتماد أو ترويسات التفويض أبداً.',
+        [
+          ['Approval and policy evidence', 'أدلة الموافقة والسياسة'],
+          ['Execution and verification state', 'حالة التنفيذ والتحقق'],
+          ['Known limitations and uncertainty', 'الحدود المعروفة وعدم اليقين'],
+        ],
+      ),
+    ],
+  ),
+];
+
+export function copy(value: LocalizedText, locale: ProductLocale): string {
+  return locale === 'ar-SA' ? value.ar : value.en;
+}
+export function directionFor(locale: ProductLocale): ProductDirection {
+  return locale === 'ar-SA' ? 'rtl' : 'ltr';
+}
+export function getProductView(id: string | undefined): ProductView | undefined {
+  return productViews.find((candidate) => candidate.id === id);
+}
+export function assessProductAccess(view: ProductView, access: ProductAccess): ProductAccessState {
+  if (access.tenantContext === 'missing') return 'missing-context';
+  if (!access.permissions.includes(view.requiredPermission)) return 'permission-denied';
+  if (view.entitlement && !access.entitlements.includes(view.entitlement))
+    return 'entitlement-unavailable';
+  return 'available';
+}
+export const unavailableState = (
+  view: ProductView,
+): Extract<ProductDataState<never>, { kind: 'unavailable' }> => ({
+  kind: 'unavailable',
+  compositionEndpoint: view.dataSources[0]?.endpoint ?? 'unavailable',
+  message: text(
+    'A signed-in tenant session and authoritative source are required before data can be shown.',
+    'تتطلب البيانات جلسة مستأجر مسجلة الدخول ومصدراً موثوقاً قبل عرضها.',
+  ),
+});
