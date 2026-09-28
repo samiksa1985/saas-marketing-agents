@@ -140,6 +140,27 @@ test(
   },
 );
 
+test('configuration rejects malformed OIDC issuer URLs in all environments', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        OIDC_ISSUER_URL: 'issuer-without-scheme',
+        OIDC_AUDIENCE: 'platform-api',
+      }),
+    /OIDC_ISSUER_URL must be an absolute URL/i,
+  );
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        OIDC_ISSUER_URL: 'https://issuer.example.com/oidc?tenant=foo',
+        OIDC_AUDIENCE: 'platform-api',
+      }),
+    /must not include a query string or fragment/i,
+  );
+});
+
 test(
   'production rejects the in-memory workflow runtime',
   () => {
@@ -160,6 +181,19 @@ test(
     );
   },
 );
+
+test('production requires OIDC_ISSUER_URL to use HTTPS', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        NODE_ENV: 'production',
+        OIDC_ISSUER_URL: 'http://issuer.example.com',
+        OIDC_AUDIENCE: 'platform-api',
+      }),
+    /OIDC_ISSUER_URL must use HTTPS in production/i,
+  );
+});
 
 test(
   'configuration rejects an unknown workflow runtime mode',

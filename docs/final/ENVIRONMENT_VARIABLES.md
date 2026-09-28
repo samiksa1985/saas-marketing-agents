@@ -15,7 +15,7 @@ Never copy real values, secrets, connection strings, or tokens into source contr
 | `ARTIFACT_ENDPOINT` | Optional endpoint override. | Provide only for approved compatible storage. | Sensitive endpoint. |
 | `AI_PROVIDER` | Required by configuration. | Approved provider with contractual/privacy review. | Non-secret identifier. |
 | `AI_MODEL` | Required by configuration. | Approved model/version and evaluation record. | Non-secret identifier. |
-| `OIDC_ISSUER_URL` | Required in production. | HTTPS issuer with discovered JWKS and approved tenant/role claims. | Sensitive endpoint. |
+| `OIDC_ISSUER_URL` | Required in production. | Absolute issuer URL; production requires HTTPS and rejects query/fragment components. | Sensitive endpoint. |
 | `OIDC_AUDIENCE` | Required in production. | Exact API audience. | Sensitive identifier. |
 | `LOCAL_ACCEPTANCE_AUTH_ENABLED`, `LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE`, `LOCAL_ACCEPTANCE_AUTH_TENANT_ID`, `LOCAL_ACCEPTANCE_AUTH_USER_ID` | Disabled by default. When explicitly enabled outside production, configuration requires an external, readable, non-empty high-entropy token file and a fixed tenant/user identity. | Forbidden in production; OIDC remains mandatory. | Local acceptance only. Never put the bearer token in `.env`, source control, logs, or an API response. |
 | `GOOGLE_ADS_EXECUTION_MODE` | Defaults to `DISABLED`; accepts `DISABLED`, `DRY_RUN`, `MOCK`, or `REAL`. | Keep `DISABLED` until the G9 provider gate is approved. Production rejects `MOCK`. | Non-secret control. |

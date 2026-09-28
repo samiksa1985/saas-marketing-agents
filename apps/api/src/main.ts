@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Controller, Get, Headers, Injectable, Module, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Headers, Module, ServiceUnavailableException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
@@ -99,9 +99,9 @@ const config=loadConfig();
 const database = createDb(config.databaseUrl);
 const tenantDatabase = new ApiTenantDatabase(database);
 
-@Injectable() class AppService {
-  health(){return {status:'ok',service:'api',...sanitizedRuntimeSummary(config)};}
-  async readiness(){
+@Controller() class AppController {
+  @Get('/health') health(){return {status:'ok',service:'api',...sanitizedRuntimeSummary(config)};}
+  @Get('/ready') async ready(){
     try {
       await database.execute(sql`SELECT 1`);
       return {status:'ready',database:'reachable',workflow:config.workflowRuntimeMode,...sanitizedRuntimeSummary(config)};
@@ -109,11 +109,6 @@ const tenantDatabase = new ApiTenantDatabase(database);
       throw new ServiceUnavailableException('Runtime dependency unavailable');
     }
   }
-}
-@Controller() class AppController {
-  constructor(private readonly app:AppService){}
-  @Get('/health') health(){return this.app.health();}
-  @Get('/ready') ready(){return this.app.readiness();}
   @Get('/version') version(){return {service:'api',...sanitizedRuntimeSummary(config)};}
   @Get('/i18n/context') context(@Headers('accept-language') language?:string){
     const locale=(supportedLocales.find((item)=>language?.includes(item))??'en') as Locale;
@@ -188,7 +183,6 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{members
 @Module({
   controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[
-    AppService,
     RegistryService,
     {
       provide: REGISTRY_SERVICE,

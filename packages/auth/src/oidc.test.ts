@@ -19,7 +19,10 @@ interface Fixture {
   issuer: string;
   audience: string;
   server: Server;
-  sign: (claims: Record<string, unknown>, options?: { audience?: string; expired?: boolean }) => Promise<string>;
+  sign: (
+    claims: Record<string, unknown>,
+    options?: { audience?: string; expired?: boolean; notBefore?: string },
+  ) => Promise<string>;
   attackerSign: (claims: Record<string, unknown>) => Promise<string>;
 }
 
@@ -51,16 +54,18 @@ async function startFixtureIdp(): Promise<Fixture> {
 
   const sign = async (
     claims: Record<string, unknown>,
-    options: { audience?: string; expired?: boolean } = {},
-  ): Promise<string> =>
-    new SignJWT({ tenant_id: TENANT, roles: ['tenant_admin'], permissions: [], ...claims })
+    options: { audience?: string; expired?: boolean; notBefore?: string } = {},
+  ): Promise<string> => {
+    const token = new SignJWT({ tenant_id: TENANT, roles: ['tenant_admin'], permissions: [], ...claims })
       .setProtectedHeader({ alg: 'RS256', kid: 'wsp04-test-key' })
       .setIssuer(issuer)
       .setAudience(options.audience ?? audience)
       .setSubject(String(claims.sub ?? 'wsp04-subject'))
       .setIssuedAt()
-      .setExpirationTime(options.expired ? new Date(Date.now() - 60_000) : '5m')
-      .sign(privateKey as never);
+      .setExpirationTime(options.expired ? new Date(Date.now() - 60_000) : '5m');
+    if (options.notBefore) token.setNotBefore(options.notBefore);
+    return token.sign(privateKey as never);
+  };
 
   const attackerSign = (claims: Record<string, unknown>): Promise<string> =>
     new SignJWT({ tenant_id: TENANT, ...claims })
@@ -123,6 +128,27 @@ test('OIDC rejects an expired token', async () => {
   try {
     const provider = new OidcAuthProvider({ issuerUrl: fixture.issuer, audience: fixture.audience });
     const token = await fixture.sign({}, { expired: true });
+    await assert.rejects(() => provider.verifyAccessToken(token), AuthenticationError);
+  } finally {
+    await new Promise((resolve) => fixture.server.close(resolve));
+  }
+});
+
+test('OIDC rejects a malformed token payload', async () => {
+  const fixture = await startFixtureIdp();
+  try {
+    const provider = new OidcAuthProvider({ issuerUrl: fixture.issuer, audience: fixture.audience });
+    await assert.rejects(() => provider.verifyAccessToken('not-a-jwt'), AuthenticationError);
+  } finally {
+    await new Promise((resolve) => fixture.server.close(resolve));
+  }
+});
+
+test('OIDC rejects a token that is not valid yet (nbf in the future)', async () => {
+  const fixture = await startFixtureIdp();
+  try {
+    const provider = new OidcAuthProvider({ issuerUrl: fixture.issuer, audience: fixture.audience });
+    const token = await fixture.sign({}, { notBefore: '2m' });
     await assert.rejects(() => provider.verifyAccessToken(token), AuthenticationError);
   } finally {
     await new Promise((resolve) => fixture.server.close(resolve));

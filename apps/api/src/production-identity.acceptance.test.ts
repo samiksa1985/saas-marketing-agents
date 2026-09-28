@@ -26,7 +26,8 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import postgres from 'postgres';
 
 const apiRoot = dirname(fileURLToPath(import.meta.url));
-const dbPackageRoot = join(dirname(dirname(apiRoot)), 'packages', 'db');
+const repoRoot = dirname(dirname(dirname(apiRoot)));
+const dbPackageRoot = join(repoRoot, 'packages', 'db');
 
 const API_PORT = 4199;
 const API_BASE = `http://127.0.0.1:${API_PORT}`;
@@ -44,13 +45,25 @@ function resolvePilotDatabaseUrl(): string | undefined {
     const passwordFile = join(homedir(), '.nawa-secrets', 'phase1-postgres-password.txt');
     const password = readFileSync(passwordFile, 'utf8').trim();
     if (!password) return undefined;
-    return `postgresql://phase1_owner:${encodeURIComponent(password)}@127.0.0.1:55435/ai_marketing_phase1`;
+    return `postgresql://phase1_owner:${encodeURIComponent(password)}@127.0.0.1:55432/ai_marketing_phase1`;
   } catch {
     return undefined;
   }
 }
 
 const ownerUrl = resolvePilotDatabaseUrl();
+
+async function pilotDatabaseReachable(url: string): Promise<boolean> {
+  const client = postgres(url, { max: 1, prepare: false, connect_timeout: 5 });
+  try {
+    await client.unsafe('SELECT 1');
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await client.end({ timeout: 0 }).catch(() => undefined);
+  }
+}
 
 /** Same session file as packages/db integration suites: the cluster-global
  * codecore_app credential must converge across concurrently running suites. */
@@ -145,17 +158,19 @@ function baseApiEnv(databaseUrl: string): NodeJS.ProcessEnv {
 
 async function startApi(port: number, env: NodeJS.ProcessEnv): Promise<{ child: ChildProcess; logs: string[] }> {
   const logs: string[] = [];
-  const child = spawn('cmd.exe', ['/c', 'npx', '--no-install', 'tsx', 'src/main.ts'], {
+  const child = spawn(process.execPath, ['--import', 'tsx', 'main.ts'], {
     cwd: apiRoot,
     env: { ...env, API_PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stdout?.on('data', (chunk: Buffer) => logs.push(chunk.toString()));
   child.stderr?.on('data', (chunk: Buffer) => logs.push(chunk.toString()));
-  const deadline = Date.now() + 90_000;
+  const deadline = Date.now() + 180_000;
   for (;;) {
+    const tail = () => logs.join('').slice(-4000);
     if (child.exitCode !== null) {
-      throw new Error(`API exited before listening (code ${child.exitCode}): ${logs.join('').slice(0, 2000)}`);
+      killPortListeners(port);
+      throw new Error(`API exited before listening (code ${child.exitCode}): ${tail()}`);
     }
     try {
       const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(2000) });
@@ -163,14 +178,18 @@ async function startApi(port: number, env: NodeJS.ProcessEnv): Promise<{ child: 
     } catch { /* not up yet */ }
     if (Date.now() > deadline) {
       child.kill();
-      throw new Error(`API did not become healthy: ${logs.join('').slice(0, 2000)}`);
+      killPortListeners(port);
+      throw new Error(`API did not become healthy: ${tail()}`);
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 }
 
-async function stopApi(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null) return;
+async function stopApi(child: ChildProcess, port: number): Promise<void> {
+  if (child.exitCode !== null) {
+    killPortListeners(port);
+    return;
+  }
   child.kill();
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, 8000);
@@ -179,9 +198,13 @@ async function stopApi(child: ChildProcess): Promise<void> {
       resolve();
     });
   });
+  killPortListeners(port);
+}
+
+function killPortListeners(port: number): void {
   // cmd.exe wrapper may leave the grandchild; terminate anything on the port best-effort on Windows.
   if (process.platform === 'win32') {
-    spawnSync('cmd.exe', ['/c', 'for /f "tokens=5" %a in (\'netstat -ano ^| findstr LISTENING ^| findstr :' + API_PORT + '\') do taskkill /PID %a /F'], { stdio: 'ignore' });
+    spawnSync('cmd.exe', ['/c', 'for /f "tokens=5" %a in (\'netstat -ano ^| findstr LISTENING ^| findstr :' + port + '\') do taskkill /PID %a /F'], { stdio: 'ignore' });
   }
 }
 
@@ -196,27 +219,101 @@ function provisionAppRole(): void {
       timeout: 120_000,
     },
   );
-  assert.equal(result.status, 0, `provisioning failed: ${result.stderr}`);
+  const diagnostics = `${result.stderr ?? ''}${result.error ? `\n${String(result.error)}` : ''}`.trim();
+  assert.equal(result.status, 0, `provisioning failed: ${diagnostics || 'unknown error'}`);
 }
 
-test('WS-PROD-04 live acceptance: OIDC + authoritative membership + codecore_app runtime', { skip: !ownerUrl && 'pilot database unavailable', timeout: 300_000 }, async () => {
+test('WS-PROD-04 live acceptance: OIDC + authoritative membership + codecore_app runtime', { skip: !ownerUrl && 'pilot database unavailable', timeout: 300_000 }, async (t) => {
+  if (!(await pilotDatabaseReachable(ownerUrl!))) {
+    t.skip('pilot database unavailable');
+    return;
+  }
   provisionAppRole();
   const owner = postgres(ownerUrl!, { max: 1, prepare: false });
   const idp = await startFixtureIdp();
   let api: { child: ChildProcess; logs: string[] } | undefined;
+  let artifactPermissionId: string | undefined;
+  let createdArtifactPermission = false;
+  let adminRoleId: string | undefined;
+  let viewerRoleId: string | undefined;
+  let insertedAdminGrant = false;
+  let removedViewerGrant = false;
   try {
     const tenant = Array.from(
       (await owner.unsafe(`SELECT id::text AS id FROM tenants WHERE status = 'active' ORDER BY created_at ASC LIMIT 1`)) as Iterable<{ id: string }>,
     )[0];
     assert.ok(tenant, 'pilot tenant must exist');
-    const roleIds = new Map(
-      Array.from(
-        (await owner.unsafe(`SELECT id::text AS id, name FROM roles WHERE name IN ('tenant_admin','viewer')`)) as Iterable<{ id: string; name: string }>,
-      ).map((r) => [r.name, r.id]),
-    );
-    assert.ok(roleIds.get('tenant_admin') && roleIds.get('viewer'), 'canonical roles must be seeded');
+    const artifactPermission = Array.from(
+      (await owner.unsafe(
+        `SELECT id::text AS id FROM permissions WHERE name = 'artifact:read' LIMIT 1`,
+      )) as Iterable<{ id: string }>,
+    )[0];
+    if (artifactPermission) {
+      artifactPermissionId = artifactPermission.id;
+    } else {
+      const insertedPermission = Array.from(
+        (await owner.unsafe(
+          `INSERT INTO permissions (name, description)
+           VALUES ('artifact:read', 'WS-PROD-04 live acceptance test permission seed')
+           RETURNING id::text AS id`,
+        )) as Iterable<{ id: string }>,
+      )[0];
+      assert.ok(insertedPermission, 'artifact:read permission seed insert must return an id');
+      artifactPermissionId = insertedPermission.id;
+      createdArtifactPermission = true;
+    }
 
-    for (const [subject, role] of [[SUBJECT_ADMIN, 'tenant_admin'], [SUBJECT_VIEWER, 'viewer']] as const) {
+    const canonicalRoles = new Map(
+      Array.from(
+        (await owner.unsafe(
+          `SELECT id::text AS id, name
+           FROM roles
+           WHERE name IN ('tenant_admin','viewer')`,
+        )) as Iterable<{ id: string; name: string }>,
+      ).map((row) => [row.name, row.id]),
+    );
+    adminRoleId = canonicalRoles.get('tenant_admin');
+    viewerRoleId = canonicalRoles.get('viewer');
+    assert.ok(adminRoleId, 'tenant_admin role must be seeded');
+    assert.ok(viewerRoleId, 'viewer role must be seeded');
+
+    const adminGrantPresent = Array.from(
+      (await owner.unsafe(
+        `SELECT 1
+         FROM role_permissions
+         WHERE role_id = $1::uuid AND permission_id = $2::uuid
+         LIMIT 1`,
+        [adminRoleId, artifactPermissionId],
+      )) as Iterable<unknown>,
+    ).length > 0;
+    if (!adminGrantPresent) {
+      await owner.unsafe(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         VALUES ($1::uuid, $2::uuid)`,
+        [adminRoleId, artifactPermissionId],
+      );
+      insertedAdminGrant = true;
+    }
+
+    const viewerGrantPresent = Array.from(
+      (await owner.unsafe(
+        `SELECT 1
+         FROM role_permissions
+         WHERE role_id = $1::uuid AND permission_id = $2::uuid
+         LIMIT 1`,
+        [viewerRoleId, artifactPermissionId],
+      )) as Iterable<unknown>,
+    ).length > 0;
+    if (viewerGrantPresent) {
+      await owner.unsafe(
+        `DELETE FROM role_permissions
+         WHERE role_id = $1::uuid AND permission_id = $2::uuid`,
+        [viewerRoleId, artifactPermissionId],
+      );
+      removedViewerGrant = true;
+    }
+
+    for (const [subject, roleId] of [[SUBJECT_ADMIN, adminRoleId], [SUBJECT_VIEWER, viewerRoleId]] as const) {
       await owner.unsafe(`INSERT INTO users (subject, display_name) VALUES ($1, $1) ON CONFLICT (subject) DO NOTHING`, [subject]);
       const user = Array.from(
         (await owner.unsafe(`SELECT id::text AS id FROM users WHERE subject = $1`, [subject])) as Iterable<{ id: string }>,
@@ -224,11 +321,15 @@ test('WS-PROD-04 live acceptance: OIDC + authoritative membership + codecore_app
       await owner.unsafe(
         `INSERT INTO tenant_members (tenant_id, user_id, role_id, status) VALUES ($1::uuid, $2::uuid, $3::uuid, 'active')
          ON CONFLICT (tenant_id, user_id) DO NOTHING`,
-        [tenant.id, user.id, roleIds.get(role)!],
+        [tenant.id, user.id, roleId],
       );
     }
 
-    api = await startApi(API_PORT, baseApiEnv(urlAsAppRole()));
+    api = await startApi(API_PORT, {
+      ...baseApiEnv(urlAsAppRole()),
+      OIDC_ISSUER_URL: idp.issuer,
+      OIDC_AUDIENCE: idp.audience,
+    });
 
     // 1-2. Health + readiness prove the API operates on the runtime identity.
     const health = await fetch(`${API_BASE}/health`);
@@ -273,10 +374,29 @@ test('WS-PROD-04 live acceptance: OIDC + authoritative membership + codecore_app
       assert.equal(body.includes(secret), false, 'responses must never contain bearer tokens');
     }
   } finally {
-    if (api) await stopApi(api.child);
+    if (api) await stopApi(api.child, API_PORT);
     await new Promise((resolve) => idp.server.close(resolve));
     await owner.unsafe(`DELETE FROM tenant_members WHERE user_id IN (SELECT id FROM users WHERE subject IN ($1, $2, $3))`, [SUBJECT_ADMIN, SUBJECT_VIEWER, SUBJECT_UNKNOWN]).catch(() => undefined);
     await owner.unsafe(`DELETE FROM users WHERE subject IN ($1, $2, $3)`, [SUBJECT_ADMIN, SUBJECT_VIEWER, SUBJECT_UNKNOWN]).catch(() => undefined);
+    if (insertedAdminGrant && adminRoleId && artifactPermissionId) {
+      await owner.unsafe(
+        `DELETE FROM role_permissions
+         WHERE role_id = $1::uuid AND permission_id = $2::uuid`,
+        [adminRoleId, artifactPermissionId],
+      ).catch(() => undefined);
+    }
+    if (removedViewerGrant && viewerRoleId && artifactPermissionId) {
+      await owner.unsafe(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         VALUES ($1::uuid, $2::uuid)
+         ON CONFLICT DO NOTHING`,
+        [viewerRoleId, artifactPermissionId],
+      ).catch(() => undefined);
+    }
+    if (createdArtifactPermission && artifactPermissionId) {
+      await owner.unsafe(`DELETE FROM role_permissions WHERE permission_id = $1::uuid`, [artifactPermissionId]).catch(() => undefined);
+      await owner.unsafe(`DELETE FROM permissions WHERE id = $1::uuid`, [artifactPermissionId]).catch(() => undefined);
+    }
     await owner.end();
   }
 });
@@ -286,7 +406,7 @@ test('WS-PROD-04 production lockout: local acceptance auth cannot boot in produc
   const tokenFile = join(tokenDir, 'token.txt');
   writeFileSync(tokenFile, randomBytes(48).toString('base64url'));
   try {
-    const child = spawn('cmd.exe', ['/c', 'npx', '--no-install', 'tsx', 'src/main.ts'], {
+    const child = spawn(process.execPath, ['--import', 'tsx', 'main.ts'], {
       cwd: apiRoot,
       env: {
         ...baseApiEnv(urlAsAppRole()),
@@ -323,7 +443,11 @@ test('WS-PROD-04 production lockout: local acceptance auth cannot boot in produc
   }
 });
 
-test('WS-PROD-04 pilot regression: explicit local acceptance still works outside production', { skip: !ownerUrl && 'pilot database unavailable', timeout: 180_000 }, async () => {
+test('WS-PROD-04 pilot regression: explicit local acceptance still works outside production', { skip: !ownerUrl && 'pilot database unavailable', timeout: 180_000 }, async (t) => {
+  if (!(await pilotDatabaseReachable(ownerUrl!))) {
+    t.skip('pilot database unavailable');
+    return;
+  }
   const tokenDir = mkdtempSync(join(tmpdir(), 'wsp04-pilot-'));
   const tokenFile = join(tokenDir, 'token.txt');
   const pilotToken = randomBytes(48).toString('base64url');
@@ -350,7 +474,7 @@ test('WS-PROD-04 pilot regression: explicit local acceptance still works outside
     assert.equal(withToken.status, 200);
     assert.equal((await withToken.text()).includes(pilotToken), false);
   } finally {
-    if (api) await stopApi(api.child);
+    if (api) await stopApi(api.child, PILOT_API_PORT);
     await owner.end();
     rmSync(tokenDir, { recursive: true, force: true });
   }

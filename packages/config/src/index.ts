@@ -108,6 +108,22 @@ function httpsOrigin(name: string, value: string): string {
   return parsed.origin;
 }
 
+function absoluteUrl(name: string, value: string, options: { httpsOnly: boolean }): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${name} must be an absolute URL`);
+  }
+  if (options.httpsOnly && parsed.protocol !== 'https:') {
+    throw new Error(`${name} must use HTTPS in production`);
+  }
+  if (parsed.search || parsed.hash) {
+    throw new Error(`${name} must not include a query string or fragment`);
+  }
+  return parsed.toString().replace(/\/+$/, '');
+}
+
 function corsOrigins(value: string | undefined, production: boolean): string[] {
   const raw = optional(value);
   if (!raw) {
@@ -220,9 +236,13 @@ export function loadConfig(
       env.OIDC_AUDIENCE,
     );
 
+  const normalizedIssuerUrl = oidcIssuerUrl
+    ? absoluteUrl('OIDC_ISSUER_URL', oidcIssuerUrl, { httpsOnly: nodeEnv === 'production' })
+    : undefined;
+
   if (nodeEnv === 'production') {
     httpsOrigin('WEB_URL', required('WEB_URL', env.WEB_URL));
-    if (!oidcIssuerUrl) {
+    if (!normalizedIssuerUrl) {
       throw new Error(
         'Missing required environment variable: OIDC_ISSUER_URL',
       );
@@ -439,9 +459,9 @@ export function loadConfig(
       env.AI_MODEL,
     ),
 
-    ...(oidcIssuerUrl
+    ...(normalizedIssuerUrl
       ? {
-          oidcIssuerUrl,
+          oidcIssuerUrl: normalizedIssuerUrl,
         }
       : {}),
 
