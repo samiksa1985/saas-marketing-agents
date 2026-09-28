@@ -73,6 +73,7 @@ import { LIFECYCLE_ACTIVATION_APPLICATION_SERVICE, LifecycleActivationApplicatio
 import { CUSTOMER_GROWTH_DECISION_APPLICATION_SERVICE, CustomerGrowthDecisionApplicationService } from './customer-growth-decisioning.application.js';
 import { PROVIDER_INTEGRATIONS_APPLICATION_SERVICE, ProviderIntegrationsApplicationService } from './provider-integrations.application.js';
 import { createApiAuthProvider } from './auth-provider.factory.js';
+import { DatabaseTenantMembershipResolver } from './tenant-membership-resolver.js';
 import {
   EnvironmentGoogleAdsCredentialResolver,
   GoogleAdsApiAdapter,
@@ -180,7 +181,10 @@ const externalActionProviders = new ExternalActionProviderRegistry({
     capabilities: { actionTypes: META_ADS_MUTATION_TYPES, budgetUnit: 'MINOR' },
   },
 });
-const authProviderFactory=():AuthProvider=>createApiAuthProvider(config);
+// WS-PROD-04: OIDC tokens are bound to authoritative tenant_members rows; the
+// resolver runs on the runtime database identity (codecore_app in production).
+const membershipResolver = new DatabaseTenantMembershipResolver(database);
+const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{membershipResolver});
 @Module({
   controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController],
   providers:[

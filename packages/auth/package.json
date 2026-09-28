@@ -13,6 +13,10 @@
     "./oidc": {
       "types": "./dist/oidc.d.ts",
       "import": "./dist/oidc.js"
+    },
+    "./membership": {
+      "types": "./dist/membership.d.ts",
+      "import": "./dist/membership.js"
     }
   },
   "scripts": {

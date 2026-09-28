@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { TenantMembershipAuthProvider } from '@platform/auth/membership';
 import { OidcAuthProvider } from '@platform/auth/oidc';
 import { loadConfig } from '@platform/config';
 
@@ -20,6 +21,12 @@ const baseEnv = {
   ARTIFACT_BUCKET: 'test',
   AI_PROVIDER: 'mock',
   AI_MODEL: 'test',
+};
+
+const stubMembershipResolver = {
+  async resolve() {
+    return null;
+  },
 };
 
 test('auth provider selection is OIDC first, then explicit local acceptance, then rejecting', () => {
@@ -46,19 +53,43 @@ test('auth provider selection is OIDC first, then explicit local acceptance, the
       LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
     });
     assert.ok(createApiAuthProvider(oidcConfig) instanceof OidcAuthProvider);
-    const productionConfig = loadConfig({
-      ...baseEnv,
-      NODE_ENV: 'production',
-      WEB_URL: 'https://web.example.com',
-      CORS_ALLOWED_ORIGINS: 'https://web.example.com',
-      TRUST_PROXY: 'false',
-      OIDC_ISSUER_URL: 'https://issuer.example.com',
-      OIDC_AUDIENCE: 'platform-api',
-      WORKFLOW_RUNTIME_MODE: 'temporal',
-      RELEASE_VERSION: '1.0.0',
-    });
-    assert.ok(createApiAuthProvider(productionConfig) instanceof OidcAuthProvider);
+    // Non-production OIDC composes with membership enforcement when available.
+    const oidcWithMembership = createApiAuthProvider(oidcConfig, { membershipResolver: stubMembershipResolver });
+    assert.ok(oidcWithMembership instanceof TenantMembershipAuthProvider);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('production requires OIDC plus an authoritative tenant membership resolver', () => {
+  const productionEnv = {
+    ...baseEnv,
+    NODE_ENV: 'production',
+    WEB_URL: 'https://web.example.com',
+    CORS_ALLOWED_ORIGINS: 'https://web.example.com',
+    TRUST_PROXY: 'false',
+    OIDC_ISSUER_URL: 'https://issuer.example.com',
+    OIDC_AUDIENCE: 'platform-api',
+    WORKFLOW_RUNTIME_MODE: 'temporal',
+    RELEASE_VERSION: '1.0.0',
+  };
+  const productionConfig = loadConfig(productionEnv);
+  // Production OIDC without a membership resolver must fail closed.
+  assert.throws(() => createApiAuthProvider(productionConfig), /PRODUCTION_TENANT_MEMBERSHIP_RESOLVER_REQUIRED/);
+  const provider = createApiAuthProvider(productionConfig, { membershipResolver: stubMembershipResolver });
+  assert.ok(provider instanceof TenantMembershipAuthProvider);
+});
+
+test('local acceptance fails closed when the flag is missing or false, and a token file alone never activates auth', () => {
+  assert.ok(createApiAuthProvider(loadConfig(baseEnv)) instanceof RejectingAuthProvider);
+  assert.ok(
+    createApiAuthProvider(loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_AUTH_ENABLED: 'false' })) instanceof
+      RejectingAuthProvider,
+  );
+  // A token file without the explicit enable flag must NOT activate authentication.
+  assert.ok(
+    createApiAuthProvider(
+      loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: 'C:\\temp\\unused.txt' }),
+    ) instanceof RejectingAuthProvider,
+  );
 });
