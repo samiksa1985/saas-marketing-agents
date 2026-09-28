@@ -4,7 +4,25 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema.js';
 
 export function createDb(connectionString: string) {
-  return drizzle(postgres(connectionString), { schema });
+  if (process.env.NODE_ENV !== 'production') {
+    // Preserve existing local-development behavior exactly.
+    return drizzle(postgres(connectionString), { schema });
+  }
+  // Bounded production pool safety (WS-PROD-02): capped pool size, no prepared
+  // statement caching (pooler/proxy safe), idle/lifetime recycling, and a
+  // conservative server-side statement timeout. TLS is expected via the URL
+  // (sslmode=verify-full) or the ssl connection option — see
+  // packages/db/docs/production-database.md.
+  return drizzle(
+    postgres(connectionString, {
+      max: 10,
+      prepare: false,
+      idle_timeout: 20,
+      max_lifetime: 3600,
+      connection: { statement_timeout: 30_000 },
+    }),
+    { schema },
+  );
 }
 
 /**
