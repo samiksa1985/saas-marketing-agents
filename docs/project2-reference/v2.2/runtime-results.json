@@ -1,0 +1,13 @@
+{
+  "version": "V2.2",
+  "checks": {
+    "structure": true,
+    "dependency_install": false,
+    "prisma_generate": false,
+    "typecheck": null,
+    "tests": false,
+    "build": false
+  },
+  "github_ready": false,
+  "reason": "Dependency installation did not complete in the available sandbox runtime; downstream runtime gates were not certified."
+}

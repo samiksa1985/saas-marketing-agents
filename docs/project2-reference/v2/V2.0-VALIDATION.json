@@ -1,0 +1,9 @@
+{
+  "version": "V2.0",
+  "billing_contracts": true,
+  "usage_metering": true,
+  "integrations_registry": true,
+  "admin_contracts": true,
+  "enterprise_security_docs": true,
+  "status": "STRUCTURAL_VALIDATION_PASS"
+}

@@ -1,9 +1,27 @@
 import { loadConfig } from '@platform/config';
 import postgres from 'postgres';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { fileURLToPath } from 'node:url';
+
+import {
+  applyJournalMigrations,
+  loadJournalMigrations,
+  type JournalMigrationClient,
+} from './journal-migration-runner.js';
+import { resolveMigrationDatabaseUrl } from './migration-url.js';
 
 const config = loadConfig();
-const client = postgres(config.databaseUrl);
-await migrate(drizzle(client), { migrationsFolder: './drizzle' });
-await client.end();
+// Migration authority separation (WS-PROD-02): migrations may run as the
+// privileged owner identity via MIGRATION_DATABASE_URL while the runtime
+// application connects as codecore_app via DATABASE_URL. Never printed.
+const migrationUrl = resolveMigrationDatabaseUrl(process.env, config.databaseUrl);
+// Keep the migration client aligned with the proven Phase-1 harness. The
+// runner additionally reserves a connection for each opaque source program.
+const client = postgres(migrationUrl, { max: 1, prepare: false });
+const migrationsDirectory = fileURLToPath(new URL('../drizzle/', import.meta.url));
+
+try {
+  const migrations = await loadJournalMigrations(migrationsDirectory);
+  await applyJournalMigrations(client as unknown as JournalMigrationClient, migrations);
+} finally {
+  await client.end();
+}

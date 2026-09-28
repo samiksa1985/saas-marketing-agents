@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS marketing_memory_records (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid NOT NULL REFERENCES tenants(id),scope varchar(40) NOT NULL,scope_id uuid NOT NULL,statement text NOT NULL,evidence_ids jsonb NOT NULL DEFAULT '[]'::jsonb,confidence integer,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS marketing_memory_tenant_scope_idx ON marketing_memory_records (tenant_id,scope,scope_id);
+CREATE INDEX IF NOT EXISTS marketing_memory_tenant_updated_idx ON marketing_memory_records (tenant_id,updated_at);
+CREATE TABLE IF NOT EXISTS marketing_os_plan_snapshots (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid NOT NULL REFERENCES tenants(id),goal text NOT NULL,objective varchar(80) NOT NULL,plan jsonb NOT NULL,context jsonb NOT NULL,readiness jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS marketing_os_plan_tenant_updated_idx ON marketing_os_plan_snapshots (tenant_id,updated_at);
+CREATE TABLE IF NOT EXISTS marketing_outcome_events (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid NOT NULL REFERENCES tenants(id),type varchar(60) NOT NULL,metric varchar(120) NOT NULL,value integer NOT NULL,source_entity_id uuid NOT NULL,occurred_at timestamptz NOT NULL,attributes jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS marketing_outcomes_tenant_occurred_idx ON marketing_outcome_events (tenant_id,occurred_at);
+CREATE INDEX IF NOT EXISTS marketing_outcomes_source_idx ON marketing_outcome_events (tenant_id,source_entity_id);

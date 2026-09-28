@@ -1,0 +1,516 @@
+'use client';
+
+import { useMemo, useState, useEffect } from 'react';
+
+import {
+  assessProductAccess,
+  copy,
+  directionFor,
+  productNavigation,
+  productViews,
+  unavailableState,
+  type ProductLocale,
+  type ProductView,
+} from './product-model';
+import { GrowthCommandCenter } from './growth-command-center';
+import { CommercialSurface } from './commercial-surface';
+import { pilotAccess, signedOutAccess } from './pilot-access';
+
+import { ProductDataState } from './product-model';
+
+type ProductShellProps = {
+  initialView: ProductView['id'];
+  pilotDataState?: ProductDataState<unknown> | undefined;
+  isPilotAuthenticated?: boolean;
+  pilotTenantName?: string;
+};
+
+// Pilot config from build-time env (NEXT_PUBLIC_ prefix - non-secret only)
+const pilotTenantId =
+  typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_PILOT_TENANT_ID
+    ? process.env.NEXT_PUBLIC_PILOT_TENANT_ID
+    : null;
+const pilotTenantName =
+  typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_PILOT_TENANT_NAME
+    ? process.env.NEXT_PUBLIC_PILOT_TENANT_NAME
+    : null;
+const isPilotMode = pilotTenantId !== null;
+
+const ui = (locale: ProductLocale, en: string, ar: string) => (locale === 'ar-SA' ? ar : en);
+
+function SourcePanel({ view, locale }: { view: ProductView; locale: ProductLocale }) {
+  const unavailable = unavailableState(view);
+
+  return (
+    <aside className="source-panel" aria-label={ui(locale, 'Source status', 'حالة المصدر')}>
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">
+            {ui(locale, 'Authoritative data sources', 'مصادر البيانات الموثوقة')}
+          </p>
+          <h2>{ui(locale, 'Data readiness', 'جاهزية البيانات')}</h2>
+        </div>
+        <span className="status-pill status-pill--composition-required">
+          {ui(locale, 'Session required', 'تتطلب جلسة')}
+        </span>
+      </div>
+      <p>{copy(unavailable.message, locale)}</p>
+      <ul className="source-list">
+        {view.dataSources.map((source) => (
+          <li key={source.endpoint}>
+            <span>{copy(source.label, locale)}</span>
+            <code>{source.endpoint}</code>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+function ExecutiveBoard({ locale }: { locale: ProductLocale }) {
+  const labels =
+    locale === 'ar-SA'
+      ? ['الاكتساب', 'مسار التحويل', 'الإيرادات', 'العملاء والنمو']
+      : ['Acquisition', 'Conversion funnel', 'Revenue', 'Customers and growth'];
+
+  return (
+    <section
+      className="operating-board"
+      aria-label={locale === 'ar-SA' ? 'لوحة المدير التنفيذي' : 'Executive operating board'}
+    >
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">{locale === 'ar-SA' ? 'لوحة التشغيل' : 'Operating board'}</p>
+          <h2>
+            {locale === 'ar-SA'
+              ? 'مقاييس أعمال موثّقة المصدر'
+              : 'Source-attributed business signals'}
+          </h2>
+        </div>
+        <span className="status-pill status-pill--composition-required">
+          {ui(locale, 'Unavailable', 'غير متاح')}
+        </span>
+      </div>
+      <p>
+        {locale === 'ar-SA'
+          ? 'لا تُعرض أرقام مُختلقة. ستظهر كل إشارة فقط بعد ربط مصدر ACTUAL أو ESTIMATED أو MODELED المعتمد.'
+          : 'No fabricated numbers are displayed. Each signal appears only after an approved ACTUAL, ESTIMATED, or MODELED source is connected.'}
+      </p>
+      <div className="signal-grid">
+        {labels.map((label) => (
+          <article className="signal-card" key={label}>
+            <h3>{label}</h3>
+            <p>{locale === 'ar-SA' ? 'بانتظار مصدر موثّق' : 'Awaiting attributed source'}</p>
+            <span>ACTUAL · ESTIMATED · MODELED</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CommandCenter({ locale }: { locale: ProductLocale }) {
+  return (
+    <section
+      className="command-card"
+      aria-label={locale === 'ar-SA' ? 'مركز أوامر الذكاء الاصطناعي' : 'AI Command Center'}
+    >
+      <div>
+        <p className="eyebrow">AI Command</p>
+        <h2>
+          {locale === 'ar-SA'
+            ? 'وجّه العمل، ثم راجع قبل التنفيذ'
+            : 'Direct work, then review before execution'}
+        </h2>
+        <p>
+          {locale === 'ar-SA'
+            ? 'تحتاج الأوامر إلى جلسة مستأجر ومصدر تحكم متصل. لا ترسل هذه الواجهة أي أثر خارجي.'
+            : 'Commands require an authenticated tenant session and a connected control source. This interface sends no external side effect.'}
+        </p>
+      </div>
+      <form className="command-form" onSubmit={(event) => event.preventDefault()}>
+        <label htmlFor="command-input">
+          {locale === 'ar-SA' ? 'طلب التشغيل' : 'Operating request'}
+        </label>
+        <textarea
+          id="command-input"
+          disabled
+          placeholder={
+            locale === 'ar-SA' ? 'تتطلب جلسة مؤسسية حقيقية' : 'A real tenant session is required'
+          }
+          rows={3}
+        />
+        <button type="submit" disabled>
+          {locale === 'ar-SA' ? 'لا يوجد تنفيذ خارجي' : 'No external action executed'}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function Onboarding({ locale }: { locale: ProductLocale }) {
+  const steps =
+    locale === 'ar-SA'
+      ? [
+          'مرحباً ومساحة العمل',
+          'ملف النشاط',
+          'أهداف النمو',
+          'السوق والجمهور',
+          'القنوات',
+          'تكاملات المزوّدين',
+          'تفضيلات الحوكمة',
+          'مراجعة الجاهزية',
+          'دخول مساحة عمل النمو',
+        ]
+      : [
+          'Welcome and workspace',
+          'Business profile',
+          'Growth goals',
+          'Market and audience',
+          'Channels',
+          'Provider integrations',
+          'Governance preferences',
+          'Readiness review',
+          'Enter Growth Workspace',
+        ];
+  return (
+    <section
+      className="onboarding-card"
+      aria-label={ui(locale, 'Onboarding steps', 'خطوات التهيئة')}
+    >
+      <p className="eyebrow">{ui(locale, 'Pilot onboarding', 'تهيئة التجربة')}</p>
+      <h2>{ui(locale, 'Start with what is connected', 'ابدأ بما هو متصل')}</h2>
+      <p>
+        {ui(
+          locale,
+          'Partial integrations are supported. Status is evidence-bound: connected, needs configuration, unavailable, disabled, or requires approval.',
+          'التكاملات الجزئية مدعومة. الحالة مرتبطة بالأدلة: متصل أو يحتاج تهيئة أو غير متاح أو معطل أو يتطلب موافقة.',
+        )}
+      </p>
+      <ol className="onboarding-steps">
+        {steps.map((step, index) => (
+          <li key={step}>
+            <span>{index + 1}</span>
+            {step}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function GrowthChain({ locale }: { locale: ProductLocale }) {
+  const stages =
+    locale === 'ar-SA'
+      ? ['راقب', 'شخّص', 'قرّر', 'حاكي', 'وافق', 'نفّذ', 'تحقق', 'تعلّم']
+      : ['Observe', 'Diagnose', 'Decide', 'Simulate', 'Approve', 'Execute', 'Verify', 'Learn'];
+  return (
+    <section
+      className="growth-chain"
+      aria-label={ui(locale, 'Governed growth chain', 'سلسلة النمو المحكومة')}
+    >
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">{ui(locale, 'Growth operating system', 'نظام تشغيل النمو')}</p>
+          <h2>{ui(locale, 'Recommendation is not authorization', 'التوصية ليست تفويضاً')}</h2>
+        </div>
+        <span className="status-pill status-pill--composition-required">
+          {ui(locale, 'Awaiting evidence', 'بانتظار الأدلة')}
+        </span>
+      </div>
+      <p>
+        {ui(
+          locale,
+          'AI recommendation, human approval, executed action, and verified result are intentionally distinct states.',
+          'توصية الذكاء الاصطناعي والموافقة البشرية والإجراء المنفذ والنتيجة المتحقق منها حالات متميزة عمداً.',
+        )}
+      </p>
+      <ol className="growth-stages">
+        {stages.map((stage) => (
+          <li key={stage}>{stage}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function ApprovalStates({ locale }: { locale: ProductLocale }) {
+  const states =
+    locale === 'ar-SA'
+      ? ['معلق', 'معتمد', 'مرفوض', 'منتهٍ', 'منفذ', 'متحقق', 'فاشل', 'غير مؤكد']
+      : [
+          'Pending',
+          'Approved',
+          'Rejected',
+          'Expired',
+          'Executed',
+          'Verified',
+          'Failed',
+          'Uncertain',
+        ];
+  return (
+    <section className="state-card" aria-label={ui(locale, 'Approval states', 'حالات الموافقة')}>
+      <h2>{ui(locale, 'Approval state', 'حالة الموافقة')}</h2>
+      <p>
+        {ui(
+          locale,
+          'Decisions are submitted only to the existing server-side approval authority.',
+          'تُرسل القرارات فقط إلى جهة الموافقة الحالية من جانب الخادم.',
+        )}
+      </p>
+      <div className="state-list">
+        {states.map((state) => (
+          <span key={state}>{state}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function IntegrationStates({ locale }: { locale: ProductLocale }) {
+  const capabilities =
+    locale === 'ar-SA'
+      ? ['إعلام مدفوع', 'CRM', 'بريد إلكتروني', 'SMS', 'WhatsApp']
+      : ['Paid Media', 'CRM', 'Email', 'SMS', 'WhatsApp'];
+  return (
+    <section
+      className="state-card"
+      aria-label={ui(locale, 'Integration capabilities', 'قدرات التكامل')}
+    >
+      <h2>{ui(locale, 'Capability readiness', 'جاهزية القدرة')}</h2>
+      <p>
+        {ui(
+          locale,
+          'No credential values are rendered. Google, Meta, CRM, and communications remain evidence-bound.',
+          'لا تُعرض قيم بيانات الاعتماد. تظل Google وMeta وCRM والاتصالات مرتبطة بالأدلة.',
+        )}
+      </p>
+      <div className="state-list">
+        {capabilities.map((capability) => (
+          <span key={capability}>
+            {capability} · {ui(locale, 'Awaiting evidence', 'بانتظار الأدلة')}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ViewBody({
+  view,
+  locale,
+  period,
+  isPilotAuthenticated,
+  pilotTenantName,
+  pilotDataState,
+}: {
+  view: ProductView;
+  locale: ProductLocale;
+  period: string;
+  isPilotAuthenticated: boolean;
+  pilotTenantName: string | null;
+  pilotDataState?: ProductDataState<unknown> | undefined;
+}) {
+  if (view.id === 'overview') {
+    return (
+      <GrowthCommandCenter
+        locale={locale}
+        period={period}
+        isPilotAuthenticated={isPilotAuthenticated}
+        pilotTenantName={pilotTenantName ?? undefined}
+        pilotDataState={pilotDataState}
+      />
+    );
+  }
+
+  if (view.id === 'onboarding') return <Onboarding locale={locale} />;
+  if (view.id === 'growth-workspace') return <GrowthChain locale={locale} />;
+  if (['campaigns', 'customers', 'conversations', 'journeys', 'approvals', 'analytics', 'integrations', 'reports', 'admin'].includes(view.id)) {
+    return <CommercialSurface view={view} locale={locale} dataState={pilotDataState ?? unavailableState(view)} />;
+  }
+
+  return <SectionGrid view={view} locale={locale} />;
+}
+
+function SectionGrid({ view, locale }: { view: ProductView; locale: ProductLocale }) {
+  return (
+    <section className="content-grid" aria-label={copy(view.title, locale)}>
+      {view.sections.map((section) => (
+        <article className="domain-panel" key={section.title.en}>
+          <h2>{copy(section.title, locale)}</h2>
+          <p>{copy(section.description, locale)}</p>
+          <ul>
+            {section.items.map((item) => (
+              <li key={item.en}>{copy(item, locale)}</li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+export function ProductShell({
+  initialView,
+  pilotDataState,
+  isPilotAuthenticated = false,
+  pilotTenantName = 'CODECORE Growth Pilot',
+}: ProductShellProps) {
+  const [locale, setLocale] = useState<ProductLocale>('en-US');
+  const [period, setPeriod] = useState('30D');
+  const view = useMemo(
+    () => productViews.find((candidate) => candidate.id === initialView) ?? productViews[0]!,
+    [initialView],
+  );
+  const access = assessProductAccess(view, isPilotAuthenticated ? pilotAccess : signedOutAccess);
+  const direction = directionFor(locale);
+  const group = productNavigation.find((candidate) => candidate.id === view.group)!;
+
+  return (
+    <main className="product-shell" dir={direction} lang={locale === 'ar-SA' ? 'ar' : 'en'}>
+      <aside className="sidebar" aria-label={ui(locale, 'Navigation', 'التنقل')}>
+        <a className="brand" href="/">
+          <span className="brand-mark" aria-hidden="true">
+            C
+          </span>
+          <span>CODECORE AI</span>
+        </a>
+        <p className="workspace-label">
+          {locale === 'ar-SA' ? 'نبني ما هو قادم' : "BUILDING WHAT'S NEXT"}
+        </p>
+        <a className="onboarding-link" href="/onboarding">
+          {ui(locale, 'Set up workspace', 'إعداد مساحة العمل')}
+        </a>
+        <nav>
+          {productNavigation.map((group) => (
+            <section className="nav-group" key={group.id} aria-label={copy(group.label, locale)}>
+              <h2>{copy(group.label, locale)}</h2>
+              {group.views.map((viewId) => {
+                const item = productViews.find((candidate) => candidate.id === viewId)!;
+                return (
+                  <a
+                    aria-current={item.id === view.id ? 'page' : undefined}
+                    className={item.id === view.id ? 'nav-link nav-link--active' : 'nav-link'}
+                    href={item.route}
+                    key={item.id}
+                  >
+                    {copy(item.label, locale)}
+                  </a>
+                );
+              })}
+            </section>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="application">
+        <header className="topbar">
+          <div className="context-indicator topbar__session">
+            <span className="status-dot" aria-hidden="true" />
+            <span>
+              {isPilotAuthenticated
+                ? locale === 'ar-SA'
+                  ? `جلسة نشطة: ${pilotTenantName} (Pilot)`
+                  : `Active session: ${pilotTenantName} (Pilot)`
+                : locale === 'ar-SA'
+                  ? 'لا توجد جلسة مستأجر نشطة'
+                  : 'No active tenant session'}
+            </span>
+          </div>
+          <div className="topbar__controls">
+            <label className="topbar-select">
+              <span>{ui(locale, 'Workspace', 'مساحة العمل')}</span>
+              <select disabled value={isPilotAuthenticated ? pilotTenantName! : 'unavailable'}>
+                <option value={isPilotAuthenticated ? pilotTenantName! : 'unavailable'}>
+                  {isPilotAuthenticated ? pilotTenantName! : ui(locale, 'Unavailable', 'غير متاح')}
+                </option>
+              </select>
+            </label>
+            <label className="topbar-select">
+              <span>{ui(locale, 'Date range', 'النطاق الزمني')}</span>
+              <select value={period} onChange={(event) => setPeriod(event.target.value)}>
+                <option>Today</option>
+                <option>7D</option>
+                <option>30D</option>
+                <option>Quarter</option>
+                <option>YTD</option>
+                <option>Custom</option>
+              </select>
+            </label>
+            <span className="comparison-toggle">
+              {ui(locale, 'vs Previous period', 'مقارنة بالفترة السابقة')}
+            </span>
+            <button
+              className="topbar-icon"
+              type="button"
+              disabled={!isPilotAuthenticated}
+              aria-label={ui(
+                locale,
+                isPilotAuthenticated
+                  ? 'Notifications'
+                  : 'Notifications unavailable without a session',
+                isPilotAuthenticated ? 'الإشعارات' : 'الإشعارات غير متاحة من دون جلسة',
+              )}
+            >
+              ◌
+            </button>
+            <button className="topbar-account" type="button" disabled={!isPilotAuthenticated}>
+              {isPilotAuthenticated
+                ? locale === 'ar-SA'
+                  ? 'الحساب: تجريبي'
+                  : 'Account: Pilot'
+                : ui(locale, 'Account', 'الحساب')}
+            </button>
+          </div>
+          <button
+            className="locale-switcher"
+            onClick={() => setLocale((current) => (current === 'en-US' ? 'ar-SA' : 'en-US'))}
+            type="button"
+          >
+            {locale === 'en-US' ? 'العربية' : 'English'}
+          </button>
+        </header>
+
+        <div className="page-wrap">
+          <header className="page-intro">
+            <div>
+              <p className="eyebrow">{copy(group.label, locale)}</p>
+              <h1>{copy(view.title, locale)}</h1>
+              <p>{copy(view.description, locale)}</p>
+            </div>
+            <div className="guard-card">
+              <span>{ui(locale, 'Access and evidence', 'الوصول والأدلة')}</span>
+              <strong>
+                {access === 'available'
+                  ? isPilotAuthenticated
+                    ? locale === 'ar-SA'
+                      ? 'متاح — جلسة تجريبية نشطة'
+                      : 'Available — Active pilot session'
+                    : ui(locale, 'Available', 'متاح')
+                  : ui(locale, 'Real session required', 'تتطلب جلسة حقيقية')}
+              </strong>
+              <p>
+                {isPilotAuthenticated
+                  ? locale === 'ar-SA'
+                    ? `مستأجر تجريبي: ${pilotTenantName} · دور: tenant_admin`
+                    : `Pilot tenant: ${pilotTenantName} · Role: tenant_admin`
+                  : view.requiredPermission ||
+                    ui(locale, 'Tenant role permissions', 'صلاحيات دور المستأجر')}
+              </p>
+            </div>
+          </header>
+
+          <ViewBody
+            locale={locale}
+            view={view}
+            period={period}
+            isPilotAuthenticated={isPilotAuthenticated}
+            pilotTenantName={pilotTenantName}
+            pilotDataState={pilotDataState}
+          />
+          <SourcePanel locale={locale} view={view} />
+        </div>
+      </div>
+    </main>
+  );
+}

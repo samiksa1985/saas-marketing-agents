@@ -279,3 +279,6 @@ export function parseGraphEdges(source: string, version: string): DependencyEdge
 }
 
 export * from './graph.js';
+
+export * from './canonical.js';
+export * from './capabilities.js';

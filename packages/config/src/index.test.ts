@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   loadConfig,
@@ -10,7 +14,16 @@ const baseEnv = {
     'test',
 
   WEB_URL:
-    'http://localhost:3000',
+    'https://app.example.test',
+
+  RELEASE_VERSION:
+    '1.0.0-test',
+
+  CORS_ALLOWED_ORIGINS:
+    'https://app.example.test',
+
+  TRUST_PROXY:
+    'false',
 
   DATABASE_URL:
     'postgresql://test',
@@ -30,6 +43,18 @@ const baseEnv = {
   AI_MODEL:
     'test',
 };
+
+function withTokenFile(callback: (tokenFile: string, token: string) => void): void {
+  const directory = mkdtempSync(join(tmpdir(), 'nawa-local-acceptance-'));
+  const tokenFile = join(directory, 'token.txt');
+  const token = randomBytes(48).toString('base64url');
+  try {
+    writeFileSync(tokenFile, token, { encoding: 'utf8' });
+    callback(tokenFile, token);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
 
 test(
   'configuration rejects missing required infrastructure secrets',
@@ -66,6 +91,21 @@ test(
       config.oidcAudience,
       undefined,
     );
+
+    assert.equal(
+      config.workflowRuntimeMode,
+      'in-memory',
+    );
+
+    assert.equal(config.googleAdsExecutionMode, 'DISABLED');
+    assert.equal(config.googleAdsExecutionEnabled, false);
+    assert.equal(config.metaAdsExecutionMode, 'DISABLED');
+    assert.equal(config.metaAdsExecutionEnabled, false);
+    assert.equal(config.metaAdsApiVersion, 'v21.0');
+    assert.deepEqual(config.metaAdsSandboxAdAccountIds, []);
+    assert.equal(config.localAcceptanceAuthEnabled, false);
+    assert.equal(config.localAcceptanceDurableApprovals, false);
+    assert.equal(config.localAcceptanceAuthTokenFile, undefined);
   },
 );
 
@@ -92,8 +132,236 @@ test(
       config.oidcAudience,
       'platform-api',
     );
+
+    assert.equal(
+      config.workflowRuntimeMode,
+      'in-memory',
+    );
   },
 );
+
+test(
+  'production rejects the in-memory workflow runtime',
+  () => {
+    assert.throws(
+      () =>
+        loadConfig({
+          ...baseEnv,
+          NODE_ENV:
+            'production',
+          OIDC_ISSUER_URL:
+            'https://issuer.example.com',
+          OIDC_AUDIENCE:
+            'platform-api',
+          WORKFLOW_RUNTIME_MODE:
+            'in-memory',
+        }),
+      /WORKFLOW_RUNTIME_MODE=temporal/i,
+    );
+  },
+);
+
+test(
+  'configuration rejects an unknown workflow runtime mode',
+  () => {
+    assert.throws(
+      () =>
+        loadConfig({
+          ...baseEnv,
+          WORKFLOW_RUNTIME_MODE:
+            'unsupported',
+        }),
+      /WORKFLOW_RUNTIME_MODE must be/i,
+    );
+  },
+);
+
+test('configuration refuses MOCK Google Ads execution in production', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        NODE_ENV: 'production',
+        OIDC_ISSUER_URL: 'https://issuer.example.com',
+        OIDC_AUDIENCE: 'platform-api',
+        GOOGLE_ADS_EXECUTION_MODE: 'MOCK',
+      }),
+    /cannot use.*MOCK/i,
+  );
+});
+
+test('configuration validates explicit Google Ads enablement', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, GOOGLE_ADS_EXECUTION_ENABLED: 'yes' }),
+    /GOOGLE_ADS_EXECUTION_ENABLED must be true or false/i,
+  );
+});
+
+test('local acceptance auth is disabled by default and rejects incomplete configuration', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_DURABLE_APPROVALS: 'true' }),
+    /LOCAL_ACCEPTANCE_DURABLE_APPROVALS requires LOCAL_ACCEPTANCE_AUTH_ENABLED/i,
+  );
+  assert.throws(
+    () => loadConfig({ ...baseEnv, LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true' }),
+    /LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE/i,
+  );
+  withTokenFile((tokenFile) => {
+    assert.throws(
+      () => loadConfig({
+        ...baseEnv,
+        LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+        LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+      }),
+      /LOCAL_ACCEPTANCE_AUTH_TENANT_ID/i,
+    );
+    assert.throws(
+      () => loadConfig({
+        ...baseEnv,
+        LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+        LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+        LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      }),
+      /LOCAL_ACCEPTANCE_AUTH_USER_ID/i,
+    );
+  });
+});
+
+test('local acceptance auth rejects production and unreadable or empty token files', () => {
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      OIDC_ISSUER_URL: 'https://issuer.example.com',
+      OIDC_AUDIENCE: 'platform-api',
+      WORKFLOW_RUNTIME_MODE: 'temporal',
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+    }),
+    /LOCAL_ACCEPTANCE_AUTH_ENABLED is forbidden in production/i,
+  );
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+      LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: join(tmpdir(), 'does-not-exist-local-acceptance-token.txt'),
+      LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+    }),
+    /readable non-empty high-entropy token file/i,
+  );
+  const directory = mkdtempSync(join(tmpdir(), 'nawa-empty-local-acceptance-'));
+  const emptyTokenFile = join(directory, 'token.txt');
+  try {
+    writeFileSync(emptyTokenFile, '', { encoding: 'utf8' });
+    assert.throws(
+      () => loadConfig({
+        ...baseEnv,
+        LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+        LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: emptyTokenFile,
+        LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+        LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+      }),
+      /readable non-empty high-entropy token file/i,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('local acceptance auth exposes only its non-secret local configuration', () => {
+  withTokenFile((tokenFile, token) => {
+    const config = loadConfig({
+      ...baseEnv,
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+      LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+      LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+    });
+    assert.equal(config.localAcceptanceAuthEnabled, true);
+    assert.equal(config.localAcceptanceDurableApprovals, false);
+    assert.equal(config.localAcceptanceAuthTokenFile, tokenFile);
+    assert.equal(config.localAcceptanceAuthTenantId, 'tenant-a');
+    assert.equal(config.localAcceptanceAuthUserId, 'user-a');
+    assert.equal(JSON.stringify(config).includes(token), false);
+  });
+});
+
+test('local acceptance can explicitly require durable approvals without changing workflow mode', () => {
+  withTokenFile((tokenFile) => {
+    const config = loadConfig({
+      ...baseEnv,
+      LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
+      LOCAL_ACCEPTANCE_DURABLE_APPROVALS: 'true',
+      LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE: tokenFile,
+      LOCAL_ACCEPTANCE_AUTH_TENANT_ID: 'tenant-a',
+      LOCAL_ACCEPTANCE_AUTH_USER_ID: 'user-a',
+    });
+    assert.equal(config.workflowRuntimeMode, 'in-memory');
+    assert.equal(config.localAcceptanceDurableApprovals, true);
+  });
+});
+
+test('REAL Google Ads mode requires an explicit numeric sandbox allowlist containing the approved account', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, GOOGLE_ADS_EXECUTION_MODE: 'REAL', GOOGLE_ADS_CUSTOMER_ID: '1234567890' }),
+    /GOOGLE_ADS_SANDBOX_CUSTOMER_IDS/i,
+  );
+  const config = loadConfig({
+    ...baseEnv,
+    GOOGLE_ADS_EXECUTION_MODE: 'REAL',
+    GOOGLE_ADS_CUSTOMER_ID: '123-456-7890',
+    GOOGLE_ADS_SANDBOX_CUSTOMER_IDS: '1234567890, 222-222-2222',
+  });
+  assert.equal(config.googleAdsApprovedCustomerId, '1234567890');
+  assert.deepEqual(config.googleAdsSandboxCustomerIds, ['1234567890', '2222222222']);
+  assert.equal(config.googleAdsApiVersion, 'v25');
+});
+
+test('REAL Google Ads mode rejects an approved account outside its sandbox allowlist', () => {
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      GOOGLE_ADS_EXECUTION_MODE: 'REAL',
+      GOOGLE_ADS_CUSTOMER_ID: '1234567890',
+      GOOGLE_ADS_SANDBOX_CUSTOMER_IDS: '2222222222',
+    }),
+    /must be included/i,
+  );
+});
+
+test('Meta Ads defaults are disabled and explicit REAL mode requires an allowlisted ad account', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, META_ADS_EXECUTION_MODE: 'REAL' }),
+    /META_ADS_AD_ACCOUNT_ID/i,
+  );
+  assert.throws(
+    () => loadConfig({
+      ...baseEnv,
+      META_ADS_EXECUTION_MODE: 'REAL',
+      META_ADS_AD_ACCOUNT_ID: 'act_123456789',
+    }),
+    /META_ADS_SANDBOX_AD_ACCOUNT_IDS/i,
+  );
+  const config = loadConfig({
+    ...baseEnv,
+    META_ADS_EXECUTION_MODE: 'REAL',
+    META_ADS_AD_ACCOUNT_ID: '123456789',
+    META_ADS_SANDBOX_AD_ACCOUNT_IDS: 'act_123456789, act_987654321',
+  });
+  assert.equal(config.metaAdsApprovedAdAccountId, 'act_123456789');
+  assert.deepEqual(config.metaAdsSandboxAdAccountIds, ['act_123456789', 'act_987654321']);
+});
+
+test('Meta Ads rejects malformed execution enablement and API version', () => {
+  assert.throws(
+    () => loadConfig({ ...baseEnv, META_ADS_EXECUTION_ENABLED: 'yes' }),
+    /META_ADS_EXECUTION_ENABLED must be true or false/i,
+  );
+  assert.throws(
+    () => loadConfig({ ...baseEnv, META_ADS_API_VERSION: 'latest' }),
+    /META_ADS_API_VERSION/i,
+  );
+});
 
 test(
   'production requires OIDC issuer',
@@ -159,5 +427,17 @@ test(
       config.oidcAudience,
       'platform-api',
     );
+
+    assert.equal(
+      config.workflowRuntimeMode,
+      'temporal',
+    );
   },
 );
+
+test('production fails closed for missing CORS/trusted-proxy/release configuration', () => {
+  const production = { ...baseEnv, NODE_ENV: 'production', OIDC_ISSUER_URL: 'https://issuer.example.com', OIDC_AUDIENCE: 'platform-api' };
+  assert.throws(() => loadConfig({ ...production, CORS_ALLOWED_ORIGINS: '' }), /CORS_ALLOWED_ORIGINS/i);
+  assert.throws(() => loadConfig({ ...production, TRUST_PROXY: undefined }), /TRUST_PROXY/i);
+  assert.throws(() => loadConfig({ ...production, RELEASE_VERSION: 'latest' }), /RELEASE_VERSION/i);
+});

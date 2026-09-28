@@ -10,6 +10,7 @@ import {
   Headers,
   Inject,
   Injectable,
+  Optional,
   NotFoundException,
   Param,
   Post,
@@ -29,9 +30,13 @@ import type {
 } from '@platform/contracts';
 
 import {
-  InMemoryWorkflowRuntime,
   TenantIsolationError,
+  createWorkflowRuntime,
   type TransitionMetadata,
+  type WorkflowRuntime,
+  type WorkflowRuntimeQuery,
+  type WorkflowRuntimeSelection,
+  type WorkflowTaskCommandRuntime,
 } from '@platform/workflow-runtime';
 
 import {
@@ -39,6 +44,9 @@ import {
   getAuthContext,
   type AuthenticatedRequest,
 } from './auth.guard.js';
+
+/** Nest composition token for the one application-selected workflow provider. */
+export const WORKFLOW_RUNTIME_SELECTION = Symbol('WORKFLOW_RUNTIME_SELECTION');
 
 interface WorkflowBody {
   engagementId:
@@ -118,8 +126,42 @@ class TenantIsolationExceptionFilter
 
 @Injectable()
 export class WorkflowApiService {
-  readonly runtime =
-    new InMemoryWorkflowRuntime();
+  /** Commands are provider-neutral; production selection supplies Temporal. */
+  runtime: WorkflowRuntime;
+
+  /** All API read endpoints use this durable-query boundary. */
+  query: WorkflowRuntimeQuery;
+
+  private taskCommands: WorkflowTaskCommandRuntime | undefined;
+
+  constructor(
+    @Optional()
+    @Inject(WORKFLOW_RUNTIME_SELECTION)
+    selection?: WorkflowRuntimeSelection,
+  ) {
+    const configuredSelection = selection ?? createWorkflowRuntime({
+      mode: 'in-memory',
+    });
+    this.runtime = configuredSelection.runtime;
+    this.query = configuredSelection.query;
+    this.taskCommands = configuredSelection.taskCommands;
+  }
+
+  configureRuntime(selection: WorkflowRuntimeSelection): void {
+    this.runtime = selection.runtime;
+    this.query = selection.query;
+    this.taskCommands = selection.taskCommands;
+  }
+
+  commands(): WorkflowTaskCommandRuntime {
+    if (!this.taskCommands) {
+      throw new Error(
+        'Selected workflow provider does not expose task command operations',
+      );
+    }
+
+    return this.taskCommands;
+  }
 
   context(
     request:
@@ -272,7 +314,7 @@ export class WorkflowController {
   @Get(
     '/workflows/:workflowId',
   )
-  get(
+  async get(
     @Param(
       'workflowId',
     )
@@ -296,7 +338,7 @@ export class WorkflowController {
     );
 
     try {
-      return this.service.runtime
+      return await this.service.query
       .getWorkflow(
         workflowId,
         context,
@@ -462,7 +504,7 @@ export class WorkflowController {
   @Get(
     '/workflows/:workflowId/readiness',
   )
-  readiness(
+  async readiness(
     @Param(
       'workflowId',
     )
@@ -485,35 +527,37 @@ export class WorkflowController {
       'workflow:read',
     );
 
-    return this.service.runtime
+    const tasks = await this.service.query
       .getTasks(
         workflowId,
         context,
-      )
-      .map(
+      );
+
+    return Promise.all(
+      tasks.map(
         (
           task,
-        ) => ({
+        ) => (async () => ({
           taskId:
             task.id,
 
           workstreamId:
             task.workstreamId,
 
-          readiness:
-            this.service.runtime
-              .isTaskReady(
+          readiness: await this.service.query
+              .getTaskReadiness(
                 task.id,
                 context,
               ),
-        }),
-      );
+        }))(),
+      ),
+    );
   }
 
   @Get(
     '/workflows/:workflowId/tasks',
   )
-  tasks(
+  async tasks(
     @Param(
       'workflowId',
     )
@@ -536,7 +580,7 @@ export class WorkflowController {
       'workflow:read',
     );
 
-    return this.service.runtime
+    return this.service.query
       .getTasks(
         workflowId,
         context,
@@ -546,7 +590,7 @@ export class WorkflowController {
   @Get(
     '/workflows/:workflowId/artifacts',
   )
-  artifacts(
+  async artifacts(
     @Param(
       'workflowId',
     )
@@ -569,7 +613,7 @@ export class WorkflowController {
       'artifact:read',
     );
 
-    return this.service.runtime
+    return this.service.query
       .getArtifacts(
         workflowId,
         context,
@@ -579,7 +623,7 @@ export class WorkflowController {
   @Get(
     '/workflows/:workflowId/handoffs',
   )
-  handoffs(
+  async handoffs(
     @Param(
       'workflowId',
     )
@@ -602,7 +646,7 @@ export class WorkflowController {
       'workflow:read',
     );
 
-    return this.service.runtime
+    return this.service.query
       .getHandoffs(
         workflowId,
         context,
@@ -660,7 +704,7 @@ export class WorkflowController {
         idempotencyKey,
       );
 
-    return this.service.runtime
+    return this.service.commands()
       .claimTask(
         taskId,
         body.workerId,
@@ -706,7 +750,7 @@ export class WorkflowController {
       'workflow:execute',
     );
 
-    return this.service.runtime
+    return this.service.commands()
       .retryTask(
         taskId,
         context,
@@ -754,7 +798,7 @@ export class WorkflowController {
       'workflow:execute',
     );
 
-    return this.service.runtime
+    return this.service.commands()
       .repairTask(
         taskId,
         context,
@@ -802,7 +846,7 @@ export class WorkflowController {
       'workflow:execute',
     );
 
-    return this.service.runtime
+    return this.service.commands()
       .cancelTask(
         taskId,
         context,

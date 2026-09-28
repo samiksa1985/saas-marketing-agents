@@ -1,0 +1,176 @@
+# Phase 1 Disposable PostgreSQL Runbook
+
+## Safety boundary
+
+Run only against a disposable local PostgreSQL database. The harness requires both a database name containing `phase1` and `PHASE1_CONFIRM_DISPOSABLE=YES`, then drops and recreates only that named database through the supplied admin URL. It never reads `DATABASE_URL` and does not operate on production.
+
+The current canonical Phase1 chain ends at migration `0031_provider_integration_runtime` (32 migrations). EPIC14 verifies provider-binding, capability-binding, and sanitized verification-evidence tables with RLS, tenant/no-context boundaries, single-authority idempotency races, evidence isolation, and child-before-parent fixture cleanup. EPIC05 remains the provider-health and reliability authority; evidence verification fails closed without every structured EPIC14 field.
+
+EPIC15 is a frontend/application product-experience composition only. It adds no migration, PostgreSQL acceptance assertion, or provider mutation path; therefore it does not require a new disposable PostgreSQL gate.
+
+EPIC16 preserves migrations `0000`–`0031` and does not alter Phase1 acceptance code. It adds production procedures only; a fresh disposable Phase1 gate is therefore not required for this change. Production deployment must instead run the separate `production-migrate.ps1` and `production:verify` procedure documented in the production runbooks.
+
+## Required environment
+
+| Variable                    | Purpose                                             | Secret |
+| --------------------------- | --------------------------------------------------- | ------ |
+| `PHASE1_POSTGRES_PASSWORD`  | Compose-only local database password                | Yes    |
+| `PHASE1_POSTGRES_PORT`      | Optional loopback host port; default `127.0.0.1:55432` | No     |
+| `PHASE1_DATABASE_URL`       | Disposable target database                          | Yes    |
+| `PHASE1_ADMIN_DATABASE_URL` | Same local server, connected to `postgres` database | Yes    |
+| `PHASE1_CONFIRM_DISPOSABLE` | Must equal `YES`                                    | No     |
+
+## Execution
+
+Run the repository-owned fail-closed runner from a local PowerShell terminal:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-phase1-postgres-local.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-phase1-postgres-evidence.ps1
+```
+
+It uses `infra/docker/docker-compose.phase1.yml`, binds PostgreSQL only to
+`127.0.0.1:55432` by default, waits for health, uses a
+fresh password generated only in shell memory, does not create an `.env` file,
+and writes sanitized result evidence under `artifacts/phase1-postgres/`.
+It removes exactly one leading UTF-8 BOM (`U+FEFF`) from each migration before
+PostgreSQL execution; it does not edit migrations or alter any other character.
+The persisted `*.result.json` file is written for both `PASS` and `FAIL`, even
+when the Node harness exits non-zero. The verifier reads that result file and
+rejects any status other than `PASS`.
+
+Each migration emits `PHASE1_MIGRATION_START=<filename>` and then
+`PHASE1_MIGRATION_PASS=<filename>`. Migration failures carry the journal
+number/order, filename/path, PostgreSQL error metadata, and bounded SQL context
+in the persisted result; PostgreSQL `NOTICE` messages do not fail the run.
+
+The Marketing OS CRUD RLS check also emits `PHASE1_RLS_STEP=<step>` and the
+current table name. Its transaction first proves that `current_user` is the
+non-owner `phase1_app` role and that `app.tenant_id` has the expected value on
+the same transaction object that performs CRUD. A failed CRUD RLS result
+includes its active step; expected rejection cases run in separate transactions
+so their required rollback cannot invalidate later assertions.
+
+The durable-approval RLS check emits `PHASE1_APPROVAL_STEP=<step>`. It uses the
+same transaction-local non-owner role and tenant-context assertion, while its
+create/read/decision/recovery operations use a fresh PostgreSQL transaction
+after the original write context has closed. Expected cross-tenant and
+missing-context write denials run in
+isolated transactions, so the required PostgreSQL rollback cannot invalidate a
+subsequent approval lifecycle assertion.
+
+The transaction-local tenant-context check emits
+`PHASE1_TENANT_SETTING_STEP=<step>` and
+`PHASE1_TENANT_SETTING_STATE=<step>:<classification>`. PostgreSQL may represent
+a transaction-local custom GUC reset as `''` instead of SQL `NULL`; both are
+safe only when the previous tenant UUID is absent. The check therefore requires
+`NULL` or `''`, rejects any non-empty tenant context, and proves under
+`phase1_app` that a following no-context transaction cannot read, update, or
+insert Tenant A rows. It tests both commit and deliberate rollback, uses a
+`max: 1` client for the strongest deterministic postgres.js reuse boundary, and
+reports a same-backend result only when PostgreSQL backend PIDs actually match.
+
+The pgvector check emits `PHASE1_PGVECTOR_STEP=<step>` for extension,
+column-metadata, round-trip, dimension, invalid-dimension, and tenant-isolation
+proofs. It reads `pg_catalog.format_type(atttypid, atttypmod)` instead of
+subtracting a generic varlena offset from `atttypmod`; the rendered
+`vector(1536)` type is the authoritative storage contract. The raw typmod is
+logged only as evidence through `PHASE1_PGVECTOR_TYPMOD`, while
+`PHASE1_PGVECTOR_COLUMN_TYPE` gives the canonical PostgreSQL type.
+
+The check uses only deterministic synthetic vectors. It writes and reads a
+1536-dimensional Tenant A vector, verifies its stored size with pgvector's
+`vector_dims`, confirms nearest-neighbor retrieval, and requires PostgreSQL to
+reject a 1535-dimensional insert in an isolated rollback transaction. It then
+proves Tenant B and a missing tenant context cannot read the Tenant A chunk.
+Any failure persists the current step plus table, column, rendered type, raw
+typmod, expected dimension, and observed dimension where available.
+
+The billing-authority check emits `PHASE1_BILLING_STEP` for `driver_setup`,
+`authority_metadata`, `tenant_a`, `override_precedence`, `persistent_usage`,
+`tenant_b_denied`, and `missing_context_denied`. It constructs Drizzle only
+from an outer postgres.js client; a raw
+postgres.js callback transaction must never be passed to `drizzle(...)` because
+it lacks the driver option maps needed by the adapter. The resulting Drizzle
+transaction receives the same transaction-local application role and tenant
+setting as the rest of the harness, then is passed to the persistent billing
+repository and atomic usage store.
+
+This check verifies integer minor-unit columns, authoritative organization
+override precedence, persistent usage reads, Tenant B isolation, and
+missing-context default denial. Before the tenant-A operation it emits safe
+`PHASE1_BILLING_PARAM` classifications for the four raw-SQL usage period
+parameters; all are `Date` values for a `timestamp with time zone`, Drizzle
+`date`-mode column and are bound through that column encoder. Billing
+concurrency, idempotency, quota, and rollback remain in the later dedicated
+`billing_concurrency` check; they are not duplicated by the authority check. A
+JavaScript driver failure includes its error class and a bounded stack in
+fail-closed evidence without exposing a connection URL or password.
+
+## Evidence handling
+
+Preserve the full terminal output and return it without credentials. A result is valid only when the final line contains `PHASE1_POSTGRES_RESULT=` with JSON `status` equal to `PASS`. A missing required assertion, failed migration, unavailable extension, or command failure is a blocker.
+
+The current journal includes `0020_persistent_marketing_os_runtime`,
+`0021_durable_marketing_os_approvals`, `0022_governed_external_marketing_actions`,
+`0023_external_action_reliability`, and
+`0024_unified_campaign_orchestration`, and
+`0025_cross_channel_performance_optimization`. The harness applies `0019` after
+verifying the pre-repair state, then applies the remaining journal before
+schema, RLS, pgvector, approval, billing, governed-action, reliability, and
+unified-campaign and cross-channel-performance checks. The verifier requires
+migration count 26, latest migration 0025, all EPIC07 checks, EPIC08 migration
+ledger/eight-table RLS/observation-idempotency/tenant-learning/fixture-cleanup
+checks, and one real concurrent action owner with one PostgreSQL conflict. It
+must not print a pass record after a failed migration or failed assertion.
+
+The journal now also includes `0026_customer_acquisition_revenue_intelligence`.
+The verifier requires migration count 27, latest migration 0026, and EPIC09
+migration-ledger, twenty-table RLS, tenant A/B, cross-tenant/missing-context
+denial, lead idempotency, identity deduplication, revenue-event idempotency,
+persistence-scope, and fixture-cleanup evidence. Until a new local disposable
+run produces those exact checks as `PASS`, EPIC09 PostgreSQL evidence is
+`PENDING_LOCAL_RUN`.
+
+The journal also includes `0028_customer_journey_lifecycle_orchestration`. A
+The journal includes `0029_governed_lifecycle_activation`; its disposable proof must verify the eight activation tables, tenant RLS, single-authority plan/candidate/execution/outcome idempotency, learning isolation, and schema-aware fixture cleanup. It remains pending until a real PostgreSQL run completes.
+future EPIC11 disposable proof must replay 0000–0028, verify RLS for every
+EPIC11 table (including missing context and cross-tenant denial), and
+demonstrate two attempts with one created/one duplicate for journey-event
+ingestion, deterministic next-best-action persistence, and journey-outcome
+ingestion. It must also prove tenant-scoped learning isolation and
+reverse-order fixture cleanup. Until that run has been captured and the
+verifier updated with matching required result fields, EPIC11 PostgreSQL
+evidence is `PENDING_LOCAL_RUN`.
+
+The verifier now requires the 29-entry chain through `0028`, explicit migration
+proof, nineteen-table EPIC11 RLS coverage, three two-attempt/one-create
+idempotency proofs, cross-tenant and missing-context denials, tenant learning
+isolation, and fixture cleanup. The result remains invalid until an actual
+local disposable runner invocation supplies those fields as `PASS`.
+
+The journal further includes `0027_customer_conversations_ai_receptionist`.
+The verifier requires migration count 28, latest migration 0027, and EPIC10
+twenty-two-table RLS coverage; conversation-ingestion and receptionist-session
+idempotency (two attempts, one created record, one duplicate); Tenant A/B,
+cross-tenant and missing-context denials; and reverse-order fixture cleanup.
+The EPIC10 check emits
+`PHASE1_CHECK_START=epic10_customer_conversations_ai_receptionist` and may
+only emit its pass marker after every required assertion. Until a fresh local
+disposable run provides that evidence, EPIC10 PostgreSQL evidence is
+`PENDING_LOCAL_RUN`.
+
+The prior Phase-1 closeout evidence through 0021 remains valid for its bounded
+scope. A fresh fail-closed result through 0022 has now passed for EPIC-03;
+see `EPIC03_POSTGRESQL_EVIDENCE.md`. The runbook remains a reproducible
+disposable rerun procedure, not a production deployment procedure.
+
+## Disposal
+
+After evidence is captured, stop and remove the container and volume explicitly:
+
+```powershell
+docker compose -f infra/docker/docker-compose.phase1.yml down -v
+```
+
+This action removes only the named Phase 1 Compose resources.

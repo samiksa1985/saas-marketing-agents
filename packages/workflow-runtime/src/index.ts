@@ -348,6 +348,32 @@ export interface WorkflowRuntime {
   ): Promise<Workflow>;
 }
 
+/** Optional command surface for provider-specific task orchestration. */
+export interface WorkflowTaskCommandRuntime {
+  claimTask(
+    taskId: string,
+    workerId: string,
+    idempotencyKey: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<ExecutionLease>;
+  retryTask(
+    taskId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Task>;
+  repairTask(
+    taskId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Task>;
+  cancelTask(
+    taskId: string,
+    context: TenantContext,
+    metadata: TransitionMetadata,
+  ): Promise<Task>;
+}
+
 export class ReadinessResolver {
   resolve(
     task: Task,
@@ -900,3 +926,5 @@ export class LocalWorkflowExecutor implements WorkflowRuntime {
 }
 
 export * from './temporal.js';
+export * from './provider.js';
+export * from './query.js';

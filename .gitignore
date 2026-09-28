@@ -115,3 +115,12 @@ build/
 *.tsbuildinfo
 node_modules/
 coverage/
+
+# Disposable PostgreSQL Phase 1 evidence is generated locally by the runner.
+artifacts/phase1-postgres/
+.phase1-compiled/
+
+# Database backup artifacts must never be committed (may contain tenant data).
+backups/
+*.dump
+*.dump.manifest.json

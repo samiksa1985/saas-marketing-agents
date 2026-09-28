@@ -1,0 +1,430 @@
+{
+  "version": "1.0.0",
+  "agents": [
+    {
+      "id": "ai-orchestrator",
+      "name": "AI Orchestrator",
+      "mission": "Coordinate agent selection, context loading, tool use, validation, approvals, and workflow state. Never invent business facts or bypass permissions.",
+      "input_schema": [
+        "intent",
+        "organization_id",
+        "user_id",
+        "task_context"
+      ],
+      "tools": [
+        "agent_registry",
+        "context_builder",
+        "retriever",
+        "workflow_engine",
+        "approval_service"
+      ],
+      "output_schema": [
+        "selected_agent",
+        "rationale",
+        "required_context",
+        "tool_plan",
+        "approval_required",
+        "workflow_actions"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "business-intelligence",
+      "name": "Business Intelligence Agent",
+      "mission": "Build and maintain the canonical company intelligence profile from approved company data and source documents.",
+      "input_schema": [
+        "organization_id",
+        "company_profile",
+        "documents",
+        "onboarding_answers"
+      ],
+      "tools": [
+        "knowledge_base",
+        "document_search"
+      ],
+      "output_schema": [
+        "company_summary",
+        "business_model",
+        "products",
+        "services",
+        "ICP",
+        "personas",
+        "positioning",
+        "strengths",
+        "weaknesses",
+        "opportunities",
+        "goals",
+        "confidence",
+        "sources"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "market-research",
+      "name": "Market Research Agent",
+      "mission": "Research market conditions, competitors, demand signals, positioning gaps, and opportunities using approved external research tools.",
+      "input_schema": [
+        "organization_id",
+        "research_question",
+        "company_context"
+      ],
+      "tools": [
+        "web_search",
+        "website_reader",
+        "keyword_research"
+      ],
+      "output_schema": [
+        "market_summary",
+        "competitors",
+        "customer_signals",
+        "trends",
+        "opportunities",
+        "threats",
+        "evidence",
+        "confidence"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "marketing-strategist",
+      "name": "Marketing Strategist Agent",
+      "mission": "Translate business and market intelligence into measurable 30/60/90-day marketing strategy.",
+      "input_schema": [
+        "company_context",
+        "market_research",
+        "goals",
+        "budget",
+        "historical_performance"
+      ],
+      "tools": [
+        "analytics_reader",
+        "knowledge_base"
+      ],
+      "output_schema": [
+        "objectives",
+        "ICP",
+        "positioning",
+        "messaging",
+        "channels",
+        "offers",
+        "campaigns",
+        "content_pillars",
+        "KPIs",
+        "roadmap",
+        "priorities",
+        "assumptions"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "content",
+      "name": "Content Agent",
+      "mission": "Create channel-specific content aligned to approved strategy, brand voice, audience, funnel stage, and business objective.",
+      "input_schema": [
+        "company_context",
+        "strategy",
+        "brief",
+        "channel",
+        "funnel_stage"
+      ],
+      "tools": [
+        "knowledge_base",
+        "content_library"
+      ],
+      "output_schema": [
+        "concepts",
+        "hooks",
+        "drafts",
+        "CTA",
+        "metadata",
+        "sources",
+        "QA_flags"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "campaign",
+      "name": "Campaign Agent",
+      "mission": "Design integrated campaigns that connect objective, audience, offer, creative, landing page, lead capture, follow-up, and measurement.",
+      "input_schema": [
+        "company_context",
+        "strategy",
+        "campaign_goal",
+        "budget"
+      ],
+      "tools": [
+        "analytics_reader",
+        "content_library",
+        "CRM"
+      ],
+      "output_schema": [
+        "campaign_plan",
+        "audience",
+        "offer",
+        "messaging",
+        "assets",
+        "funnel",
+        "budget",
+        "KPIs",
+        "launch_checklist"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "creative",
+      "name": "Creative Agent",
+      "mission": "Develop creative concepts and variants for ads and organic media, including visual direction and test plans.",
+      "input_schema": [
+        "brand",
+        "strategy",
+        "campaign",
+        "audience",
+        "channel"
+      ],
+      "tools": [
+        "brand_assets",
+        "image_generation_if_enabled",
+        "content_library"
+      ],
+      "output_schema": [
+        "creative_concepts",
+        "hooks",
+        "visual_direction",
+        "copy_variants",
+        "formats",
+        "A_B_test_plan",
+        "QA_flags"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "seo",
+      "name": "SEO Agent",
+      "mission": "Identify search opportunities and produce SEO recommendations, briefs, on-page actions, and measurement plans.",
+      "input_schema": [
+        "company_context",
+        "products",
+        "strategy",
+        "target_market"
+      ],
+      "tools": [
+        "web_search",
+        "keyword_research",
+        "website_reader",
+        "analytics_reader"
+      ],
+      "output_schema": [
+        "keyword_clusters",
+        "search_intent",
+        "content_briefs",
+        "on_page_actions",
+        "technical_recommendations",
+        "KPIs"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "analytics",
+      "name": "Analytics & Growth Agent",
+      "mission": "Explain performance changes, identify causes, and recommend prioritized actions tied to business outcomes.",
+      "input_schema": [
+        "organization_id",
+        "campaign_data",
+        "CRM_data",
+        "revenue_data",
+        "goals"
+      ],
+      "tools": [
+        "analytics_reader",
+        "CRM_reader",
+        "finance_reader"
+      ],
+      "output_schema": [
+        "findings",
+        "evidence",
+        "root_causes",
+        "recommendations",
+        "expected_impact",
+        "priority",
+        "confidence"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "sales",
+      "name": "Sales Agent",
+      "mission": "Support lead qualification, opportunity prioritization, discovery, proposals, follow-up, objection handling, and next-best actions.",
+      "input_schema": [
+        "lead",
+        "opportunity",
+        "company_context",
+        "sales_history"
+      ],
+      "tools": [
+        "CRM",
+        "proposal_generator",
+        "knowledge_base"
+      ],
+      "output_schema": [
+        "lead_score",
+        "qualification",
+        "risks",
+        "next_best_action",
+        "follow_up",
+        "proposal_inputs",
+        "objections"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "customer-success",
+      "name": "Customer Success Agent",
+      "mission": "Protect retention, monitor client health, identify delivery risks, renewal risk, satisfaction issues, and expansion opportunities.",
+      "input_schema": [
+        "client_context",
+        "performance",
+        "approvals",
+        "usage",
+        "subscription"
+      ],
+      "tools": [
+        "CRM",
+        "analytics_reader",
+        "billing_reader",
+        "tasks"
+      ],
+      "output_schema": [
+        "health_score",
+        "churn_risk",
+        "causes",
+        "actions",
+        "renewal_plan",
+        "upsell_opportunities"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "automation",
+      "name": "Automation Agent",
+      "mission": "Design and validate business workflows with triggers, conditions, actions, retries, and human approval gates.",
+      "input_schema": [
+        "workflow_request",
+        "organization_context",
+        "available_tools"
+      ],
+      "tools": [
+        "workflow_engine",
+        "integrations_registry"
+      ],
+      "output_schema": [
+        "workflow_definition",
+        "triggers",
+        "conditions",
+        "actions",
+        "permissions",
+        "approval_gates",
+        "failure_policy"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "cfo-intelligence",
+      "name": "CFO Intelligence Agent",
+      "mission": "Analyze revenue, costs, AI/tool/human delivery costs, margins, unit economics, pricing, cash implications, and forecasts.",
+      "input_schema": [
+        "revenue",
+        "costs",
+        "subscriptions",
+        "usage",
+        "delivery_costs",
+        "pipeline"
+      ],
+      "tools": [
+        "finance_reader",
+        "billing_reader",
+        "analytics_reader"
+      ],
+      "output_schema": [
+        "financial_findings",
+        "unit_economics",
+        "profitability",
+        "forecast",
+        "pricing_options",
+        "risks",
+        "recommendations"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    },
+    {
+      "id": "ai-business-mentor",
+      "name": "AI Business Mentor",
+      "mission": "Coach the internal operator using real business data and explain decisions as practical business lessons.",
+      "input_schema": [
+        "business_metrics",
+        "pipeline",
+        "clients",
+        "profitability",
+        "goals",
+        "decisions"
+      ],
+      "tools": [
+        "CRM",
+        "finance_reader",
+        "analytics_reader",
+        "customer_success"
+      ],
+      "output_schema": [
+        "daily_priorities",
+        "decisions",
+        "rationale",
+        "expected_impact",
+        "risks",
+        "business_lesson",
+        "learning_question"
+      ],
+      "human_approval_policy": "required for external publication, financial changes, paid campaign launch, or external communications unless explicitly configured otherwise",
+      "default_timeout_seconds": 60,
+      "retry_policy": "2 retries with exponential backoff for transient provider/tool failures",
+      "cost_limit": "configurable per plan and organization"
+    }
+  ]
+}
