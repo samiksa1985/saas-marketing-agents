@@ -29,6 +29,10 @@ const restoreScript = join(repositoryRoot, 'scripts', 'restore-postgres-isolated
 const DOCKER_CONTAINER = process.env.PG_DOCKER_CONTAINER ?? 'nawa-growth-phase1-postgres-1';
 const ISOLATED_DB = 'wsp03_restore_acceptance';
 
+function quoteIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
 function resolvePilotDatabaseUrl(): string | undefined {
   const envUrl = process.env.DATABASE_URL?.trim();
   if (envUrl) return envUrl;
@@ -158,6 +162,11 @@ test('WS-PROD-03 DR drill: backup, isolated restore, role model, isolation probe
   const owner = postgres(ownerUrl!, { max: 1, prepare: false });
   const timings: Record<string, number> = {};
   try {
+    // Defensive cleanup: a prior interrupted run may have left the isolated
+    // target behind. Terminate connections and drop it before asserting freshness.
+    await owner.unsafe(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, [ISOLATED_DB]).catch(() => undefined);
+    await owner.unsafe(`DROP DATABASE IF EXISTS ${quoteIdentifier(ISOLATED_DB)}`).catch(() => undefined);
+
     const before = await canonicalSnapshot(owner);
     assert.ok(before.tenants > 0, 'canonical pilot must contain representative tenant data');
     assert.ok(before.migrations > 0, 'canonical pilot must have a migration ledger');
@@ -289,17 +298,20 @@ test('backup tooling fails closed without explicit confirmation', () => {
   assert.notEqual(result.status, 0);
 });
 
-test('restore target guards validate only the decoded database component', () => {
-  const runGuard = (target: string, source = ownerUrl!) =>
-    runPowerShell(
+test('restore target guards reject malformed URLs, query parameters, and source identity', () => {
+  const runGuard = (target: string, source = ownerUrl!, createDatabase = false) => {
+    const args = ['-BackupFile', 'missing.dump'];
+    if (createDatabase) { args.push('-CreateDatabase'); }
+    return runPowerShell(
       restoreScript,
-      ['-BackupFile', 'missing.dump'],
+      args,
       drillEnv({
         DATABASE_URL: source,
         ISOLATED_RESTORE_DATABASE_URL: target,
         NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
       }),
     );
+  };
   const targetUrl = (database: string, username = 'restore_user', password = 'restore_password') => {
     const url = new URL(ownerUrl!);
     url.username = username;
@@ -317,7 +329,7 @@ test('restore target guards validate only the decoded database component', () =>
   const queryWithMarker = new URL(targetUrl('plain_target'));
   queryWithMarker.search = '?mode=restore';
   const markerInQuery = runGuard(queryWithMarker.toString());
-  assert.match(markerInQuery.stderr, /isolated restore\/recovery database/i);
+  assert.match(markerInQuery.stderr, /Database URL must not contain query parameters/i);
   const encodedPathTrick = runGuard(targetUrl('wsp03%2Frestore'));
   assert.match(encodedPathTrick.stderr, /simple, unencoded database name/i);
 
@@ -336,8 +348,14 @@ test('restore target guards validate only the decoded database component', () =>
   );
   assert.match(sameSourceDifferentCredentials.stderr, /RESTORE_TARGET_MATCHES_SOURCE_DATABASE/);
 
-  const validIsolated = runGuard(urlWithDatabase('wsp03_restore_acceptance'));
-  assert.match(validIsolated.stderr, /Backup file does not exist/);
+  // Without -CreateDatabase the target must already exist for identity proof.
+  const validIsolatedMissing = runGuard(urlWithDatabase('wsp03_restore_acceptance'));
+  assert.match(validIsolatedMissing.stderr, /RESTORE_TARGET_DATABASE_MISSING|Backup file does not exist/);
+
+  // With -CreateDatabase the target must not exist; the backup file is then the
+  // first hard failure.
+  const validIsolatedCreate = runGuard(urlWithDatabase('wsp03_restore_acceptance_create'), ownerUrl!, true);
+  assert.match(validIsolatedCreate.stderr, /Backup file does not exist/);
 });
 
 test('restore fails closed before invoking restore tools for canonical targets', () => {
@@ -354,24 +372,38 @@ test('restore fails closed before invoking restore tools for canonical targets',
   assert.match(result.stderr, /RESTORE_TARGET_CANONICAL_DATABASE/);
 });
 
-test('restore tooling fails closed for missing and corrupt artifacts', { skip: !prerequisites && skipReason }, () => {
+test('restore tooling fails closed for missing and corrupt artifacts', { skip: !prerequisites && skipReason }, async () => {
   const missing = runPowerShell(restoreScript, ['-BackupFile', join(tmpdir(), 'wsp03-does-not-exist.dump')], drillEnv({
     NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
     ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase(ISOLATED_DB),
   }));
   assert.notEqual(missing.status, 0);
 
+  const corruptDb = 'wsp03_corrupt_artifact_acceptance';
+  const owner = postgres(ownerUrl!, { max: 1, prepare: false });
+  try {
+    await owner.unsafe(`DROP DATABASE IF EXISTS ${quoteIdentifier(corruptDb)}`);
+  } finally {
+    await owner.end();
+  }
+
   const corrupt = join(mkdtempSync(join(tmpdir(), 'wsp03-corrupt-')), 'corrupt.dump');
   writeFileSync(corrupt, Buffer.from('this is not a pg_dump custom archive'));
   try {
     const unreadable = runPowerShell(restoreScript, ['-BackupFile', corrupt, '-CreateDatabase'], drillEnv({
       NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
-      ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase(ISOLATED_DB),
+      ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase(corruptDb),
     }));
     assert.notEqual(unreadable.status, 0);
     assert.equal(Number((unreadable.stderr.match(/BACKUP_ARTIFACT_UNREADABLE|restore failed/i) ?? []).length) > 0, true, `expected unreadable-artifact failure, got: ${unreadable.stderr}`);
   } finally {
     rmSync(dirname(corrupt), { recursive: true, force: true });
+    const cleanup = postgres(ownerUrl!, { max: 1, prepare: false });
+    try {
+      await cleanup.unsafe(`DROP DATABASE IF EXISTS ${quoteIdentifier(corruptDb)}`);
+    } finally {
+      await cleanup.end();
+    }
   }
 });
 

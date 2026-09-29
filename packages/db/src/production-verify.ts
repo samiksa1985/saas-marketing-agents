@@ -52,14 +52,18 @@ try {
 
   if (config.nodeEnv === 'production') {
     await assertRlsPolicyCoverage(client);
-    const probeUrl = resolveMigrationDatabaseUrl(process.env, config.databaseUrl, config.nodeEnv);
-    const probeClient = postgres(probeUrl, { max: 1, prepare: false });
+    // Behavioral RLS verification must use the ACTUAL runtime connection
+    // (codecore_app) rather than impersonating that role from the migration
+    // authority. The migration/owner connection is used only to seed and clean
+    // up the synthetic tenant fixtures.
+    const migrationUrl = resolveMigrationDatabaseUrl(process.env, config.databaseUrl, config.nodeEnv);
+    const migrationClient = postgres(migrationUrl, { max: 1, prepare: false });
     let probe: Awaited<ReturnType<typeof runCrossTenantProbe>>;
     try {
-      await assertMigrationAuthority(probeClient);
-      probe = await runCrossTenantProbe(probeClient, { appRole: PRODUCTION_APP_ROLE });
+      await assertMigrationAuthority(migrationClient);
+      probe = await runCrossTenantProbe(client, { appRole: PRODUCTION_APP_ROLE, seedClient: migrationClient });
     } finally {
-      await probeClient.end();
+      await migrationClient.end();
     }
     result.runtimeRole = runtimeRole!;
     result.appRole = PRODUCTION_APP_ROLE;

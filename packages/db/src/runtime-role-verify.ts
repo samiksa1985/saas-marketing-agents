@@ -27,16 +27,23 @@ function rowsOf<T>(value: unknown): T[] {
   return Array.from(value as Iterable<T>);
 }
 
+interface SessionIdentityRow extends RoleAttributesRow {
+  session_user: string;
+}
+
 /** Fail closed when the RUNTIME connection identity carries unsafe authority. */
 export async function assertRuntimeRoleIsSafe(client: SqlClient): Promise<string> {
-  const row = rowsOf<RoleAttributesRow>(
+  const row = rowsOf<SessionIdentityRow>(
     await client.unsafe(
-      `SELECT current_user AS name, r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+      `SELECT current_user AS name, session_user, r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
               r.rolinherit, r.rolcanlogin
        FROM pg_roles r WHERE r.rolname = current_user`,
     ),
   )[0];
   if (!row) throw new Error('PRODUCTION_RUNTIME_ROLE_UNRESOLVABLE');
+  if (row.session_user !== PRODUCTION_APP_ROLE) {
+    throw new Error('PRODUCTION_RUNTIME_SESSION_USER_NOT_CODECORE_APP');
+  }
   if (row.name === PRODUCTION_OWNER_ROLE) {
     throw new Error('PRODUCTION_RUNTIME_USER_IS_MIGRATION_OWNER');
   }
@@ -92,69 +99,83 @@ export async function assertNoProtectedTablesOwnedByRuntime(
   }
 }
 
+/**
+ * Canonical tenant-scoped RLS expressions. Whitespace is ignored, but
+ * identifier quoting is NOT: a policy on "TENANT_ID" or another column
+ * must fail closed because it does not enforce isolation on the real
+ * tenant_id column.
+ */
+function isCanonicalTenantPolicyExpression(expression: string): boolean {
+  const normalized = expression.replace(/\s+/g, ' ').trim();
+  const form1 =
+    /^\(?tenant_id = \(NULLIF\(current_setting\('app\.tenant_id'(::text)?, true\), ''(::text)?\)\)::uuid\)?$/i;
+  const form2 = /^\(?\(tenant_id\)::text = current_setting\('app\.tenant_id'(::text)?, true\)\)?$/i;
+  return form1.test(normalized) || form2.test(normalized);
+}
+
 /** Every tenant table must have an applicable, tenant-scoped ALL-command policy. */
 export async function assertRlsPolicyCoverage(client: SqlClient): Promise<void> {
-  const gaps = rowsOf<{ relname: string }>(
+  const policies = rowsOf<{
+    relname: string;
+    polname: string;
+    polcmd: string;
+    polpermissive: boolean;
+    applies_to_app: boolean;
+    polqual: string | null;
+    polwithcheck: string | null;
+  }>(
     await client.unsafe(`
-      SELECT c.relname
+      SELECT c.relname,
+             p.polname,
+             p.polcmd,
+             p.polpermissive,
+             (0::oid = ANY(p.polroles) OR 'codecore_app'::regrole::oid = ANY(p.polroles)) AS applies_to_app,
+             pg_get_expr(p.polqual, p.polrelid) AS polqual,
+             pg_get_expr(p.polwithcheck, p.polrelid) AS polwithcheck
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
         AND a.attnum > 0
+      LEFT JOIN pg_policy p ON p.polrelid = c.oid
       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
-        AND (
-          NOT c.relrowsecurity
-          OR NOT EXISTS (
-            SELECT 1 FROM pg_policy p
-            WHERE p.polrelid = c.oid AND p.polpermissive AND p.polcmd = '*'
-              AND (0::oid = ANY(p.polroles) OR 'codecore_app'::regrole::oid = ANY(p.polroles))
-              AND regexp_replace(lower(pg_get_expr(p.polqual, p.polrelid)), '[[:space:]"]', '', 'g') IN (
-                '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
-                '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
-              )
-              AND regexp_replace(
-                lower(pg_get_expr(COALESCE(p.polwithcheck, p.polqual), p.polrelid)),
-                '[[:space:]"]',
-                '',
-                'g'
-              ) IN (
-                '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
-                '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
-              )
-          )
-          OR EXISTS (
-            SELECT 1 FROM pg_policy p
-            WHERE p.polrelid = c.oid AND p.polpermissive
-              AND (0::oid = ANY(p.polroles) OR 'codecore_app'::regrole::oid = ANY(p.polroles))
-              AND (
-                p.polcmd <> '*'
-                OR COALESCE(
-                  regexp_replace(lower(pg_get_expr(p.polqual, p.polrelid)), '[[:space:]"]', '', 'g'),
-                  ''
-                ) NOT IN (
-                  '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
-                  '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
-                )
-                OR COALESCE(
-                  regexp_replace(
-                    lower(pg_get_expr(COALESCE(p.polwithcheck, p.polqual), p.polrelid)),
-                    '[[:space:]"]',
-                    '',
-                    'g'
-                  ),
-                  ''
-                ) NOT IN (
-                  '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
-                  '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
-                )
-              )
-          )
-        )
-      LIMIT 5
     `),
   );
+
+  const tenantTables = new Set(policies.map((p) => p.relname));
+  const gaps: string[] = [];
+
+  for (const table of tenantTables) {
+    const tablePolicies = policies.filter((p) => p.relname === table);
+    const rlsEnabled = tablePolicies.some((p) => p.polname !== null);
+    if (!rlsEnabled) {
+      gaps.push(table);
+      continue;
+    }
+
+    const validAllPolicy = tablePolicies.some(
+      (p) =>
+        p.polpermissive &&
+        p.polcmd === '*' &&
+        p.applies_to_app &&
+        isCanonicalTenantPolicyExpression(p.polqual ?? '') &&
+        isCanonicalTenantPolicyExpression(p.polwithcheck ?? p.polqual ?? ''),
+    );
+    const invalidPolicy = tablePolicies.some(
+      (p) =>
+        p.applies_to_app &&
+        (!p.polpermissive ||
+          p.polcmd !== '*' ||
+          !isCanonicalTenantPolicyExpression(p.polqual ?? '') ||
+          !isCanonicalTenantPolicyExpression(p.polwithcheck ?? p.polqual ?? '')),
+    );
+
+    if (!validAllPolicy || invalidPolicy) {
+      gaps.push(table);
+    }
+  }
+
   if (gaps.length > 0) {
-    throw new Error(`TENANT_POLICY_COVERAGE_GAP:${gaps.map((g) => g.relname).join(',')}`);
+    throw new Error(`TENANT_POLICY_COVERAGE_GAP:${gaps.slice(0, 5).join(',')}`);
   }
 }
 

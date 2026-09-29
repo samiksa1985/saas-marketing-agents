@@ -360,10 +360,11 @@ test('production migration authority accepts the migration role and rejects code
 });
 
 test('A: verifier rejects a superuser runtime connection', { skip: !dbAvailable && skipReason }, async () => {
-  // Function-level proof: the pilot owner identity is superuser.
+  // Function-level proof: the pilot owner identity is superuser and its
+  // session_user is not codecore_app, so the session identity check fires first.
   const probe = postgres(ownerUrl!, { max: 1, prepare: false });
   try {
-    await assert.rejects(() => assertRuntimeRoleIsSafe(probe), /PRODUCTION_RUNTIME_USER_SUPERUSER/);
+    await assert.rejects(() => assertRuntimeRoleIsSafe(probe), /PRODUCTION_RUNTIME_SESSION_USER_NOT_CODECORE_APP/);
   } finally {
     await probe.end();
   }
@@ -371,7 +372,7 @@ test('A: verifier rejects a superuser runtime connection', { skip: !dbAvailable 
   // End-to-end proof through the production verify entrypoint.
   const result = runVerify(productionConfigEnv(ownerUrl!));
   assert.notEqual(result.status, 0, `superuser runtime must fail closed: ${result.stdout}`);
-  assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_USER_SUPERUSER');
+  assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_SESSION_USER_NOT_CODECORE_APP');
 });
 
 test('B: verifier rejects a BYPASSRLS runtime role', { skip: !dbAvailable && skipReason }, async () => {
@@ -385,7 +386,7 @@ test('B: verifier rejects a BYPASSRLS runtime role', { skip: !dbAvailable && ski
     );
     const result = runVerify(productionConfigEnv(urlAsRole(role, password)));
     assert.notEqual(result.status, 0);
-    assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_USER_BYPASSRLS');
+    assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_SESSION_USER_NOT_CODECORE_APP');
   } finally {
     await owner.unsafe(`DROP ROLE IF EXISTS ${quoteIdentifier(role)}`).catch(() => undefined);
     await owner.end();
@@ -421,10 +422,27 @@ test('C: verifier rejects a runtime role that owns protected tenant tables', { s
     );
     const result = runVerify(productionConfigEnv(urlAsRole(role, password)));
     assert.notEqual(result.status, 0);
-    assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_USER_NOT_CODECORE_APP');
+    assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_SESSION_USER_NOT_CODECORE_APP');
   } finally {
     await owner.unsafe(`DROP TABLE IF EXISTS public.${table}`).catch(() => undefined);
     await owner.unsafe(`DROP ROLE IF EXISTS ${quoteIdentifier(role)}`).catch(() => undefined);
+    await owner.end();
+  }
+});
+
+test('E: verifier rejects a privileged session_user masquerading as codecore_app', { skip: !dbAvailable && skipReason }, async () => {
+  // A superuser session can SET ROLE to codecore_app, making current_user
+  // codecore_app while session_user remains the privileged owner. This must
+  // fail closed before any tenant data is touched.
+  const owner = postgres(ownerUrl!, { max: 1, prepare: false });
+  try {
+    await owner.unsafe(`SET ROLE ${quoteIdentifier(PRODUCTION_APP_ROLE)}`);
+    await assert.rejects(
+      () => assertRuntimeRoleIsSafe(owner),
+      /PRODUCTION_RUNTIME_SESSION_USER_NOT_CODECORE_APP/,
+    );
+  } finally {
+    await owner.unsafe(`SET ROLE NONE`).catch(() => undefined);
     await owner.end();
   }
 });
@@ -512,6 +530,46 @@ test('RLS verifier rejects a permissive or bypassing tenant-table policy', { ski
       for (const policy of policies) {
         await cleanup.unsafe(`DROP POLICY IF EXISTS ${quoteIdentifier(policy)} ON public.${table}`);
       }
+    } finally {
+      await cleanup.end();
+    }
+  }
+});
+
+test('RLS verifier rejects a policy on a quoted identifier collision', { skip: !dbAvailable && skipReason }, async () => {
+  // A table with both the real tenant_id column and a quoted "TENANT_ID"
+  // column must not satisfy coverage with a policy on the quoted impostor.
+  const table = 'wsp02_quoted_tenant_collision';
+  const policy = 'wsp02_quoted_tenant_policy';
+  const owner = postgres(ownerUrl!, { max: 1, prepare: false });
+  try {
+    await owner.unsafe(`DROP TABLE IF EXISTS public.${quoteIdentifier(table)}`);
+    await owner.unsafe(
+      `CREATE TABLE public.${quoteIdentifier(table)} (
+        id uuid PRIMARY KEY,
+        tenant_id uuid NOT NULL,
+        "TENANT_ID" uuid NOT NULL
+      )`,
+    );
+    await owner.unsafe(`ALTER TABLE public.${quoteIdentifier(table)} ENABLE ROW LEVEL SECURITY`);
+    await owner.unsafe(
+      `CREATE POLICY ${quoteIdentifier(policy)} ON public.${quoteIdentifier(table)} FOR ALL
+       USING ("TENANT_ID" = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+       WITH CHECK ("TENANT_ID" = NULLIF(current_setting('app.tenant_id', true), '')::uuid)`,
+    );
+  } finally {
+    await owner.end();
+  }
+  try {
+    assert.equal(runProvision({ CODECORE_APP_PASSWORD: appPassword }).status, 0);
+    const result = runVerify(productionConfigEnv(urlAsRole(PRODUCTION_APP_ROLE, appPassword)));
+    assert.notEqual(result.status, 0);
+    assert.equal(result.json?.code, 'TENANT_POLICY_COVERAGE_GAP');
+  } finally {
+    const cleanup = postgres(ownerUrl!, { max: 1, prepare: false });
+    try {
+      await cleanup.unsafe(`DROP POLICY IF EXISTS ${quoteIdentifier(policy)} ON public.${quoteIdentifier(table)}`);
+      await cleanup.unsafe(`DROP TABLE IF EXISTS public.${quoteIdentifier(table)}`);
     } finally {
       await cleanup.end();
     }
