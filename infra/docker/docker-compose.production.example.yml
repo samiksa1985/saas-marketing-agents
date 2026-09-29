@@ -3,34 +3,51 @@ services:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?required}
-      POSTGRES_USER: ${POSTGRES_USER:?required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:?Set through the deployment secret/configuration boundary}
+      POSTGRES_USER: ${POSTGRES_USER:?Set through the deployment secret/configuration boundary}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set through the deployment secret/configuration boundary}
     volumes: [postgres-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 10
     ports: []
+
+  migrate:
+    image: ${CODECORE_API_IMAGE:?Set to the API image by immutable @sha256 digest}
+    profiles: [migration]
+    restart: 'no'
+    env_file: [.env.production]
+    environment:
+      NAWA_PRODUCTION_MIGRATION_CONFIRM: ${NAWA_PRODUCTION_MIGRATION_CONFIRM:-}
+    entrypoint:
+      - sh
+      - -ec
+      - test "$$NAWA_PRODUCTION_MIGRATION_CONFIRM" = APPLY; node packages/db/dist/migrate.js && exec node packages/db/dist/production-verify.js
+
   api:
-    build: { context: ../.., dockerfile: infra/docker/Dockerfile }
-    command: ['node', 'apps/api/dist/main.js']
+    image: ${CODECORE_API_IMAGE:?Set to the API image by immutable @sha256 digest}
     restart: unless-stopped
     env_file: [.env.production]
     depends_on: { postgres: { condition: service_healthy } }
     ports: ['127.0.0.1:4000:4000']
+
   worker:
-    build: { context: ../.., dockerfile: infra/docker/Dockerfile }
-    command: ['node', 'apps/worker/dist/main.js']
+    image: ${CODECORE_WORKER_IMAGE:?Set to the worker image by immutable @sha256 digest}
     restart: unless-stopped
     env_file: [.env.production]
     depends_on: { postgres: { condition: service_healthy } }
+
   web:
-    build: { context: ../.., dockerfile: infra/docker/Dockerfile }
-    command: ['npm', '--workspace', 'apps/web', 'run', 'start']
+    image: ${CODECORE_WEB_IMAGE:?Set to the web image by immutable @sha256 digest}
     restart: unless-stopped
-    environment: [NODE_ENV=production]
-    depends_on: [api]
+    environment:
+      API_BASE_URL: http://api:4000
+    depends_on:
+      api:
+        condition: service_healthy
     ports: ['127.0.0.1:3000:3000']
-volumes: { postgres-data: {} }
+
+volumes:
+  postgres-data: {}

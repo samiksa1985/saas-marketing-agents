@@ -1,0 +1,262 @@
+name: Immutable production artifacts
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic release version (with or without the v prefix)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set release identity
+        id: release
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            version="${INPUT_VERSION#v}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]] || {
+            echo "Release version must be semantic version text" >&2
+            exit 1
+          }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          echo "build_id=${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify source
+        run: |
+          mkdir -p "$RUNNER_TEMP/codecore-release-artifacts"
+          npm run typecheck
+          npx prettier --check .github/workflows/release.yml infra/docker/docker-compose.production.example.yml apps/worker/package.json scripts/release/*.mjs
+          npm test
+          npm run test:release
+          npm run build
+          npm run db:check
+          set +e
+          npm audit --omit=dev --json > "$RUNNER_TEMP/codecore-release-artifacts/dependency-audit.json"
+          audit_status=$?
+          set -e
+          if [[ "$audit_status" -gt 1 ]]; then
+            echo "npm audit could not complete" >&2
+            exit "$audit_status"
+          fi
+          node scripts/release/validate-audit-report.mjs "$RUNNER_TEMP/codecore-release-artifacts/dependency-audit.json"
+
+      - name: Generate source SBOM
+        run: |
+          npm sbom --sbom-format cyclonedx --package-lock-only > "$RUNNER_TEMP/codecore-release-artifacts/source.cdx.json"
+          node -e "const b=require(process.argv[1]);if(b.bomFormat!=='CycloneDX')process.exit(1)" "$RUNNER_TEMP/codecore-release-artifacts/source.cdx.json"
+
+      - name: Retrieve previous release metadata for rollback
+        id: previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_TAG: ${{ github.ref_name }}
+        run: |
+          previous_tag="$(gh release list --limit 100 --json tagName,isDraft,createdAt \
+            --jq '[.[] | select(.isDraft and .tagName != env.CURRENT_TAG)] | sort_by(.createdAt) | last | .tagName // ""')"
+          if [[ -n "$previous_tag" ]]; then
+            mkdir -p "$RUNNER_TEMP/codecore-previous-release"
+            gh release download "$previous_tag" \
+              --pattern release-manifest.json \
+              --dir "$RUNNER_TEMP/codecore-previous-release"
+          else
+            prior="$(gh run list --workflow .github/workflows/release.yml --status success --limit 1 \
+              --json databaseId,headSha --jq '.[0] | if . then "\(.databaseId) \(.headSha)" else "" end')"
+          fi
+          if [[ -z "$previous_tag" && -z "$prior" ]]; then
+            echo "manifest_path=" >> "$GITHUB_OUTPUT"
+          elif [[ -z "$previous_tag" ]]; then
+            read -r run_id prior_sha <<< "$prior"
+            mkdir -p "$RUNNER_TEMP/codecore-previous-release"
+            gh run download "$run_id" \
+              --name "codecore-growth-release-$prior_sha" \
+              --dir "$RUNNER_TEMP/codecore-previous-release"
+          fi
+          test ! -s "$RUNNER_TEMP/codecore-previous-release/release-manifest.json" || \
+            echo "manifest_path=$RUNNER_TEMP/codecore-previous-release/release-manifest.json" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish API image
+        id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          target: api
+          push: true
+          tags: |
+            ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-api:sha-${{ github.sha }}
+            ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-api:${{ steps.release.outputs.version }}
+          build-args: |
+            RELEASE_VERSION=${{ steps.release.outputs.version }}
+            VCS_REF=${{ github.sha }}
+            BUILD_TIMESTAMP=${{ steps.release.outputs.timestamp }}
+            BUILD_ID=${{ steps.release.outputs.build_id }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=codecore-api
+          cache-to: type=gha,mode=max,scope=codecore-api
+
+      - name: Verify API image secret exclusion
+        env:
+          IMAGE: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-api
+          DIGEST: ${{ steps.api.outputs.digest }}
+        run: |
+          docker pull "$IMAGE@$DIGEST"
+          node scripts/release/verify-container-image.mjs "$IMAGE@$DIGEST"
+
+      - name: Attest API image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-api
+          subject-digest: ${{ steps.api.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build and publish web image
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          target: web
+          push: true
+          tags: |
+            ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-web:sha-${{ github.sha }}
+            ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-web:${{ steps.release.outputs.version }}
+          build-args: |
+            RELEASE_VERSION=${{ steps.release.outputs.version }}
+            VCS_REF=${{ github.sha }}
+            BUILD_TIMESTAMP=${{ steps.release.outputs.timestamp }}
+            BUILD_ID=${{ steps.release.outputs.build_id }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=codecore-web
+          cache-to: type=gha,mode=max,scope=codecore-web
+
+      - name: Verify web image secret exclusion
+        env:
+          IMAGE: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-web
+          DIGEST: ${{ steps.web.outputs.digest }}
+        run: |
+          docker pull "$IMAGE@$DIGEST"
+          node scripts/release/verify-container-image.mjs "$IMAGE@$DIGEST"
+
+      - name: Attest web image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-web
+          subject-digest: ${{ steps.web.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build and publish worker image
+        id: worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          target: worker
+          push: true
+          tags: |
+            ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-worker:sha-${{ github.sha }}
+            ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-worker:${{ steps.release.outputs.version }}
+          build-args: |
+            RELEASE_VERSION=${{ steps.release.outputs.version }}
+            VCS_REF=${{ github.sha }}
+            BUILD_TIMESTAMP=${{ steps.release.outputs.timestamp }}
+            BUILD_ID=${{ steps.release.outputs.build_id }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=codecore-worker
+          cache-to: type=gha,mode=max,scope=codecore-worker
+
+      - name: Verify worker image secret exclusion
+        env:
+          IMAGE: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-worker
+          DIGEST: ${{ steps.worker.outputs.digest }}
+        run: |
+          docker pull "$IMAGE@$DIGEST"
+          node scripts/release/verify-container-image.mjs "$IMAGE@$DIGEST"
+
+      - name: Attest worker image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-worker
+          subject-digest: ${{ steps.worker.outputs.digest }}
+          push-to-registry: true
+
+      - name: Create release manifest
+        env:
+          GIT_SHA: ${{ github.sha }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          BUILD_TIMESTAMP: ${{ steps.release.outputs.timestamp }}
+          BUILD_ID: ${{ steps.release.outputs.build_id }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          SOURCE_SBOM: source.cdx.json
+          PREVIOUS_RELEASE_MANIFEST_PATH: ${{ steps.previous.outputs.manifest_path }}
+          API_IMAGE: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-api:sha-${{ github.sha }}
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          WEB_IMAGE: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-web:sha-${{ github.sha }}
+          WEB_DIGEST: ${{ steps.web.outputs.digest }}
+          WORKER_IMAGE: ghcr.io/${{ steps.release.outputs.owner }}/codecore-growth-worker:sha-${{ github.sha }}
+          WORKER_DIGEST: ${{ steps.worker.outputs.digest }}
+        run: npm run release:manifest -- "$RUNNER_TEMP/codecore-release-artifacts/release-manifest.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codecore-growth-release-${{ github.sha }}
+          path: ${{ runner.temp }}/codecore-release-artifacts/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Preserve release metadata on the tagged release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          generate_release_notes: false
+          files: |
+            ${{ runner.temp }}/codecore-release-artifacts/release-manifest.json
+            ${{ runner.temp }}/codecore-release-artifacts/source.cdx.json
+            ${{ runner.temp }}/codecore-release-artifacts/dependency-audit.json

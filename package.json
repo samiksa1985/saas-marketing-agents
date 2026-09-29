@@ -29,6 +29,8 @@
                     "db:generate":  "npm --workspace packages/db run generate",
                     "db:migrate":  "npm --workspace packages/db run migrate",
                     "db:check":  "npm --workspace packages/db run check",
+                    "release:manifest": "node scripts/release/create-release-manifest.mjs",
+                    "test:release": "node --test scripts/release/create-release-manifest.test.mjs",
                     "format:check":  "prettier --check ."
                 },
     "devDependencies":  {
