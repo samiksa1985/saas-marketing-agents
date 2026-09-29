@@ -3,7 +3,7 @@ import { Controller, Get, Headers, Module, ServiceUnavailableException } from '@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
-import { createDb } from '@platform/db';
+import { assertProductionRuntimeAuthority, createDb } from '@platform/db';
 import { sql } from 'drizzle-orm';
 import { createWorkflowRuntime } from '@platform/workflow-runtime';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
@@ -97,6 +97,14 @@ export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
 const config=loadConfig();
 // This factory only creates a client; readiness opens a connection with SELECT 1.
 const database = createDb(config.databaseUrl);
+if (config.nodeEnv === 'production') {
+  try {
+    await assertProductionRuntimeAuthority(database.$client);
+  } catch (error) {
+    await database.$client.end();
+    throw error;
+  }
+}
 const tenantDatabase = new ApiTenantDatabase(database);
 
 @Controller() class AppController {

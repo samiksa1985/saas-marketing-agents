@@ -19,6 +19,8 @@ interface RoleAttributesRow {
   rolbypassrls: boolean;
   rolcreatedb: boolean;
   rolcreaterole: boolean;
+  rolinherit: boolean;
+  rolcanlogin: boolean;
 }
 
 function rowsOf<T>(value: unknown): T[] {
@@ -29,7 +31,8 @@ function rowsOf<T>(value: unknown): T[] {
 export async function assertRuntimeRoleIsSafe(client: SqlClient): Promise<string> {
   const row = rowsOf<RoleAttributesRow>(
     await client.unsafe(
-      `SELECT current_user AS name, r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole
+      `SELECT current_user AS name, r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+              r.rolinherit, r.rolcanlogin
        FROM pg_roles r WHERE r.rolname = current_user`,
     ),
   )[0];
@@ -41,7 +44,27 @@ export async function assertRuntimeRoleIsSafe(client: SqlClient): Promise<string
   if (row.rolbypassrls) throw new Error('PRODUCTION_RUNTIME_USER_BYPASSRLS');
   if (row.rolcreatedb) throw new Error('PRODUCTION_RUNTIME_USER_CREATEDB');
   if (row.rolcreaterole) throw new Error('PRODUCTION_RUNTIME_USER_CREATEROLE');
+  if (row.rolinherit) throw new Error('PRODUCTION_RUNTIME_USER_INHERITS_ROLES');
+  if (!row.rolcanlogin) throw new Error('PRODUCTION_RUNTIME_USER_CANNOT_LOGIN');
+  if (row.name !== PRODUCTION_APP_ROLE) throw new Error('PRODUCTION_RUNTIME_USER_NOT_CODECORE_APP');
   return row.name;
+}
+
+/** Reject direct and transitive memberships, which can grant SET ROLE even with NOINHERIT. */
+export async function assertRuntimeRoleHasNoMemberships(client: SqlClient): Promise<void> {
+  const memberships = rowsOf<{ rolname: string }>(
+    await client.unsafe(
+      `SELECT r.rolname
+       FROM pg_roles r
+       WHERE r.rolname <> $1
+         AND pg_has_role($1, r.rolname, 'MEMBER')
+       ORDER BY r.rolname`,
+      [PRODUCTION_APP_ROLE],
+    ),
+  );
+  if (memberships.length > 0) {
+    throw new Error(`PRODUCTION_RUNTIME_ROLE_MEMBERSHIP_FORBIDDEN:${memberships.map((r) => r.rolname).join(',')}`);
+  }
 }
 
 /** The runtime identity must not own any protected tenant-scoped table. */
@@ -54,7 +77,7 @@ export async function assertNoProtectedTablesOwnedByRuntime(
       `SELECT c.relname
        FROM pg_class c
        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public' AND c.relkind = 'r'
+       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
          AND EXISTS (
            SELECT 1 FROM pg_attribute a
            WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
@@ -69,7 +92,7 @@ export async function assertNoProtectedTablesOwnedByRuntime(
   }
 }
 
-/** Every tenant-scoped table must carry an ALL-command tenant policy. */
+/** Every tenant table must have an applicable, tenant-scoped ALL-command policy. */
 export async function assertRlsPolicyCoverage(client: SqlClient): Promise<void> {
   const gaps = rowsOf<{ relname: string }>(
     await client.unsafe(`
@@ -78,9 +101,54 @@ export async function assertRlsPolicyCoverage(client: SqlClient): Promise<void> 
       JOIN pg_namespace n ON n.oid = c.relnamespace
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
         AND a.attnum > 0
-      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
-        AND NOT EXISTS (
-          SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polcmd = '*'
+      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+        AND (
+          NOT c.relrowsecurity
+          OR NOT EXISTS (
+            SELECT 1 FROM pg_policy p
+            WHERE p.polrelid = c.oid AND p.polpermissive AND p.polcmd = '*'
+              AND (0::oid = ANY(p.polroles) OR 'codecore_app'::regrole::oid = ANY(p.polroles))
+              AND regexp_replace(lower(pg_get_expr(p.polqual, p.polrelid)), '[[:space:]"]', '', 'g') IN (
+                '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
+                '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
+              )
+              AND regexp_replace(
+                lower(pg_get_expr(COALESCE(p.polwithcheck, p.polqual), p.polrelid)),
+                '[[:space:]"]',
+                '',
+                'g'
+              ) IN (
+                '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
+                '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
+              )
+          )
+          OR EXISTS (
+            SELECT 1 FROM pg_policy p
+            WHERE p.polrelid = c.oid AND p.polpermissive
+              AND (0::oid = ANY(p.polroles) OR 'codecore_app'::regrole::oid = ANY(p.polroles))
+              AND (
+                p.polcmd <> '*'
+                OR COALESCE(
+                  regexp_replace(lower(pg_get_expr(p.polqual, p.polrelid)), '[[:space:]"]', '', 'g'),
+                  ''
+                ) NOT IN (
+                  '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
+                  '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
+                )
+                OR COALESCE(
+                  regexp_replace(
+                    lower(pg_get_expr(COALESCE(p.polwithcheck, p.polqual), p.polrelid)),
+                    '[[:space:]"]',
+                    '',
+                    'g'
+                  ),
+                  ''
+                ) NOT IN (
+                  '(tenant_id=(nullif(current_setting(''app.tenant_id''::text,true),''''::text))::uuid)',
+                  '((tenant_id)::text=current_setting(''app.tenant_id''::text,true))'
+                )
+              )
+          )
         )
       LIMIT 5
     `),
@@ -88,6 +156,14 @@ export async function assertRlsPolicyCoverage(client: SqlClient): Promise<void> 
   if (gaps.length > 0) {
     throw new Error(`TENANT_POLICY_COVERAGE_GAP:${gaps.map((g) => g.relname).join(',')}`);
   }
+}
+
+/** Startup gate shared by the verifier and production API composition. */
+export async function assertProductionRuntimeAuthority(client: SqlClient): Promise<string> {
+  const role = await assertRuntimeRoleIsSafe(client);
+  await assertNoProtectedTablesOwnedByRuntime(client, role);
+  await assertRuntimeRoleHasNoMemberships(client);
+  return role;
 }
 
 /**
@@ -104,7 +180,8 @@ export async function assertExpectedProductionRoles(client: SqlClient): Promise<
   const attributes = async (name: string): Promise<RoleAttributesRow | undefined> =>
     rowsOf<RoleAttributesRow>(
       await client.unsafe(
-        `SELECT r.rolname AS name, r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole
+        `SELECT r.rolname AS name, r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+                r.rolinherit, r.rolcanlogin
          FROM pg_roles r WHERE r.rolname = $1`,
         [name],
       ),
@@ -116,6 +193,9 @@ export async function assertExpectedProductionRoles(client: SqlClient): Promise<
   if (app.rolbypassrls) throw new Error('PRODUCTION_APP_ROLE_BYPASSRLS');
   if (app.rolcreatedb) throw new Error('PRODUCTION_APP_ROLE_CREATEDB');
   if (app.rolcreaterole) throw new Error('PRODUCTION_APP_ROLE_CREATEROLE');
+  if (app.rolinherit) throw new Error('PRODUCTION_APP_ROLE_INHERITS_ROLES');
+  if (!app.rolcanlogin) throw new Error('PRODUCTION_APP_ROLE_CANNOT_LOGIN');
+  await assertRuntimeRoleHasNoMemberships(client);
 
   const owner = await attributes(PRODUCTION_OWNER_ROLE);
   if (!owner) {

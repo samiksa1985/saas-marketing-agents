@@ -80,3 +80,11 @@ export class TenantScopedDatabase<TTransaction extends TenantScopedTransaction> 
 
 export { schema };
 export * from './schema.js';
+export {
+  assertExpectedProductionRoles,
+  assertNoProtectedTablesOwnedByRuntime,
+  assertProductionRuntimeAuthority,
+  assertRlsPolicyCoverage,
+  assertRuntimeRoleHasNoMemberships,
+  assertRuntimeRoleIsSafe,
+} from './runtime-role-verify.js';

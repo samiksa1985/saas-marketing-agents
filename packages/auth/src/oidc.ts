@@ -171,6 +171,8 @@ export class OidcAuthProvider implements AuthProvider {
         audience: this.audience,
 
         algorithms: this.algorithms,
+
+        requiredClaims: ['exp'],
       });
 
       return this.contextFromClaims(verified.payload);

@@ -11,7 +11,18 @@ test('migration authority separation: MIGRATION_DATABASE_URL overrides the runti
   assert.equal(resolved, 'postgresql://owner@example.internal/db');
 });
 
-test('migration authority separation: runtime URL is the fallback when no override exists', () => {
+test('production migration authority requires and accepts an explicit URL', () => {
+  assert.equal(
+    resolveMigrationDatabaseUrl(
+      { MIGRATION_DATABASE_URL: 'postgresql://owner@example.internal/db' },
+      'postgresql://app@example.internal/db',
+      'production',
+    ),
+    'postgresql://owner@example.internal/db',
+  );
+});
+
+test('migration authority separation: runtime URL fallback is limited to non-production', () => {
   assert.equal(
     resolveMigrationDatabaseUrl({}, 'postgresql://app@example.internal/db'),
     'postgresql://app@example.internal/db',
@@ -22,9 +33,25 @@ test('migration authority separation: runtime URL is the fallback when no overri
   );
 });
 
-test('migration authority separation: a whitespace-only override still falls back', () => {
+test('migration URL resolution requires a runtime URL when no override is supplied', () => {
+  assert.throws(() => resolveMigrationDatabaseUrl({}, ''), /DATABASE_URL_REQUIRED/);
+});
+
+test('migration authority separation: a whitespace-only override falls back only outside production', () => {
   assert.equal(
     resolveMigrationDatabaseUrl({ MIGRATION_DATABASE_URL: '   ' }, 'postgresql://app@example.internal/db'),
     'postgresql://app@example.internal/db',
+  );
+  assert.throws(
+    () => resolveMigrationDatabaseUrl({}, 'postgresql://app@example.internal/db', 'production'),
+    /PRODUCTION_MIGRATION_DATABASE_URL_REQUIRED/,
+  );
+  assert.throws(
+    () => resolveMigrationDatabaseUrl(
+      { MIGRATION_DATABASE_URL: '   ' },
+      'postgresql://app@example.internal/db',
+      'production',
+    ),
+    /PRODUCTION_MIGRATION_DATABASE_URL_REQUIRED/,
   );
 });

@@ -7,7 +7,7 @@ if ($env:NAWA_PRODUCTION_MIGRATION_CONFIRM -ne 'APPLY') { throw 'Set NAWA_PRODUC
 # MIGRATION_DATABASE_URL is the privileged migration identity (codecore_owner)
 # consumed only by packages/db/src/migrate.ts. Neither value is ever printed.
 if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL)) { throw 'DATABASE_URL is required but is never printed.' }
-if ([string]::IsNullOrWhiteSpace($env:MIGRATION_DATABASE_URL)) { Write-Warning 'MIGRATION_DATABASE_URL not set; migrations will run as the DATABASE_URL identity. Acceptable only for single-role trials, not for hardened production.' }
+if ([string]::IsNullOrWhiteSpace($env:MIGRATION_DATABASE_URL)) { throw 'MIGRATION_DATABASE_URL is required in production and is never printed.' }
 npm --workspace packages/db run migrate
 if ($LASTEXITCODE -ne 0) { throw 'Migration failed; do not attempt automated rollback.' }
 npm --workspace packages/db run production:verify

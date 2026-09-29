@@ -91,7 +91,7 @@ interface FixtureIdp {
   issuer: string;
   audience: string;
   server: Server;
-  sign: (claims: Record<string, unknown>, options?: { audience?: string; expired?: boolean }) => Promise<string>;
+  sign: (claims: Record<string, unknown>, options?: { audience?: string; expired?: boolean; omitExpiration?: boolean }) => Promise<string>;
   attackerSign: (claims: Record<string, unknown>) => Promise<string>;
 }
 
@@ -121,16 +121,19 @@ async function startFixtureIdp(): Promise<FixtureIdp> {
   const issuer = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const sign = (
     claims: Record<string, unknown>,
-    options: { audience?: string; expired?: boolean } = {},
-  ): Promise<string> =>
-    new SignJWT({ tenant_id: claims.tenant_id, ...claims })
+    options: { audience?: string; expired?: boolean; omitExpiration?: boolean } = {},
+  ): Promise<string> => {
+    const token = new SignJWT({ tenant_id: claims.tenant_id, ...claims })
       .setProtectedHeader({ alg: 'RS256', kid: 'wsp04-live-key' })
       .setIssuer(issuer)
       .setAudience(options.audience ?? audience)
       .setSubject(String(claims.sub))
-      .setIssuedAt()
-      .setExpirationTime(options.expired ? new Date(Date.now() - 60_000) : '5m')
-      .sign(privateKey as never);
+      .setIssuedAt();
+    if (!options.omitExpiration) {
+      token.setExpirationTime(options.expired ? new Date(Date.now() - 60_000) : '5m');
+    }
+    return token.sign(privateKey as never);
+  };
   const attackerSign = (claims: Record<string, unknown>): Promise<string> =>
     new SignJWT({ ...claims })
       .setProtectedHeader({ alg: 'RS256', kid: 'wsp04-live-key' })
@@ -214,7 +217,12 @@ function provisionAppRole(): void {
     ['/c', 'npx', '--no-install', 'tsx', 'scripts/provision-production-roles.ts'],
     {
       cwd: dbPackageRoot,
-      env: { ...process.env, DATABASE_URL: ownerUrl!, CODECORE_APP_PASSWORD: sharedTestAppPassword() },
+      env: {
+        ...process.env,
+        DATABASE_URL: ownerUrl!,
+        MIGRATION_DATABASE_URL: ownerUrl!,
+        CODECORE_APP_PASSWORD: sharedTestAppPassword(),
+      },
       encoding: 'utf8',
       timeout: 120_000,
     },
@@ -348,6 +356,11 @@ test('WS-PROD-04 live acceptance: OIDC + authoritative membership + codecore_app
     assert.equal((await call('/provider-integrations/bindings', wrongAudience)).status, 401);
     const expired = await idp.sign({ sub: SUBJECT_ADMIN, tenant_id: tenant.id }, { expired: true });
     assert.equal((await call('/provider-integrations/bindings', expired)).status, 401);
+    const withoutExpiration = await idp.sign(
+      { sub: SUBJECT_ADMIN, tenant_id: tenant.id },
+      { omitExpiration: true },
+    );
+    assert.equal((await call('/provider-integrations/bindings', withoutExpiration)).status, 401);
     const forged = await idp.attackerSign({ sub: SUBJECT_ADMIN, tenant_id: tenant.id });
     assert.equal((await call('/provider-integrations/bindings', forged)).status, 401);
 
@@ -370,7 +383,7 @@ test('WS-PROD-04 live acceptance: OIDC + authoritative membership + codecore_app
     // Secret hygiene: error responses must never echo tokens.
     const leakCheck = await call('/provider-integrations/bindings', admin);
     const body = await leakCheck.text();
-    for (const secret of [admin, viewer, forged, expired, wrongAudience]) {
+    for (const secret of [admin, viewer, forged, expired, withoutExpiration, wrongAudience]) {
       assert.equal(body.includes(secret), false, 'responses must never contain bearer tokens');
     }
   } finally {
@@ -441,6 +454,45 @@ test('WS-PROD-04 production lockout: local acceptance auth cannot boot in produc
   } finally {
     rmSync(tokenDir, { recursive: true, force: true });
   }
+});
+
+test('production API refuses to listen with migration-owner database authority', { skip: !ownerUrl && 'pilot database unavailable', timeout: 60_000 }, async (t) => {
+  if (!(await pilotDatabaseReachable(ownerUrl!))) {
+    t.skip('pilot database unavailable');
+    return;
+  }
+  const child = spawn(process.execPath, ['--import', 'tsx', 'main.ts'], {
+    cwd: apiRoot,
+    env: {
+      ...baseApiEnv(ownerUrl!),
+      API_PORT: '4298',
+      NODE_ENV: 'production',
+      WEB_URL: 'https://web.wsp04.example.test',
+      CORS_ALLOWED_ORIGINS: 'https://web.wsp04.example.test',
+      TRUST_PROXY: 'false',
+      RELEASE_VERSION: '1.0.0',
+      OIDC_ISSUER_URL: 'https://issuer.wsp04.example.test',
+      OIDC_AUDIENCE: 'growth-os-api',
+      WORKFLOW_RUNTIME_MODE: 'temporal',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const logs: string[] = [];
+  child.stdout?.on('data', (chunk: Buffer) => logs.push(chunk.toString()));
+  child.stderr?.on('data', (chunk: Buffer) => logs.push(chunk.toString()));
+  const exitCode = await new Promise<number | null>((resolve) => {
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve(null);
+    }, 45_000);
+    child.once('exit', (code) => {
+      clearTimeout(timer);
+      resolve(code);
+    });
+  });
+  assert.notEqual(exitCode, null, 'API must reject unsafe database authority before listening');
+  assert.notEqual(exitCode, 0);
+  assert.match(logs.join(''), /PRODUCTION_RUNTIME_USER_(?:SUPERUSER|IS_MIGRATION_OWNER)/);
 });
 
 test('WS-PROD-04 pilot regression: explicit local acceptance still works outside production', { skip: !ownerUrl && 'pilot database unavailable', timeout: 180_000 }, async (t) => {

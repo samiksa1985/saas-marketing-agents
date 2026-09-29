@@ -7,37 +7,40 @@ Production enforces a two-identity trust boundary:
 | Role            | Purpose                         | Attributes                                              |
 | --------------- | ------------------------------- | ------------------------------------------------------- |
 | `codecore_owner` | Migration / schema authority    | Privileged (superuser or CREATEDB+CREATEROLE). Created at environment bootstrap. **Never** used by application runtime. |
-| `codecore_app`   | Application runtime identity    | `LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE` |
+| `codecore_app`   | Application runtime identity    | `LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT` |
 
 `codecore_app`:
 
 - must never own protected (tenant-scoped) application tables;
-- receives only bounded privileges: schema `USAGE`, table DML
-  (`SELECT/INSERT/UPDATE/DELETE`), sequence `USAGE/SELECT`, and read-only
-  access to the Drizzle migration ledger;
-- inherits future grants via `ALTER DEFAULT PRIVILEGES` on the owner role.
+- must have no direct or transitive role memberships, preventing `SET ROLE`
+  escalation;
+- reads global identity/RBAC tables (`tenants`, `users`, `roles`, `permissions`,
+  `role_permissions`, `tenant_members`) but cannot mutate them;
+- receives DML only on explicitly enumerated operational tables. Future tables
+  receive SELECT only by default until provisioning explicitly grants writes;
+- receives sequence `USAGE/SELECT` and read-only access to the Drizzle ledger.
 
 ## Environment variables
 
 | Variable | Purpose |
 | ------------------------ | ---------------------------------------------------------------- |
 | `DATABASE_URL`           | Runtime application connection. In production this MUST authenticate as `codecore_app`. Never printed. |
-| `MIGRATION_DATABASE_URL` | Connection used solely by schema migration / provisioning. In production this MUST authenticate as the migration owner (`codecore_owner` or bootstrap equivalent). Falls back to `DATABASE_URL`. Never printed. |
+| `MIGRATION_DATABASE_URL` | Connection used solely by schema migration / provisioning. In production this MUST be explicit and authenticate as a privileged migration authority (`codecore_owner` or bootstrap equivalent); no fallback to `DATABASE_URL`. Never printed. |
 | `CODECORE_APP_PASSWORD` | Password applied to `codecore_app` during provisioning. Inject from a managed secret store. Never logged, never committed. |
 | `PRODUCTION_VERIFY_REQUIRE_OWNER_ROLE` | Optional. When `true`, production verification additionally requires the canonical `codecore_owner` role to exist and be privileged. Default `false` tolerates bootstrap-named owners (e.g. the local pilot's `phase1_owner`). |
 
 ## Provisioning (idempotent, safe to repeat)
 
 ```powershell
-$env:DATABASE_URL = '<owner-or-migration-url>'       # or set MIGRATION_DATABASE_URL
+$env:MIGRATION_DATABASE_URL = '<migration-authority-url>'
 $env:CODECORE_APP_PASSWORD = '<from secret store>'
 npm --workspace packages/db run provision:production-roles
 ```
 
-Provisioning converges role attributes, bounded grants, default privileges,
-and runs an ownership guard that fails if `codecore_app` owns any protected
-tenant table. It does not transfer existing table ownership and never echoes
-the password.
+Provisioning verifies migration authority, converges role attributes and
+membership, applies least-privilege table/default grants, and runs an ownership
+guard. It does not transfer existing table ownership and never echoes the
+password.
 
 ## Migrations with authority separation
 
@@ -46,10 +49,11 @@ the password.
 ```
 
 - Requires `NODE_ENV=production` and `NAWA_PRODUCTION_MIGRATION_CONFIRM=APPLY`.
-- `packages/db/src/migrate.ts` connects with
-  `process.env.MIGRATION_DATABASE_URL || config.databaseUrl`.
+- `packages/db/src/migrate.ts` requires `MIGRATION_DATABASE_URL` and verifies
+  both runtime and migration authority before applying migrations.
 - Post-migration verification connects with the **runtime** identity from
-  `DATABASE_URL`.
+  `DATABASE_URL`; its rolled-back RLS fixture setup separately uses the
+  explicit migration identity from `MIGRATION_DATABASE_URL`.
 
 ## Verification
 
@@ -60,17 +64,17 @@ npm --workspace packages/db run production:verify
 Base checks (all environments): migration ledger is current, `pgvector`
 extension present, every tenant-scoped table has RLS enabled.
 
-When `NODE_ENV=production`, the verifier additionally fails closed unless the
+When `NODE_ENV=production`, API startup and the verifier fail closed unless the
 runtime connection identity:
 
 - is not superuser, not `BYPASSRLS`, not `CREATEDB`, not `CREATEROLE`, and is
-  not the migration owner role;
-- owns no protected tenant tables;
-- `codecore_app` exists with the exact safe attribute set;
-- every RLS-enabled tenant table carries an ALL-command tenant policy;
-- a real cross-tenant probe (always rolled back, no persistent data) proves
-  cross-tenant SELECT invisibility and WITH CHECK write denial (SQLSTATE
-  `42501`) under `SET LOCAL ROLE codecore_app`.
+  exactly `codecore_app` with `NOINHERIT`;
+- owns no protected tenant tables and has no direct or transitive role
+  memberships;
+- uses RLS on every tenant table with applicable ALL-command policies whose
+  `USING` and `WITH CHECK` expressions reference tenant context;
+- passes a rolled-back real PostgreSQL probe for cross-tenant SELECT, INSERT,
+  UPDATE, and DELETE behavior under `SET LOCAL ROLE codecore_app`.
 
 Development/local pilot behavior is unchanged; the strict block above only
 activates in production.

@@ -7,10 +7,44 @@
  *
  * Neither URL is ever logged by callers of this helper.
  */
+import type postgres from 'postgres';
+
 export function resolveMigrationDatabaseUrl(
   env: { MIGRATION_DATABASE_URL?: string | undefined },
   runtimeDatabaseUrl: string,
+  nodeEnv = 'development',
 ): string {
   const override = env.MIGRATION_DATABASE_URL?.trim();
-  return override ? override : runtimeDatabaseUrl;
+  if (nodeEnv === 'production' && !override) {
+    throw new Error('PRODUCTION_MIGRATION_DATABASE_URL_REQUIRED');
+  }
+  const runtimeUrl = runtimeDatabaseUrl.trim();
+  if (!override && !runtimeUrl) throw new Error('DATABASE_URL_REQUIRED');
+  return override || runtimeUrl;
+}
+
+type SqlClient = Pick<ReturnType<typeof postgres>, 'unsafe'>;
+
+export async function assertMigrationAuthority(client: SqlClient): Promise<string> {
+  const rows = Array.from(
+    (await client.unsafe(
+      `SELECT current_user AS name, rolsuper, rolcreatedb, rolcreaterole,
+              has_schema_privilege(current_user, 'public', 'CREATE') AS can_create_public
+       FROM pg_roles WHERE rolname = current_user`,
+    )) as Iterable<{
+      name: string;
+      rolsuper: boolean;
+      rolcreatedb: boolean;
+      rolcreaterole: boolean;
+      can_create_public: boolean;
+    }>,
+  );
+  const role = rows[0];
+  if (!role) throw new Error('PRODUCTION_MIGRATION_ROLE_UNRESOLVABLE');
+  if (role.name === 'codecore_app') throw new Error('PRODUCTION_MIGRATION_ROLE_IS_RUNTIME');
+  if (!role.rolsuper && !(role.rolcreatedb && role.rolcreaterole)) {
+    throw new Error('PRODUCTION_MIGRATION_ROLE_NOT_PRIVILEGED');
+  }
+  if (!role.can_create_public) throw new Error('PRODUCTION_MIGRATION_ROLE_CANNOT_CREATE_SCHEMA_OBJECTS');
+  return role.name;
 }

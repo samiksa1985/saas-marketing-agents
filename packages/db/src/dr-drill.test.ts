@@ -123,9 +123,11 @@ function drillEnv(extra: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 }
 
 function productionEnv(databaseUrl: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  const migrationDatabase = new URL(databaseUrl).pathname.replace(/^\//, '');
   return drillEnv({
     NODE_ENV: 'production',
     DATABASE_URL: databaseUrl,
+    MIGRATION_DATABASE_URL: urlWithDatabase(migrationDatabase),
     WEB_URL: 'https://drill.wsp03.example.test',
     CORS_ALLOWED_ORIGINS: 'https://drill.wsp03.example.test',
     TRUST_PROXY: 'false',
@@ -181,6 +183,25 @@ test('WS-PROD-03 DR drill: backup, isolated restore, role model, isolation probe
     for (const text of [backup.stdout, backup.stderr, readFileSync(backupFile === '' ? '.' : String(backup.json?.manifest), 'utf8')]) {
       assert.equal(text.includes(String(new URL(ownerUrl!).password)), false, 'credentials must never appear in backup output/manifest');
     }
+
+    // A canonical target with different credentials must be rejected before
+    // target creation or pg_restore --clean can touch the database.
+    const canonicalAttempt = runPowerShell(
+      restoreScript,
+      ['-BackupFile', backupFile, '-CreateDatabase'],
+      drillEnv({
+        NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+        ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase(
+          new URL(ownerUrl!).pathname.replace(/^\//, ''),
+          'different_user',
+          'different_password',
+        ),
+        PG_RESTORE_PATH: join(workDir, 'must-not-be-resolved.exe'),
+      }),
+    );
+    assert.notEqual(canonicalAttempt.status, 0);
+    assert.match(canonicalAttempt.stderr, /RESTORE_TARGET_CANONICAL_DATABASE/);
+    assert.deepEqual(await canonicalSnapshot(owner), before, 'canonical data and database inventory must remain untouched');
 
     // 2. RESTORE_TARGET_ISOLATED + RESTORE_COMPLETED (separate disposable DB).
     startedAt = Date.now();
@@ -268,21 +289,69 @@ test('backup tooling fails closed without explicit confirmation', () => {
   assert.notEqual(result.status, 0);
 });
 
-test('restore tooling fails closed without confirmation, target parity, or an isolated name', () => {
-  const noConfirm = runPowerShell(restoreScript, ['-BackupFile', 'missing.dump'], drillEnv({ ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('wsp03_restore_acceptance') }));
-  assert.notEqual(noConfirm.status, 0);
+test('restore target guards validate only the decoded database component', () => {
+  const runGuard = (target: string, source = ownerUrl!) =>
+    runPowerShell(
+      restoreScript,
+      ['-BackupFile', 'missing.dump'],
+      drillEnv({
+        DATABASE_URL: source,
+        ISOLATED_RESTORE_DATABASE_URL: target,
+        NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+      }),
+    );
+  const targetUrl = (database: string, username = 'restore_user', password = 'restore_password') => {
+    const url = new URL(ownerUrl!);
+    url.username = username;
+    url.password = password;
+    url.pathname = `/${database}`;
+    return url.toString();
+  };
 
-  const sameTarget = runPowerShell(restoreScript, ['-BackupFile', 'missing.dump'], drillEnv({
-    NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
-    ISOLATED_RESTORE_DATABASE_URL: ownerUrl!,
-  }));
-  assert.notEqual(sameTarget.status, 0);
+  const markerInUsername = runGuard(targetUrl('plain_target', 'restore_user'));
+  assert.match(markerInUsername.stderr, /isolated restore\/recovery database/i);
+  const hostWithMarker = new URL(targetUrl('plain_target'));
+  hostWithMarker.hostname = 'restore-host.example';
+  const markerInHost = runGuard(hostWithMarker.toString());
+  assert.match(markerInHost.stderr, /isolated restore\/recovery database/i);
+  const queryWithMarker = new URL(targetUrl('plain_target'));
+  queryWithMarker.search = '?mode=restore';
+  const markerInQuery = runGuard(queryWithMarker.toString());
+  assert.match(markerInQuery.stderr, /isolated restore\/recovery database/i);
+  const encodedPathTrick = runGuard(targetUrl('wsp03%2Frestore'));
+  assert.match(encodedPathTrick.stderr, /simple, unencoded database name/i);
 
-  const badName = runPowerShell(restoreScript, ['-BackupFile', 'missing.dump'], drillEnv({
-    NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
-    ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('wsp03_plain_database'),
-  }));
-  assert.notEqual(badName.status, 0);
+  const canonicalWithDifferentCredentials = runGuard(
+    targetUrl('ai_marketing_phase1', 'different_user', 'different_password'),
+  );
+  assert.match(canonicalWithDifferentCredentials.stderr, /RESTORE_TARGET_CANONICAL_DATABASE/);
+  const encodedCanonicalUrl = new URL(targetUrl('ai_marketing_phase1', 'different_user', 'different_password'));
+  encodedCanonicalUrl.pathname = '/%61i_marketing_phase1';
+  const encodedCanonical = runGuard(encodedCanonicalUrl.toString());
+  assert.match(encodedCanonical.stderr, /RESTORE_TARGET_CANONICAL_DATABASE/);
+
+  const sameSourceDifferentCredentials = runGuard(
+    targetUrl('wsp03_restore_source', 'different_user', 'different_password'),
+    targetUrl('wsp03_restore_source', 'source_user', 'source_password'),
+  );
+  assert.match(sameSourceDifferentCredentials.stderr, /RESTORE_TARGET_MATCHES_SOURCE_DATABASE/);
+
+  const validIsolated = runGuard(urlWithDatabase('wsp03_restore_acceptance'));
+  assert.match(validIsolated.stderr, /Backup file does not exist/);
+});
+
+test('restore fails closed before invoking restore tools for canonical targets', () => {
+  const result = runPowerShell(
+    restoreScript,
+    ['-BackupFile', join(tmpdir(), 'valid-looking-backup.dump'), '-CreateDatabase'],
+    drillEnv({
+      NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+      ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('ai_marketing_phase1', 'different_user', 'different_password'),
+      PG_RESTORE_PATH: join(tmpdir(), 'must-not-be-resolved-before-target-validation.exe'),
+    }),
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /RESTORE_TARGET_CANONICAL_DATABASE/);
 });
 
 test('restore tooling fails closed for missing and corrupt artifacts', { skip: !prerequisites && skipReason }, () => {

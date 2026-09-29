@@ -21,7 +21,7 @@ interface Fixture {
   server: Server;
   sign: (
     claims: Record<string, unknown>,
-    options?: { audience?: string; expired?: boolean; notBefore?: string },
+    options?: { audience?: string; expired?: boolean; notBefore?: string; omitExpiration?: boolean },
   ) => Promise<string>;
   attackerSign: (claims: Record<string, unknown>) => Promise<string>;
 }
@@ -54,15 +54,17 @@ async function startFixtureIdp(): Promise<Fixture> {
 
   const sign = async (
     claims: Record<string, unknown>,
-    options: { audience?: string; expired?: boolean; notBefore?: string } = {},
+    options: { audience?: string; expired?: boolean; notBefore?: string; omitExpiration?: boolean } = {},
   ): Promise<string> => {
     const token = new SignJWT({ tenant_id: TENANT, roles: ['tenant_admin'], permissions: [], ...claims })
       .setProtectedHeader({ alg: 'RS256', kid: 'wsp04-test-key' })
       .setIssuer(issuer)
       .setAudience(options.audience ?? audience)
       .setSubject(String(claims.sub ?? 'wsp04-subject'))
-      .setIssuedAt()
-      .setExpirationTime(options.expired ? new Date(Date.now() - 60_000) : '5m');
+      .setIssuedAt();
+    if (!options.omitExpiration) {
+      token.setExpirationTime(options.expired ? new Date(Date.now() - 60_000) : '5m');
+    }
     if (options.notBefore) token.setNotBefore(options.notBefore);
     return token.sign(privateKey as never);
   };
@@ -128,6 +130,17 @@ test('OIDC rejects an expired token', async () => {
   try {
     const provider = new OidcAuthProvider({ issuerUrl: fixture.issuer, audience: fixture.audience });
     const token = await fixture.sign({}, { expired: true });
+    await assert.rejects(() => provider.verifyAccessToken(token), AuthenticationError);
+  } finally {
+    await new Promise((resolve) => fixture.server.close(resolve));
+  }
+});
+
+test('OIDC rejects a correctly signed token without exp', async () => {
+  const fixture = await startFixtureIdp();
+  try {
+    const provider = new OidcAuthProvider({ issuerUrl: fixture.issuer, audience: fixture.audience });
+    const token = await fixture.sign({}, { omitExpiration: true });
     await assert.rejects(() => provider.verifyAccessToken(token), AuthenticationError);
   } finally {
     await new Promise((resolve) => fixture.server.close(resolve));

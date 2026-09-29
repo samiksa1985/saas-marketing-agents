@@ -9,15 +9,48 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($env:NAWA_ISOLATED_RESTORE_CONFIRM -ne 'YES') { throw 'Set NAWA_ISOLATED_RESTORE_CONFIRM=YES only for an isolated restore target.' }
 if ([string]::IsNullOrWhiteSpace($env:ISOLATED_RESTORE_DATABASE_URL)) { throw 'ISOLATED_RESTORE_DATABASE_URL is required and is never printed.' }
-if ($env:ISOLATED_RESTORE_DATABASE_URL -eq $env:DATABASE_URL) { throw 'Restore target must not equal DATABASE_URL.' }
-if ($env:ISOLATED_RESTORE_DATABASE_URL -notmatch '(?i)(restore|recovery|acceptance)') { throw 'Restore target name must explicitly identify an isolated restore/recovery database.' }
-if (-not (Test-Path -LiteralPath $BackupFile)) { throw 'Backup file does not exist.' }
+if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL)) { throw 'DATABASE_URL is required to prove the restore target is isolated.' }
 
-$uri = [System.Uri]$env:ISOLATED_RESTORE_DATABASE_URL
-$targetDb = $uri.Segments[-1].Trim('/')
-if ([string]::IsNullOrWhiteSpace($targetDb) -or $targetDb -notmatch '^[A-Za-z0-9_]+$') { throw 'ISOLATED_RESTORE_DATABASE_URL must end in a simple database name.' }
-$dbUser = ($uri.UserInfo -split ':')[0]
+function Get-DatabaseIdentity([string]$value) {
+  try { $parsed = [System.Uri]$value } catch { throw 'Database URL is invalid.' }
+  if (-not $parsed.IsAbsoluteUri -or $parsed.Scheme -notin @('postgres', 'postgresql') -or [string]::IsNullOrWhiteSpace($parsed.Host)) {
+    throw 'Database URL must be an absolute PostgreSQL URL.'
+  }
+  $segments = $parsed.AbsolutePath.TrimStart('/').Split('/')
+  if ($segments.Count -ne 1 -or [string]::IsNullOrWhiteSpace($segments[0])) {
+    throw 'Database URL must identify exactly one database path component.'
+  }
+  $database = [System.Uri]::UnescapeDataString($segments[0])
+  if ($database -notmatch '^[A-Za-z0-9_]+$') {
+    throw 'Database URL must end in a simple, unencoded database name.'
+  }
+  $port = if ($parsed.IsDefaultPort -or $parsed.Port -lt 1) { 5432 } else { $parsed.Port }
+  return [pscustomobject]@{
+    Uri = $parsed
+    Host = $parsed.DnsSafeHost.TrimEnd('.').ToLowerInvariant()
+    Port = $port
+    Database = $database
+    User = [System.Uri]::UnescapeDataString(($parsed.UserInfo -split ':')[0])
+  }
+}
+
+# Validate both identities before any database creation or pg_restore --clean.
+$target = Get-DatabaseIdentity $env:ISOLATED_RESTORE_DATABASE_URL
+$source = Get-DatabaseIdentity $env:DATABASE_URL
+$uri = $target.Uri
+$targetDb = $target.Database
+$dbUser = $target.User
 if ([string]::IsNullOrWhiteSpace($dbUser)) { throw 'ISOLATED_RESTORE_DATABASE_URL must include a user (password is never echoed).' }
+if ($target.Database -in @('ai_marketing_phase1', 'platform', 'postgres', 'template0', 'template1')) {
+  throw 'RESTORE_TARGET_CANONICAL_DATABASE'
+}
+if ($target.Database -notmatch '(?i)(restore|recovery|acceptance)') {
+  throw 'Restore target database name must explicitly identify an isolated restore/recovery database.'
+}
+if ($target.Host -eq $source.Host -and $target.Port -eq $source.Port -and $target.Database -eq $source.Database) {
+  throw 'RESTORE_TARGET_MATCHES_SOURCE_DATABASE'
+}
+if (-not (Test-Path -LiteralPath $BackupFile)) { throw 'Backup file does not exist.' }
 
 function Resolve-Tool([string]$explicit, [string]$name) {
   if (-not [string]::IsNullOrWhiteSpace($explicit)) {

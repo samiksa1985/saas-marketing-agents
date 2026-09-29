@@ -19,11 +19,16 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
 import postgres from 'postgres';
 
 import { runCrossTenantProbe } from './cross-tenant-probe.js';
-import { PRODUCTION_APP_ROLE, assertRuntimeRoleIsSafe } from './runtime-role-verify.js';
+import {
+  PRODUCTION_APP_ROLE,
+  assertNoProtectedTablesOwnedByRuntime,
+  assertRuntimeRoleHasNoMemberships,
+  assertRuntimeRoleIsSafe,
+} from './runtime-role-verify.js';
+import { assertMigrationAuthority } from './migration-url.js';
 import { sharedTestAppPassword } from './test-app-password.js';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -98,10 +103,13 @@ function baseConfigEnv(): NodeJS.ProcessEnv {
 }
 
 function productionConfigEnv(databaseUrl: string): NodeJS.ProcessEnv {
+  const migrationUrl = new URL(ownerUrl!);
+  migrationUrl.pathname = new URL(databaseUrl).pathname;
   return {
     ...baseConfigEnv(),
     NODE_ENV: 'production',
     DATABASE_URL: databaseUrl,
+    MIGRATION_DATABASE_URL: migrationUrl.toString(),
     WEB_URL: 'https://pilot.wsp02.example.test',
     CORS_ALLOWED_ORIGINS: 'https://pilot.wsp02.example.test',
     TRUST_PROXY: 'false',
@@ -116,7 +124,11 @@ function runVerify(env: NodeJS.ProcessEnv): SpawnedJson {
 }
 
 function runProvision(extraEnv: NodeJS.ProcessEnv = {}): SpawnedJson {
-  return spawnTsx('scripts/provision-production-roles.ts', { ...baseConfigEnv(), ...extraEnv });
+  return spawnTsx('scripts/provision-production-roles.ts', {
+    ...baseConfigEnv(),
+    MIGRATION_DATABASE_URL: ownerUrl!,
+    ...extraEnv,
+  });
 }
 
 function quoteIdentifier(value: string): string {
@@ -127,12 +139,74 @@ const testRole = (name: string) => `wsp02_${name}`;
 // Shared across concurrently running DB integration suites (see module doc).
 const appPassword = sharedTestAppPassword();
 
+test('cross-tenant probe fails closed on prerequisite errors and missing own-tenant data', async () => {
+  const makeClient = (failAt?: number, emptyOwnRead = false) => {
+    let call = 0;
+    const transaction: {
+      unsafe: (query: string) => Promise<unknown>;
+      savepoint: <T>(operation: (tx: typeof transaction) => Promise<T>) => Promise<T>;
+    } = {
+      unsafe: async (query: string) => {
+        call += 1;
+        if (call === 10) {
+          throw Object.assign(
+            new Error('new row violates row-level security policy for table "marketing_memory_records"'),
+            { code: '42501' },
+          );
+        }
+        if (call === failAt) {
+          throw Object.assign(new Error('permission denied'), { code: '42501' });
+        }
+        if (query.includes('SELECT 1 AS one FROM marketing_memory_records')) {
+          return call === 5 && !emptyOwnRead ? [{ one: 1 }] : [];
+        }
+        if (query.includes('UPDATE marketing_memory_records') || query.includes('DELETE FROM marketing_memory_records')) {
+          return [];
+        }
+        if (query.includes('SELECT statement FROM marketing_memory_records')) {
+          return [{ statement: 'probe fixture (rolled back)' }];
+        }
+        return [];
+      },
+      savepoint: async (operation) => operation(transaction),
+    };
+    return {
+      begin: async (operation: (tx: typeof transaction) => Promise<void>) => {
+        try {
+          await operation(transaction);
+        } catch (error) {
+          if (!(error instanceof Error) || error.message !== 'CROSS_TENANT_PROBE_ROLLBACK') throw error;
+        }
+      },
+    };
+  };
+
+  for (const failAt of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+    await assert.rejects(
+      () => runCrossTenantProbe(makeClient(failAt)),
+      /permission denied/,
+      `prerequisite call ${failAt} must not be interpreted as isolation`,
+    );
+  }
+  await assert.rejects(
+    () => runCrossTenantProbe(makeClient(undefined, true)),
+    /PROBE_SANITY_OWN_TENANT_FAILED/,
+  );
+  assert.deepEqual(await runCrossTenantProbe(makeClient()), {
+    table: 'marketing_memory_records',
+    selectIsolation: true,
+    insertIsolation: true,
+    updateIsolation: true,
+    deleteIsolation: true,
+  });
+});
+
 test('G: role provisioning converges codecore_app and is idempotent', { skip: !dbAvailable && skipReason }, async () => {
-  const first = runProvision({ CODECORE_APP_PASSWORD: appPassword });
+  const first = runProvision({ MIGRATION_DATABASE_URL: ownerUrl!, CODECORE_APP_PASSWORD: appPassword });
   assert.equal(first.status, 0, `first provisioning failed: ${first.stderr}`);
   assert.equal(first.json?.status, 'ok');
 
-  const second = runProvision({ CODECORE_APP_PASSWORD: appPassword });
+  const second = runProvision({ MIGRATION_DATABASE_URL: ownerUrl!, CODECORE_APP_PASSWORD: appPassword });
   assert.equal(second.status, 0, `second provisioning failed: ${second.stderr}`);
   assert.equal(second.json?.status, 'ok');
 
@@ -142,6 +216,8 @@ test('G: role provisioning converges codecore_app and is idempotent', { skip: !d
   }
 
   const client = postgres(ownerUrl!, { max: 1, prepare: false });
+  const escalatedRole = testRole('escalation');
+  const defaultPrivilegeTable = testRole('default_privileges');
   try {
     const rows = Array.from(
       (await client.unsafe(
@@ -168,8 +244,118 @@ test('G: role provisioning converges codecore_app and is idempotent', { skip: !d
       )) as Iterable<{ relname: string }>,
     );
     assert.deepEqual(owned, [], 'codecore_app must not own protected tenant tables');
+
+    for (const table of ['tenants', 'users', 'roles', 'permissions', 'role_permissions', 'tenant_members']) {
+      const privileges = Array.from(
+        (await client.unsafe(
+          `SELECT has_table_privilege($1, $2, 'SELECT') AS can_select,
+                  has_table_privilege($1, $2, 'INSERT') AS can_insert,
+                  has_table_privilege($1, $2, 'UPDATE') AS can_update,
+                  has_table_privilege($1, $2, 'DELETE') AS can_delete`,
+          [PRODUCTION_APP_ROLE, `public.${table}`],
+        )) as Iterable<{ can_select: boolean; can_insert: boolean; can_update: boolean; can_delete: boolean }>,
+      )[0]!;
+      assert.equal(privileges.can_select, true, `${table} must remain readable for membership resolution`);
+      assert.deepEqual(
+        [privileges.can_insert, privileges.can_update, privileges.can_delete],
+        [false, false, false],
+        `${table} authorization/control writes must not be granted to runtime`,
+      );
+    }
+
+    await client.unsafe(`DROP TABLE IF EXISTS public.${quoteIdentifier(defaultPrivilegeTable)}`);
+    await client.unsafe(
+      `CREATE TABLE public.${quoteIdentifier(defaultPrivilegeTable)} (id uuid PRIMARY KEY, payload text)`,
+    );
+    const futurePrivileges = Array.from(
+      (await client.unsafe(
+        `SELECT has_table_privilege($1, $2, 'SELECT') AS can_select,
+                has_table_privilege($1, $2, 'INSERT') AS can_insert,
+                has_table_privilege($1, $2, 'UPDATE') AS can_update,
+                has_table_privilege($1, $2, 'DELETE') AS can_delete`,
+        [PRODUCTION_APP_ROLE, `public.${defaultPrivilegeTable}`],
+      )) as Iterable<{ can_select: boolean; can_insert: boolean; can_update: boolean; can_delete: boolean }>,
+    )[0]!;
+    assert.deepEqual(
+      [futurePrivileges.can_select, futurePrivileges.can_insert, futurePrivileges.can_update, futurePrivileges.can_delete],
+      [true, false, false, false],
+      'future tables must not inherit broad runtime DML privileges',
+    );
+
+    await client.unsafe(`DROP ROLE IF EXISTS ${quoteIdentifier(escalatedRole)}`);
+    await client.unsafe(`CREATE ROLE ${quoteIdentifier(escalatedRole)} NOLOGIN CREATEDB`);
+    await client.unsafe(`GRANT ${quoteIdentifier(escalatedRole)} TO ${quoteIdentifier(PRODUCTION_APP_ROLE)}`);
+    await assert.rejects(() => assertRuntimeRoleHasNoMemberships(client), /PRODUCTION_RUNTIME_ROLE_MEMBERSHIP_FORBIDDEN/);
+
+    const app = postgres(urlAsRole(PRODUCTION_APP_ROLE, appPassword), { max: 1, prepare: false });
+    try {
+      await app.unsafe(`SET ROLE ${quoteIdentifier(escalatedRole)}`);
+      assert.equal(
+        Array.from(await app.unsafe('SELECT current_user AS name') as Iterable<{ name: string }>)[0]?.name,
+        escalatedRole,
+        'the adversarial membership must demonstrate SET ROLE before provisioning',
+      );
+    } finally {
+      await app.end();
+    }
+
+    const repaired = runProvision({ MIGRATION_DATABASE_URL: ownerUrl!, CODECORE_APP_PASSWORD: appPassword });
+    assert.equal(repaired.status, 0, `membership convergence failed: ${repaired.stderr}`);
+    const postProvisionApp = postgres(urlAsRole(PRODUCTION_APP_ROLE, appPassword), { max: 1, prepare: false });
+    try {
+      await assert.rejects(
+        () => postProvisionApp.unsafe(`SET ROLE ${quoteIdentifier(escalatedRole)}`),
+        /permission denied to set role|must be member of role/i,
+      );
+      for (const table of ['tenants', 'users', 'roles', 'permissions', 'role_permissions', 'tenant_members']) {
+        await assert.rejects(() => postProvisionApp.unsafe(`INSERT INTO public.${table} DEFAULT VALUES`), /permission denied/i);
+        const columns = Array.from(
+          (await client.unsafe(
+            `SELECT a.attname
+             FROM pg_attribute a
+             WHERE a.attrelid = to_regclass($1) AND a.attnum > 0 AND NOT a.attisdropped
+               AND a.attgenerated = '' AND a.attidentity = ''
+             ORDER BY a.attnum LIMIT 1`,
+            [`public.${table}`],
+          )) as Iterable<{ attname: string }>,
+        );
+        assert.ok(columns[0], `${table} must have an ordinary column for the UPDATE denial probe`);
+        const column = quoteIdentifier(columns[0].attname);
+        await assert.rejects(
+          () => postProvisionApp.unsafe(`UPDATE public.${table} SET ${column} = ${column} WHERE false`),
+          /permission denied/i,
+        );
+        await assert.rejects(() => postProvisionApp.unsafe(`DELETE FROM public.${table} WHERE false`), /permission denied/i);
+      }
+    } finally {
+      await postProvisionApp.end();
+    }
   } finally {
+    await client.unsafe(`DROP TABLE IF EXISTS public.${quoteIdentifier(defaultPrivilegeTable)}`).catch(() => undefined);
+    await client.unsafe(`REVOKE ${quoteIdentifier(escalatedRole)} FROM ${quoteIdentifier(PRODUCTION_APP_ROLE)}`).catch(() => undefined);
+    await client.unsafe(`DROP ROLE IF EXISTS ${quoteIdentifier(escalatedRole)}`).catch(() => undefined);
     await client.end();
+  }
+});
+
+test('production migration authority accepts the migration role and rejects codecore_app', { skip: !dbAvailable && skipReason }, async () => {
+  const migrationClient = postgres(ownerUrl!, { max: 1, prepare: false });
+  try {
+    const migrationRole = await assertMigrationAuthority(migrationClient);
+    assert.notEqual(migrationRole, PRODUCTION_APP_ROLE);
+  } finally {
+    await migrationClient.end();
+  }
+
+  assert.equal(runProvision({ MIGRATION_DATABASE_URL: ownerUrl!, CODECORE_APP_PASSWORD: appPassword }).status, 0);
+  const runtimeClient = postgres(urlAsRole(PRODUCTION_APP_ROLE, appPassword), { max: 1, prepare: false });
+  try {
+    await assert.rejects(
+      () => assertMigrationAuthority(runtimeClient),
+      /PRODUCTION_MIGRATION_ROLE_IS_RUNTIME/,
+    );
+  } finally {
+    await runtimeClient.end();
   }
 });
 
@@ -214,7 +400,7 @@ test('C: verifier rejects a runtime role that owns protected tenant tables', { s
   try {
     await owner.unsafe(`DROP ROLE IF EXISTS ${quoteIdentifier(role)}`);
     await owner.unsafe(
-      `CREATE ROLE ${quoteIdentifier(role)} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '${password}'`,
+      `CREATE ROLE ${quoteIdentifier(role)} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '${password}'`,
     );
     await owner.unsafe(`DROP TABLE IF EXISTS public.${table}`);
     await owner.unsafe(
@@ -229,9 +415,13 @@ test('C: verifier rejects a runtime role that owns protected tenant tables', { s
     );
     await owner.unsafe(`ALTER TABLE public.${table} OWNER TO ${quoteIdentifier(role)}`);
 
+    await assert.rejects(
+      () => assertNoProtectedTablesOwnedByRuntime(owner, role),
+      /PRODUCTION_RUNTIME_OWNS_TENANT_TABLES/,
+    );
     const result = runVerify(productionConfigEnv(urlAsRole(role, password)));
     assert.notEqual(result.status, 0);
-    assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_OWNS_TENANT_TABLES');
+    assert.equal(result.json?.code, 'PRODUCTION_RUNTIME_USER_NOT_CODECORE_APP');
   } finally {
     await owner.unsafe(`DROP TABLE IF EXISTS public.${table}`).catch(() => undefined);
     await owner.unsafe(`DROP ROLE IF EXISTS ${quoteIdentifier(role)}`).catch(() => undefined);
@@ -251,18 +441,23 @@ test('D: verifier accepts a correctly configured codecore_app runtime authority'
   assert.equal(result.json?.runtimeRoleSafe, true);
   assert.equal(result.json?.tenantPolicyCoverage, 'enabled');
   assert.equal(result.json?.crossTenantSelectIsolation, 'enforced', 'production verify must prove cross-tenant SELECT isolation');
+  assert.equal(result.json?.crossTenantInsertIsolation, 'enforced');
+  assert.equal(result.json?.crossTenantUpdateIsolation, 'enforced');
+  assert.equal(result.json?.crossTenantDeleteIsolation, 'enforced');
   assert.equal(result.json?.crossTenantWriteIsolation, 'enforced', 'production verify must prove cross-tenant write isolation');
   assert.match(String(result.json?.migrations), /^\d+$/);
 });
 
-test('E/F: cross-tenant probe proves SELECT and WRITE isolation with a rolled-back transaction', { skip: !dbAvailable && skipReason }, async () => {
+test('cross-tenant probe proves SELECT, INSERT, UPDATE, and DELETE isolation with rollback', { skip: !dbAvailable && skipReason }, async () => {
   const client = postgres(ownerUrl!, { max: 1, prepare: false });
   try {
     const result = await runCrossTenantProbe(client, { appRole: PRODUCTION_APP_ROLE });
     assert.deepEqual(result, {
       table: 'marketing_memory_records',
       selectIsolation: true,
-      writeIsolation: true,
+      insertIsolation: true,
+      updateIsolation: true,
+      deleteIsolation: true,
     });
 
     // No persistent probe data may remain (transaction must have rolled back).
@@ -280,6 +475,46 @@ test('E/F: cross-tenant probe proves SELECT and WRITE isolation with a rolled-ba
     assert.equal(Number(fixtureLeftovers[0]?.count ?? -1), 0, 'probe fixtures must roll back');
   } finally {
     await client.end();
+  }
+});
+
+test('RLS verifier rejects a permissive or bypassing tenant-table policy', { skip: !dbAvailable && skipReason }, async () => {
+  const table = 'marketing_memory_records';
+  const bypassPolicy = 'wsp02_unscoped_policy';
+  const missingUsingPolicy = 'wsp02_missing_using_policy';
+  const policies = [bypassPolicy, missingUsingPolicy];
+  const owner = postgres(ownerUrl!, { max: 1, prepare: false });
+  try {
+    // Permissive predicates that bypass or omit tenant scoping must be rejected.
+    for (const policy of policies) {
+      await owner.unsafe(`DROP POLICY IF EXISTS ${quoteIdentifier(policy)} ON public.${table}`);
+    }
+    await owner.unsafe(
+      `CREATE POLICY ${quoteIdentifier(bypassPolicy)} ON public.${table} FOR ALL
+       USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid OR true)
+       WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid OR true)`,
+    );
+    await owner.unsafe(
+      `CREATE POLICY ${quoteIdentifier(missingUsingPolicy)} ON public.${table} FOR ALL
+       WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)`,
+    );
+  } finally {
+    await owner.end();
+  }
+  try {
+    assert.equal(runProvision({ CODECORE_APP_PASSWORD: appPassword }).status, 0);
+    const result = runVerify(productionConfigEnv(urlAsRole(PRODUCTION_APP_ROLE, appPassword)));
+    assert.notEqual(result.status, 0);
+    assert.equal(result.json?.code, 'TENANT_POLICY_COVERAGE_GAP');
+  } finally {
+    const cleanup = postgres(ownerUrl!, { max: 1, prepare: false });
+    try {
+      for (const policy of policies) {
+        await cleanup.unsafe(`DROP POLICY IF EXISTS ${quoteIdentifier(policy)} ON public.${table}`);
+      }
+    } finally {
+      await cleanup.end();
+    }
   }
 });
 

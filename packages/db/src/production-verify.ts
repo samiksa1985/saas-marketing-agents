@@ -5,11 +5,11 @@ import { loadJournalMigrations } from './journal-migration-runner.js';
 import {
   PRODUCTION_APP_ROLE,
   assertExpectedProductionRoles,
-  assertNoProtectedTablesOwnedByRuntime,
+  assertProductionRuntimeAuthority,
   assertRlsPolicyCoverage,
-  assertRuntimeRoleIsSafe,
 } from './runtime-role-verify.js';
 import { runCrossTenantProbe } from './cross-tenant-probe.js';
+import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from './migration-url.js';
 
 const config = loadConfig();
 const client = postgres(config.databaseUrl, { max: 1, prepare: false });
@@ -24,8 +24,7 @@ try {
   // before the ledger/shape checks execute.
   let runtimeRole: string | undefined;
   if (config.nodeEnv === 'production') {
-    runtimeRole = await assertRuntimeRoleIsSafe(client);
-    await assertNoProtectedTablesOwnedByRuntime(client, runtimeRole);
+    runtimeRole = await assertProductionRuntimeAuthority(client);
     await assertExpectedProductionRoles(client);
   }
 
@@ -53,13 +52,25 @@ try {
 
   if (config.nodeEnv === 'production') {
     await assertRlsPolicyCoverage(client);
-    const probe = await runCrossTenantProbe(client, { appRole: PRODUCTION_APP_ROLE });
+    const probeUrl = resolveMigrationDatabaseUrl(process.env, config.databaseUrl, config.nodeEnv);
+    const probeClient = postgres(probeUrl, { max: 1, prepare: false });
+    let probe: Awaited<ReturnType<typeof runCrossTenantProbe>>;
+    try {
+      await assertMigrationAuthority(probeClient);
+      probe = await runCrossTenantProbe(probeClient, { appRole: PRODUCTION_APP_ROLE });
+    } finally {
+      await probeClient.end();
+    }
     result.runtimeRole = runtimeRole!;
     result.appRole = PRODUCTION_APP_ROLE;
     result.runtimeRoleSafe = true;
     result.tenantPolicyCoverage = 'enabled';
     result.crossTenantSelectIsolation = probe.selectIsolation ? 'enforced' : 'unproven';
-    result.crossTenantWriteIsolation = probe.writeIsolation ? 'enforced' : 'unproven';
+    result.crossTenantInsertIsolation = probe.insertIsolation ? 'enforced' : 'unproven';
+    result.crossTenantUpdateIsolation = probe.updateIsolation ? 'enforced' : 'unproven';
+    result.crossTenantDeleteIsolation = probe.deleteIsolation ? 'enforced' : 'unproven';
+    result.crossTenantWriteIsolation =
+      probe.insertIsolation && probe.updateIsolation && probe.deleteIsolation ? 'enforced' : 'unproven';
   }
 
   process.stdout.write(JSON.stringify({ status: 'ready', ...result }) + '\n');

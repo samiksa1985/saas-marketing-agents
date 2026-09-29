@@ -11,21 +11,16 @@
  *                     LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE.
  *
  * Guarantees:
- *   - Safe to run repeatedly (converges attributes, grants, default privileges).
+ *   - Safe to run repeatedly (converges attributes, memberships, and grants).
  *   - Never owns protected tenant tables; ownership stays with codecore_owner.
  *   - Never logs or echoes the application password.
- *   - Bounded grants: schema USAGE, table DML, sequence USAGE/SELECT only.
+ *   - Global identity and authorization tables are read-only to application code.
  */
 import postgres from 'postgres';
+import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from '../src/migration-url.js';
 
 const OWNER_ROLE = 'codecore_owner';
 const APP_ROLE = 'codecore_app';
-
-function required(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required`);
-  return value;
-}
 
 /** SQL identifier quoting: ALTER ROLE "x", GRANT ... TO "x". */
 function quoteIdentifier(value: string): string {
@@ -40,8 +35,8 @@ function quoteLiteral(value: string): string {
 type SqlClient = ReturnType<typeof postgres>;
 
 async function convergeAppRole(client: SqlClient, password: string | undefined): Promise<void> {
-  // Converge identity attributes. ALTER ROLE only touches the flags listed;
-  // INHERIT is disabled so membership calisthenics cannot widen authority.
+  // NOINHERIT prevents implicit privilege inheritance; membership removal below
+  // also prevents explicit SET ROLE escalation.
   const attrs = 'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT';
   const existing = Array.from(
     (await client.unsafe('SELECT 1 FROM pg_roles WHERE rolname = $1', [APP_ROLE])) as Iterable<unknown>,
@@ -64,6 +59,32 @@ async function convergeAppRole(client: SqlClient, password: string | undefined):
     )) as Iterable<unknown>,
   );
   if (drift.length > 0) throw new Error('CODECORE_APP_ATTRIBUTE_DRIFT');
+
+  const memberships = Array.from(
+    (await client.unsafe(
+      `SELECT r.rolname
+       FROM pg_roles r
+       WHERE EXISTS (
+         SELECT 1 FROM pg_auth_members m
+         WHERE m.member = $1::regrole::oid AND m.roleid = r.rolname::regrole::oid
+       )`,
+      [APP_ROLE],
+    )) as Iterable<{ rolname: string }>,
+  );
+  for (const { rolname } of memberships) {
+    await client.unsafe(`REVOKE ${quoteIdentifier(rolname)} FROM ${quoteIdentifier(APP_ROLE)}`);
+  }
+  const remainingMemberships = Array.from(
+    (await client.unsafe(
+      `SELECT r.rolname
+       FROM pg_roles r
+      WHERE r.rolname <> $1 AND pg_has_role($1, r.rolname, 'MEMBER')`,
+      [APP_ROLE],
+    )) as Iterable<{ rolname: string }>,
+  );
+  if (remainingMemberships.length > 0) {
+    throw new Error(`CODECORE_APP_ROLE_MEMBERSHIP_DRIFT:${remainingMemberships.map((r) => r.rolname).join(',')}`);
+  }
 }
 
 async function assertTableOwnershipGuard(client: SqlClient): Promise<{ checked: number }> {
@@ -73,7 +94,7 @@ async function assertTableOwnershipGuard(client: SqlClient): Promise<{ checked: 
       `SELECT c.relname
        FROM pg_class c
        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public' AND c.relkind = 'r'
+       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
          AND EXISTS (
            SELECT 1 FROM pg_attribute a
            WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
@@ -90,7 +111,7 @@ async function assertTableOwnershipGuard(client: SqlClient): Promise<{ checked: 
   const owned = Array.from(
     (await client.unsafe(
       `SELECT count(*)::int AS count FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public' AND c.relkind = 'r'
+       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
          AND EXISTS (
            SELECT 1 FROM pg_attribute a
            WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
@@ -101,11 +122,32 @@ async function assertTableOwnershipGuard(client: SqlClient): Promise<{ checked: 
 }
 
 async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
-  // Schema visibility and DML on existing objects only.
+  // Runtime needs reads across the schema, but write authority is explicit.
   await client.unsafe(`GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`);
-  await client.unsafe(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`,
+  await client.unsafe(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`);
+
+  const protectedTables = ['tenants', 'users', 'roles', 'permissions', 'role_permissions', 'tenant_members'];
+  const tables = Array.from(
+    (await client.unsafe(
+      `SELECT c.relname
+       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+       ORDER BY c.relname`,
+    )) as Iterable<{ relname: string }>,
   );
+  for (const { relname } of tables) {
+    const table = `${quoteIdentifier('public')}.${quoteIdentifier(relname)}`;
+    if (protectedTables.includes(relname)) {
+      await client.unsafe(
+        `REVOKE INSERT, UPDATE, DELETE ON TABLE ${table} FROM PUBLIC, ${quoteIdentifier(APP_ROLE)}`,
+      );
+      continue;
+    }
+    await client.unsafe(
+      `GRANT INSERT, UPDATE, DELETE ON TABLE ${table} TO ${quoteIdentifier(APP_ROLE)}`,
+    );
+  }
+
   await client.unsafe(
     `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`,
   );
@@ -129,14 +171,22 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
   // provisioning connection runs as a distinct bootstrap superuser.
   const owners = Array.from(
     (await client.unsafe(
-      `SELECT DISTINCT pg_get_userbyid(c.relowner) AS owner
-       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public' AND c.relkind = 'r'`,
+      `SELECT DISTINCT owner FROM (
+         SELECT pg_get_userbyid(c.relowner) AS owner
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+         UNION SELECT current_user
+         UNION SELECT rolname::text FROM pg_roles WHERE rolname = $1
+       ) owners`,
+      [OWNER_ROLE],
     )) as Iterable<{ owner: string }>,
   );
   for (const { owner } of owners) {
     await client.unsafe(
-      `ALTER DEFAULT PRIVILEGES FOR ROLE ${quoteIdentifier(owner)} IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${quoteIdentifier(APP_ROLE)}`,
+      `ALTER DEFAULT PRIVILEGES FOR ROLE ${quoteIdentifier(owner)} IN SCHEMA public REVOKE INSERT, UPDATE, DELETE ON TABLES FROM ${quoteIdentifier(APP_ROLE)}`,
+    );
+    await client.unsafe(
+      `ALTER DEFAULT PRIVILEGES FOR ROLE ${quoteIdentifier(owner)} IN SCHEMA public GRANT SELECT ON TABLES TO ${quoteIdentifier(APP_ROLE)}`,
     );
     await client.unsafe(
       `ALTER DEFAULT PRIVILEGES FOR ROLE ${quoteIdentifier(owner)} IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${quoteIdentifier(APP_ROLE)}`,
@@ -145,14 +195,17 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
 }
 
 async function run(): Promise<void> {
-  // Provisioning runs under the migration authority. MIGRATION_DATABASE_URL
-  // takes precedence; DATABASE_URL is the fallback for single-credential
-  // pilots. The URL is never printed.
-  const databaseUrl = process.env.MIGRATION_DATABASE_URL?.trim() || required('DATABASE_URL');
+  // Provisioning runs only through the explicit migration authority in production.
+  const databaseUrl = resolveMigrationDatabaseUrl(
+    process.env,
+    process.env.DATABASE_URL?.trim() ?? '',
+    process.env.NODE_ENV,
+  );
   const appPassword = process.env.CODECORE_APP_PASSWORD?.trim();
 
   const client = postgres(databaseUrl, { max: 1, prepare: false });
   try {
+    if (process.env.NODE_ENV === 'production') await assertMigrationAuthority(client);
     await convergeAppRole(client, appPassword || undefined);
     const guard = await assertTableOwnershipGuard(client);
     await grantBoundedRuntimePrivileges(client);

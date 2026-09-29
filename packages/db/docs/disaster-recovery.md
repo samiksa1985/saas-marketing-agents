@@ -22,9 +22,12 @@ Tool resolution order in both scripts: `PG_DUMP_PATH` / `PG_RESTORE_PATH` /
 ### Fail-closed gates (all scripts exit non-zero)
 
 - Backup requires `NAWA_BACKUP_CONFIRM=YES`.
-- Restore requires `NAWA_ISOLATED_RESTORE_CONFIRM=YES`, a target URL distinct
-  from `DATABASE_URL`, and a target database name containing
-  `restore|recovery|acceptance`.
+- Restore requires `NAWA_ISOLATED_RESTORE_CONFIRM=YES`, a target URL whose
+  decoded database name contains `restore|recovery|acceptance`, and a target
+  database distinct from both canonical names and the source database. Marker
+  text in a username, hostname, or query does not qualify. These guards run
+  before database creation or `pg_restore --clean`; differing credentials do
+  not make the same database an isolated target.
 - Backup fails if `pg_dump` fails, the artifact is missing/suspiciously small,
   or `pg_restore --list` cannot parse it. A partial backup never reports PASS.
 - `restore:verify` refuses canonical database names (`ai_marketing_phase1`,
