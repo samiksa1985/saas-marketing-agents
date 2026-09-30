@@ -88,11 +88,20 @@ activates in production.
 
 ## TLS
 
-Production connections MUST use TLS with full certificate verification,
-either via the URL (`?sslmode=verify-full`) or the equivalent `ssl:
-'verify-full'` postgres.js connection option, with the CA certificate
-provided by the platform secret store. Never use `sslmode=disable`,
-`allow`, or `prefer` in production.
+Production `DATABASE_URL` and `MIGRATION_DATABASE_URL` values MUST each include
+exactly one `?sslmode=verify-full` parameter. Configuration, migration URL
+resolution, and production PostgreSQL client creation reject a missing or
+weaker mode, including the restore verifier and PostgreSQL command-line
+boundary. Do not use `disable`, `allow`, `prefer`, `require`, or `verify-ca`
+in production.
+
+`verify-full` validates the server certificate chain and hostname. Node's
+system trust store is used unless `DATABASE_SSL_CA_FILE` points to an
+operator-managed CA bundle; when set, the file is loaded as the verified TLS
+trust root and an unreadable or empty file fails closed. The production Compose
+example mounts that external file at `/run/secrets/postgres_ca` and configures
+PostgreSQL with separately injected server certificate and private-key files.
+No certificate or key material belongs in the repository, image, URL, or logs.
 
 ## Backup / Restore / DR
 

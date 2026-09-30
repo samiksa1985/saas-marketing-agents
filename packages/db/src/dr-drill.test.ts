@@ -31,6 +31,14 @@ const DOCKER_CONTAINER = process.env.PG_DOCKER_CONTAINER ?? 'nawa-growth-phase1-
 const TEST_RUN_ID = randomUUID().replaceAll('-', '').slice(0, 12);
 const ISOLATED_DB = `wsp03_restore_acceptance_${TEST_RUN_ID}`;
 const CORRUPT_DB = `wsp03_corrupt_artifact_acceptance_${TEST_RUN_ID}`;
+const hasVerifiedTls = (() => {
+  try {
+    return process.env.DATABASE_URL !== undefined &&
+      new URL(process.env.DATABASE_URL).searchParams.getAll('sslmode').join() === 'verify-full';
+  } catch {
+    return false;
+  }
+})();
 
 function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
@@ -73,8 +81,12 @@ function dockerAvailable(): boolean {
   return probe.status === 0;
 }
 
-const prerequisites = ownerUrl !== undefined && dockerAvailable();
-const skipReason = 'pilot PostgreSQL container or DATABASE_URL secret unavailable';
+const prerequisites = ownerUrl !== undefined && hasVerifiedTls && dockerAvailable();
+const skipReason = ownerUrl === undefined
+  ? 'pilot PostgreSQL container or DATABASE_URL secret unavailable'
+  : hasVerifiedTls
+    ? 'pilot PostgreSQL container unavailable'
+    : 'pilot PostgreSQL must use sslmode=verify-full for production DR verification';
 
 interface SpawnedJson {
   status: number | null;
@@ -142,11 +154,12 @@ function productionEnv(databaseUrl: string, extra: NodeJS.ProcessEnv = {}): Node
     NODE_ENV: 'production',
     DATABASE_URL: databaseUrl,
     MIGRATION_DATABASE_URL: urlWithDatabase(migrationDatabase),
-    WEB_URL: 'https://drill.wsp03.example.test',
-    CORS_ALLOWED_ORIGINS: 'https://drill.wsp03.example.test',
+    WEB_URL: 'https://drill.wsp03.example.com',
+    API_PUBLIC_URL: 'https://api.wsp03.example.com',
+    CORS_ALLOWED_ORIGINS: 'https://drill.wsp03.example.com',
     TRUST_PROXY: 'false',
     RELEASE_VERSION: 'v1.0.0',
-    OIDC_ISSUER_URL: 'https://issuer.wsp03.example.test',
+    OIDC_ISSUER_URL: 'https://issuer.wsp03.example.com',
     OIDC_AUDIENCE: 'wsp03-drill',
     ...extra,
   });

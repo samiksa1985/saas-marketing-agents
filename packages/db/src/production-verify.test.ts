@@ -47,8 +47,18 @@ function resolvePilotDatabaseUrl(): string | undefined {
 }
 
 const ownerUrl = resolvePilotDatabaseUrl();
-const skipReason = 'pilot PostgreSQL unavailable (DATABASE_URL unset and no local pilot secret file)';
-const dbAvailable = ownerUrl !== undefined;
+const tlsReady = (() => {
+  try {
+    return ownerUrl !== undefined &&
+      new URL(ownerUrl).searchParams.getAll('sslmode').join() === 'verify-full';
+  } catch {
+    return false;
+  }
+})();
+const skipReason = ownerUrl
+  ? 'pilot PostgreSQL must use sslmode=verify-full for production verification tests'
+  : 'pilot PostgreSQL unavailable (DATABASE_URL unset and no local pilot secret file)';
+const dbAvailable = tlsReady;
 
 function urlAsRole(role: string, password: string): string {
   const url = new URL(ownerUrl!);
@@ -110,11 +120,12 @@ function productionConfigEnv(databaseUrl: string): NodeJS.ProcessEnv {
     NODE_ENV: 'production',
     DATABASE_URL: databaseUrl,
     MIGRATION_DATABASE_URL: migrationUrl.toString(),
-    WEB_URL: 'https://pilot.wsp02.example.test',
-    CORS_ALLOWED_ORIGINS: 'https://pilot.wsp02.example.test',
+    WEB_URL: 'https://pilot.wsp02.example.com',
+    API_PUBLIC_URL: 'https://api.wsp02.example.com',
+    CORS_ALLOWED_ORIGINS: 'https://pilot.wsp02.example.com',
     TRUST_PROXY: 'false',
     RELEASE_VERSION: 'v1.0.0',
-    OIDC_ISSUER_URL: 'https://issuer.wsp02.example.test',
+    OIDC_ISSUER_URL: 'https://issuer.wsp02.example.com',
     OIDC_AUDIENCE: 'wsp02-pilot',
   };
 }

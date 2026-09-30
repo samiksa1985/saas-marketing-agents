@@ -91,7 +91,12 @@ import {
   GOOGLE_ADS_MUTATION_TYPES,
   META_ADS_MUTATION_TYPES,
 } from '@platform/marketing-os-core';
-import { configureProductionRuntime, sanitizedRuntimeSummary } from './production-runtime.js';
+import {
+  configureProductionRuntime,
+  safeHealthResponse,
+  safeReadinessResponse,
+  sanitizedRuntimeSummary,
+} from './production-runtime.js';
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
 const config=loadConfig();
@@ -108,11 +113,11 @@ if (config.nodeEnv === 'production') {
 const tenantDatabase = new ApiTenantDatabase(database);
 
 @Controller() class AppController {
-  @Get('/health') health(){return {status:'ok',service:'api',...sanitizedRuntimeSummary(config)};}
+  @Get('/health') health(){return safeHealthResponse();}
   @Get('/ready') async ready(){
     try {
       await database.execute(sql`SELECT 1`);
-      return {status:'ready',database:'reachable',workflow:config.workflowRuntimeMode,...sanitizedRuntimeSummary(config)};
+      return safeReadinessResponse();
     } catch {
       throw new ServiceUnavailableException('Runtime dependency unavailable');
     }
@@ -316,4 +321,4 @@ if (config.nodeEnv !== 'production') {
   const swagger=new DocumentBuilder().setTitle('AI Marketing OS API').setVersion('1.0').build();
   SwaggerModule.setup('openapi',app,SwaggerModule.createDocument(app,swagger));
 }
-await app.listen(config.apiPort);
+await app.listen(config.apiPort, config.nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1');

@@ -19,6 +19,7 @@
 import postgres from 'postgres';
 import { resolveSecretEnvironment } from '@platform/config';
 import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from '../src/migration-url.js';
+import { productionPostgresOptions } from '../src/postgres-connection.js';
 
 const OWNER_ROLE = 'codecore_owner';
 const APP_ROLE = 'codecore_app';
@@ -210,7 +211,7 @@ async function run(): Promise<void> {
   const appPassword = secrets.CODECORE_APP_PASSWORD?.trim();
   if (secrets.NODE_ENV === 'production' && !appPassword) throw new Error('CODECORE_APP_PASSWORD_REQUIRED');
 
-  const client = postgres(databaseUrl, { max: 1, prepare: false });
+  const client = postgres(databaseUrl, productionPostgresOptions(databaseUrl, { max: 1, prepare: false }, secrets));
   try {
     if (process.env.NODE_ENV === 'production') await assertMigrationAuthority(client);
     await convergeAppRole(client, appPassword || undefined);

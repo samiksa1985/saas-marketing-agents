@@ -15,7 +15,7 @@ import { LocalAcceptanceAuthProvider } from './local-acceptance-auth.js';
 const baseEnv = {
   NODE_ENV: 'test',
   WEB_URL: 'http://localhost:3000',
-  DATABASE_URL: 'postgresql://test',
+  DATABASE_URL: 'postgresql://test?sslmode=verify-full',
   TEMPORAL_ADDRESS: 'localhost:7233',
   TEMPORAL_NAMESPACE: 'test',
   ARTIFACT_BUCKET: 'test',
@@ -66,6 +66,7 @@ test('production requires OIDC plus an authoritative tenant membership resolver'
     ...baseEnv,
     NODE_ENV: 'production',
     WEB_URL: 'https://web.example.com',
+    API_PUBLIC_URL: 'https://api.example.com',
     CORS_ALLOWED_ORIGINS: 'https://web.example.com',
     TRUST_PROXY: 'false',
     OIDC_ISSUER_URL: 'https://issuer.example.com',

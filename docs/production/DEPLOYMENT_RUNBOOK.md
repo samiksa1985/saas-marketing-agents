@@ -20,6 +20,16 @@ Provider mutation defaults remain disabled. Do not set any provider execution mo
 
 The production Compose file is a topology example, not deployment authorization. Supply `.env.production` at runtime through the approved operator/secret boundary; never commit it. The `migrate` service is disabled unless its migration profile is explicitly selected.
 
+## Domain, TLS, and network contract
+
+- Set `WEB_URL` and `API_PUBLIC_URL` to the browser web origin and API HTTPS origin with public DNS hostnames and certificates whose SANs cover each host. They may share a host when the proxy routes the API by path. Configure `OIDC_ISSUER_URL` as HTTPS and list the exact web origin in `CORS_ALLOWED_ORIGINS`; wildcard, localhost, IP-literal, and private/internal production origins are rejected.
+- The operator-managed reverse proxy is the only public listener on TCP 80/443. It redirects HTTP to HTTPS, terminates TLS, forwards to the Compose loopback listeners (`127.0.0.1:3000` and `127.0.0.1:4000`), and replaces untrusted `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Forwarded-Proto` values. Set `TRUST_PROXY=true` only with that boundary in place; the API trusts one proxy hop. Restrict host-local access to the published loopback ports.
+- The Compose example keeps PostgreSQL, the migration job, API, worker, and web on explicit private networks. PostgreSQL has no published port; the API and web host ports are loopback-only; the worker has no published port. PostgreSQL server TLS certificate/key files and the client CA trust bundle are external read-only secret references.
+- API outbound access uses a separate egress network for required OIDC, artifact/AI, and provider endpoints. The Compose bridge does not enforce destination allowlists: the target host/network firewall must restrict egress. The worker has no egress network in this example. Provider mutation remains disabled.
+- The browser OIDC redirect/callback URI is not implemented by this workstream. Before that flow is enabled, register the exact HTTPS callback URI under `API_PUBLIC_URL`; the current web CSP permits top-level HTTPS navigation while denying framing and cross-origin resource loads.
+
+Public DNS resolution, certificate issuance/renewal, reverse-proxy header replacement, firewall rules, private database reachability, and the actual server certificate chain must be verified in the target environment. The repository cannot prove those external controls.
+
 ## Build and rollback contract
 
 `infra/docker/Dockerfile` builds the three targets `api`, `web`, and `worker` from the same locked source revision. The release workflow publishes commit-identified tags, OCI provenance/SBOM attestations, and a machine-readable manifest; tag-triggered builds preserve the manifest and source SBOM on a draft GitHub Release. Use image references of the form `registry/name@sha256:...` for promotion and deployment. Tags are lookup labels, not deployment identity.

@@ -1,8 +1,11 @@
+import { isIP } from 'node:net';
 import { readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { resolveSecretEnvironment } from './secret-files.js';
+import { assertProductionDatabaseTls } from './database-tls.js';
 
 export { readSecretEnvironmentValue, resolveSecretEnvironment, SECRET_ENVIRONMENT_KEYS } from './secret-files.js';
+export { assertProductionDatabaseTls } from './database-tls.js';
 
 export type NodeEnvironment =
   | 'development'
@@ -26,6 +29,7 @@ export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
   apiPort: number;
   webUrl: string;
+  apiPublicUrl?: string;
   releaseVersion: string;
   corsAllowedOrigins: string[];
   trustProxy: boolean;
@@ -102,11 +106,30 @@ function positiveInteger(name: string, value: string | undefined, fallback: numb
   return parsed;
 }
 
-function httpsOrigin(name: string, value: string): string {
+function isNonPublicProductionHost(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  return !normalized.includes('.') ||
+    isIP(normalized) !== 0 ||
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    normalized.endsWith('.local') ||
+    normalized.endsWith('.internal') ||
+    normalized.endsWith('.home.arpa') ||
+    normalized.endsWith('.lan') ||
+    normalized.endsWith('.localdomain') ||
+    normalized.endsWith('.test') ||
+    normalized.endsWith('.invalid');
+}
+
+function httpsOrigin(name: string, value: string, production = false): string {
   let parsed: URL;
   try { parsed = new URL(value); } catch { throw new Error(`${name} must be an absolute HTTPS origin`); }
-  if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+  const validProtocol = parsed.protocol === 'https:' || (!production && parsed.protocol === 'http:');
+  if (!validProtocol || parsed.pathname !== '/' || parsed.search || parsed.hash || parsed.username || parsed.password) {
     throw new Error(`${name} must be an absolute HTTPS origin without a path`);
+  }
+  if (production && isNonPublicProductionHost(parsed.hostname)) {
+    throw new Error(`${name} must use a public DNS hostname in production`);
   }
   return parsed.origin;
 }
@@ -121,8 +144,11 @@ function absoluteUrl(name: string, value: string, options: { httpsOnly: boolean 
   if (options.httpsOnly && parsed.protocol !== 'https:') {
     throw new Error(`${name} must use HTTPS in production`);
   }
-  if (parsed.search || parsed.hash) {
+  if (parsed.search || parsed.hash || parsed.username || parsed.password) {
     throw new Error(`${name} must not include a query string or fragment`);
+  }
+  if (options.httpsOnly && isNonPublicProductionHost(parsed.hostname)) {
+    throw new Error(`${name} must use a public DNS hostname in production`);
   }
   return parsed.toString().replace(/\/+$/, '');
 }
@@ -133,7 +159,7 @@ function corsOrigins(value: string | undefined, production: boolean): string[] {
     if (production) throw new Error('Missing required environment variable: CORS_ALLOWED_ORIGINS');
     return [];
   }
-  return [...new Set(raw.split(',').map((origin) => httpsOrigin('CORS_ALLOWED_ORIGINS', origin.trim())))];
+  return [...new Set(raw.split(',').map((origin) => httpsOrigin('CORS_ALLOWED_ORIGINS', origin.trim(), production)))];
 }
 
 function googleAdsCustomerId(name: string, value: string | undefined): string | undefined {
@@ -222,13 +248,31 @@ export function loadConfig(
   if (nodeEnv === 'production' && !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(releaseVersion)) {
     throw new Error('RELEASE_VERSION must be a semantic version in production');
   }
-  const corsAllowedOrigins = corsOrigins(env.CORS_ALLOWED_ORIGINS, nodeEnv === 'production');
+  const production = nodeEnv === 'production';
+  const corsAllowedOrigins = corsOrigins(env.CORS_ALLOWED_ORIGINS, production);
   if (nodeEnv === 'production' && env.TRUST_PROXY === undefined) {
     throw new Error('Missing required environment variable: TRUST_PROXY');
   }
   const trustProxy = optionalBoolean('TRUST_PROXY', env.TRUST_PROXY);
   const apiRateLimitWindowMs = positiveInteger('API_RATE_LIMIT_WINDOW_MS', env.API_RATE_LIMIT_WINDOW_MS, 60_000);
   const apiRateLimitMax = positiveInteger('API_RATE_LIMIT_MAX', env.API_RATE_LIMIT_MAX, 300);
+  const webUrl = httpsOrigin('WEB_URL', required('WEB_URL', env.WEB_URL), production);
+  const apiPublicUrlValue = optional(env.API_PUBLIC_URL);
+  if (production && !apiPublicUrlValue) {
+    throw new Error('Missing required environment variable: API_PUBLIC_URL');
+  }
+  const apiPublicUrl = apiPublicUrlValue
+    ? httpsOrigin('API_PUBLIC_URL', apiPublicUrlValue, production)
+    : undefined;
+  const databaseUrl = required('DATABASE_URL', env.DATABASE_URL);
+  if (production) assertProductionDatabaseTls('DATABASE_URL', databaseUrl);
+  const databaseSslCaFile = optional(env.DATABASE_SSL_CA_FILE);
+  if (production && databaseSslCaFile && !isAbsolute(databaseSslCaFile)) {
+    throw new Error('DATABASE_SSL_CA_FILE must be an absolute path in production');
+  }
+  if (production && !corsAllowedOrigins.includes(webUrl)) {
+    throw new Error('CORS_ALLOWED_ORIGINS must include WEB_URL in production');
+  }
 
   const oidcIssuerUrl =
     optional(
@@ -399,15 +443,11 @@ export function loadConfig(
 
     apiRateLimitMax,
 
-    webUrl: required(
-      'WEB_URL',
-      env.WEB_URL,
-    ),
+    webUrl,
 
-    databaseUrl: required(
-      'DATABASE_URL',
-      env.DATABASE_URL,
-    ),
+    ...(apiPublicUrl ? { apiPublicUrl } : {}),
+
+    databaseUrl,
 
     temporalAddress: required(
       'TEMPORAL_ADDRESS',

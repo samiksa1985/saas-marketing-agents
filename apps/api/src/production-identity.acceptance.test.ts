@@ -87,6 +87,21 @@ function urlAsAppRole(): string {
   return url.toString();
 }
 
+function hasVerifiedTls(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).searchParams.getAll('sslmode').join() === 'verify-full';
+  } catch {
+    return false;
+  }
+}
+
+function asVerifiedTlsUrl(url: string): string {
+  const parsed = new URL(url);
+  parsed.searchParams.set('sslmode', 'verify-full');
+  return parsed.toString();
+}
+
 interface FixtureIdp {
   issuer: string;
   audience: string;
@@ -151,6 +166,7 @@ function baseApiEnv(databaseUrl: string): NodeJS.ProcessEnv {
     ...process.env,
     WEB_URL: 'http://localhost:3000',
     DATABASE_URL: databaseUrl,
+    DATABASE_URL_FILE: '',
     TEMPORAL_ADDRESS: 'localhost:7233',
     TEMPORAL_NAMESPACE: 'wsp04-acceptance',
     ARTIFACT_BUCKET: 'wsp04-artifacts',
@@ -422,14 +438,15 @@ test('WS-PROD-04 production lockout: local acceptance auth cannot boot in produc
     const child = spawn(process.execPath, ['--import', 'tsx', 'main.ts'], {
       cwd: apiRoot,
       env: {
-        ...baseApiEnv(urlAsAppRole()),
+        ...baseApiEnv(asVerifiedTlsUrl(urlAsAppRole())),
         API_PORT: '4299',
         NODE_ENV: 'production',
-        WEB_URL: 'https://web.wsp04.example.test',
-        CORS_ALLOWED_ORIGINS: 'https://web.wsp04.example.test',
+        WEB_URL: 'https://web.wsp04.example.com',
+        API_PUBLIC_URL: 'https://api.wsp04.example.com',
+        CORS_ALLOWED_ORIGINS: 'https://web.wsp04.example.com',
         TRUST_PROXY: 'false',
         RELEASE_VERSION: '1.0.0',
-        OIDC_ISSUER_URL: 'https://issuer.wsp04.example.test',
+        OIDC_ISSUER_URL: 'https://issuer.wsp04.example.com',
         OIDC_AUDIENCE: 'growth-os-api',
         WORKFLOW_RUNTIME_MODE: 'temporal',
         LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
@@ -456,7 +473,7 @@ test('WS-PROD-04 production lockout: local acceptance auth cannot boot in produc
   }
 });
 
-test('production API refuses to listen with migration-owner database authority', { skip: !ownerUrl && 'pilot database unavailable', timeout: 60_000 }, async (t) => {
+test('production API refuses to listen with migration-owner database authority', { skip: !hasVerifiedTls(ownerUrl) && 'pilot database must use sslmode=verify-full', timeout: 60_000 }, async (t) => {
   if (!(await pilotDatabaseReachable(ownerUrl!))) {
     t.skip('pilot database unavailable');
     return;
@@ -467,11 +484,12 @@ test('production API refuses to listen with migration-owner database authority',
       ...baseApiEnv(ownerUrl!),
       API_PORT: '4298',
       NODE_ENV: 'production',
-      WEB_URL: 'https://web.wsp04.example.test',
-      CORS_ALLOWED_ORIGINS: 'https://web.wsp04.example.test',
+      WEB_URL: 'https://web.wsp04.example.com',
+      API_PUBLIC_URL: 'https://api.wsp04.example.com',
+      CORS_ALLOWED_ORIGINS: 'https://web.wsp04.example.com',
       TRUST_PROXY: 'false',
       RELEASE_VERSION: '1.0.0',
-      OIDC_ISSUER_URL: 'https://issuer.wsp04.example.test',
+      OIDC_ISSUER_URL: 'https://issuer.wsp04.example.com',
       OIDC_AUDIENCE: 'growth-os-api',
       WORKFLOW_RUNTIME_MODE: 'temporal',
     },

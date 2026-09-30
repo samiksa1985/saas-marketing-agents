@@ -9,6 +9,7 @@ import {
 } from './journal-migration-runner.js';
 import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from './migration-url.js';
 import { assertProductionRuntimeAuthority } from './runtime-role-verify.js';
+import { productionPostgresOptions } from './postgres-connection.js';
 const config = loadConfig();
 // Migration authority separation (WS-PROD-02): migrations may run as the
 // privileged owner identity via MIGRATION_DATABASE_URL while the runtime
@@ -16,12 +17,15 @@ const config = loadConfig();
 const migrationUrl = resolveMigrationDatabaseUrl(process.env, config.databaseUrl, config.nodeEnv);
 // Keep the migration client aligned with the proven Phase-1 harness. The
 // runner additionally reserves a connection for each opaque source program.
-const client = postgres(migrationUrl, { max: 1, prepare: false });
+const client = postgres(migrationUrl, productionPostgresOptions(migrationUrl, { max: 1, prepare: false }));
 const migrationsDirectory = fileURLToPath(new URL('../drizzle/', import.meta.url));
 
 try {
   if (config.nodeEnv === 'production') {
-    const runtimeClient = postgres(config.databaseUrl, { max: 1, prepare: false });
+    const runtimeClient = postgres(
+      config.databaseUrl,
+      productionPostgresOptions(config.databaseUrl, { max: 1, prepare: false }),
+    );
     try {
       await assertProductionRuntimeAuthority(runtimeClient);
     } finally {

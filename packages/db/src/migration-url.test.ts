@@ -17,12 +17,33 @@ test('migration authority separation: MIGRATION_DATABASE_URL overrides the runti
 test('production migration authority requires and accepts an explicit URL', () => {
   assert.equal(
     resolveMigrationDatabaseUrl(
-      { MIGRATION_DATABASE_URL: 'postgresql://owner@example.internal/db' },
-      'postgresql://app@example.internal/db',
+      { MIGRATION_DATABASE_URL: 'postgresql://owner@example.com/db?sslmode=verify-full' },
+      'postgresql://app@example.com/db?sslmode=verify-full',
       'production',
     ),
-    'postgresql://owner@example.internal/db',
+    'postgresql://owner@example.com/db?sslmode=verify-full',
   );
+});
+
+test('production migration authority rejects every TLS mode except verify-full', () => {
+  assert.throws(
+    () => resolveMigrationDatabaseUrl(
+      { MIGRATION_DATABASE_URL: 'postgresql://owner@example.com/db' },
+      'postgresql://app@example.com/db?sslmode=verify-full',
+      'production',
+    ),
+    /MIGRATION_DATABASE_URL must set sslmode=verify-full/i,
+  );
+  for (const mode of ['disable', 'allow', 'prefer', 'require', 'verify-ca']) {
+    assert.throws(
+      () => resolveMigrationDatabaseUrl(
+        { MIGRATION_DATABASE_URL: `postgresql://owner@example.com/db?sslmode=${mode}` },
+        'postgresql://app@example.com/db?sslmode=verify-full',
+        'production',
+      ),
+      /MIGRATION_DATABASE_URL must set sslmode=verify-full/i,
+    );
+  }
 });
 
 test('migration authority separation: runtime URL fallback is limited to non-production', () => {
@@ -71,7 +92,7 @@ test('file-based migration credentials override direct values without changing r
           MIGRATION_DATABASE_URL_FILE: file,
         },
         'postgresql://app:runtime-password@example.internal/db',
-        'production',
+        'development',
       ),
       'postgresql://owner:file-password@example.internal/db',
     );

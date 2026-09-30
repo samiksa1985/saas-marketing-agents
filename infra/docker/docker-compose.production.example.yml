@@ -1,13 +1,36 @@
+# Public :80/:443 ingress terminates at the operator-managed host reverse
+# proxy. It forwards only to these loopback listeners and replaces, rather
+# than appends to, client-supplied X-Forwarded-* headers.
 services:
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_min_protocol_version=TLSv1.2
+      - -c
+      - ssl_cert_file=/run/secrets/postgres_server_cert
+      - -c
+      - ssl_key_file=/run/secrets/postgres_server_key
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Set through the deployment secret/configuration boundary}
       POSTGRES_USER: ${POSTGRES_USER:?Set through the deployment secret/configuration boundary}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    secrets: [postgres_password]
+    secrets:
+      - postgres_password
+      - source: postgres_server_cert
+        target: postgres_server_cert
+        mode: 0444
+      - source: postgres_server_key
+        target: postgres_server_key
+        uid: '999'
+        gid: '999'
+        mode: 0400
     volumes: [postgres-data:/var/lib/postgresql/data]
+    networks: [database_internal]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
@@ -23,6 +46,7 @@ services:
     environment:
       DATABASE_URL: ''
       DATABASE_URL_FILE: /run/secrets/runtime_database_url
+      DATABASE_SSL_CA_FILE: /run/secrets/postgres_ca
       POSTGRES_PASSWORD: ''
       CODECORE_POSTGRES_PASSWORD_FILE: ''
       CODECORE_RUNTIME_DATABASE_URL_FILE: ''
@@ -45,7 +69,8 @@ services:
       META_ADS_APP_SECRET: ''
       META_ADS_APP_SECRET_FILE: ''
       NAWA_PRODUCTION_MIGRATION_CONFIRM: ${NAWA_PRODUCTION_MIGRATION_CONFIRM:-}
-    secrets: [runtime_database_url, migration_database_url]
+    secrets: [runtime_database_url, migration_database_url, postgres_ca]
+    networks: [database_internal]
     entrypoint:
       - sh
       - -ec
@@ -58,6 +83,7 @@ services:
     environment:
       DATABASE_URL: ''
       DATABASE_URL_FILE: /run/secrets/runtime_database_url
+      DATABASE_SSL_CA_FILE: /run/secrets/postgres_ca
       POSTGRES_PASSWORD: ''
       CODECORE_POSTGRES_PASSWORD_FILE: ''
       CODECORE_RUNTIME_DATABASE_URL_FILE: ''
@@ -79,9 +105,10 @@ services:
       META_ADS_ACCESS_TOKEN_FILE: ${META_ADS_ACCESS_TOKEN_FILE:-}
       META_ADS_APP_SECRET: ''
       META_ADS_APP_SECRET_FILE: ${META_ADS_APP_SECRET_FILE:-}
-    secrets: [runtime_database_url]
+    secrets: [runtime_database_url, postgres_ca]
     depends_on: { postgres: { condition: service_healthy } }
     ports: ['127.0.0.1:4000:4000']
+    networks: [app_internal, database_internal, provider_egress]
 
   worker:
     image: ${CODECORE_WORKER_IMAGE:?Set to the worker image by immutable @sha256 digest}
@@ -90,6 +117,7 @@ services:
     environment:
       DATABASE_URL: ''
       DATABASE_URL_FILE: /run/secrets/runtime_database_url
+      DATABASE_SSL_CA_FILE: /run/secrets/postgres_ca
       POSTGRES_PASSWORD: ''
       CODECORE_POSTGRES_PASSWORD_FILE: ''
       CODECORE_RUNTIME_DATABASE_URL_FILE: ''
@@ -111,8 +139,9 @@ services:
       META_ADS_ACCESS_TOKEN_FILE: ''
       META_ADS_APP_SECRET: ''
       META_ADS_APP_SECRET_FILE: ''
-    secrets: [runtime_database_url]
+    secrets: [runtime_database_url, postgres_ca]
     depends_on: { postgres: { condition: service_healthy } }
+    networks: [app_internal, database_internal]
 
   web:
     image: ${CODECORE_WEB_IMAGE:?Set to the web image by immutable @sha256 digest}
@@ -123,14 +152,29 @@ services:
       api:
         condition: service_healthy
     ports: ['127.0.0.1:3000:3000']
+    networks: [app_internal]
 
 volumes:
   postgres-data: {}
 
+networks:
+  app_internal:
+    internal: true
+  database_internal:
+    internal: true
+  provider_egress:
+    driver: bridge
+
 secrets:
   postgres_password:
     file: ${CODECORE_POSTGRES_PASSWORD_FILE:?Set an operator-managed password file path}
+  postgres_server_cert:
+    file: ${CODECORE_POSTGRES_SERVER_CERT_FILE:?Set an operator-managed PostgreSQL certificate file path}
+  postgres_server_key:
+    file: ${CODECORE_POSTGRES_SERVER_KEY_FILE:?Set an operator-managed PostgreSQL private-key file path}
   runtime_database_url:
     file: ${CODECORE_RUNTIME_DATABASE_URL_FILE:?Set an operator-managed runtime URL file path}
   migration_database_url:
     file: ${CODECORE_MIGRATION_DATABASE_URL_FILE:?Set an operator-managed migration URL file path}
+  postgres_ca:
+    file: ${CODECORE_POSTGRES_CA_FILE:?Set an operator-managed PostgreSQL trust-bundle file path}

@@ -15,6 +15,14 @@ export function requestIdFor(value: string | string[] | undefined): string {
   return candidate && /^[A-Za-z0-9._-]{8,128}$/.test(candidate) ? candidate : randomUUID();
 }
 
+export function safeHealthResponse() {
+  return { status: 'ok', service: 'api' };
+}
+
+export function safeReadinessResponse() {
+  return { status: 'ready' };
+}
+
 export class SanitizedJsonLogger implements LoggerService {
   private emit(level: string, message: unknown, context?: string): void {
     const safe = typeof message === 'string' ? message.replace(/(authorization|token|secret|password)=[^\s,]+/gi, '$1=[REDACTED]') : 'structured event';
@@ -61,7 +69,7 @@ export function createRateLimitMiddleware(config: RuntimeConfig) {
 
 export function configureProductionRuntime(app: INestApplication, config: RuntimeConfig): void {
   const express = app.getHttpAdapter().getInstance() as ExpressLike;
-  if (config.trustProxy) express.set?.('trust proxy', 1);
+  express.set?.('trust proxy', config.trustProxy ? 1 : false);
   app.use((request: RequestLike, response: ResponseLike, next: Next) => {
     const requestId = requestIdFor(request.headers['x-request-id']);
     request.requestId = requestId;
@@ -77,7 +85,7 @@ export function configureProductionRuntime(app: INestApplication, config: Runtim
   app.enableCors({
     origin: (origin: string | undefined, callback: (error: Error | null, allowed?: boolean) => void) => {
       if (!origin || config.corsAllowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error('CORS origin denied'));
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -89,5 +97,5 @@ export function configureProductionRuntime(app: INestApplication, config: Runtim
 }
 
 export function sanitizedRuntimeSummary(config: RuntimeConfig) {
-  return { releaseVersion: config.releaseVersion, workflowRuntimeMode: config.workflowRuntimeMode, providerMutations: { google: config.googleAdsExecutionEnabled && config.googleAdsExecutionMode === 'REAL', meta: config.metaAdsExecutionEnabled && config.metaAdsExecutionMode === 'REAL' } };
+  return { releaseVersion: config.releaseVersion };
 }

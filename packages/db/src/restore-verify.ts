@@ -15,6 +15,7 @@ import { readSecretEnvironmentValue } from '@platform/config';
 import { loadJournalMigrations } from './journal-migration-runner.js';
 import { assertRlsPolicyCoverage } from './runtime-role-verify.js';
 import { KNOWLEDGE_EMBEDDING_DIMENSIONS } from './schema.js';
+import { productionPostgresOptions } from './postgres-connection.js';
 
 const databaseUrl = readSecretEnvironmentValue('DATABASE_URL')?.trim();
 if (!databaseUrl) {
@@ -30,7 +31,10 @@ if (canonicalNames.has(database) || !/(restore|recovery|acceptance)/i.test(datab
   process.exit(1);
 }
 
-const client = postgres(databaseUrl!, { max: 1, prepare: false });
+const client = postgres(
+  databaseUrl!,
+  productionPostgresOptions(databaseUrl!, { max: 1, prepare: false }, { ...process.env, NODE_ENV: 'production' }),
+);
 const migrationsDirectory = fileURLToPath(new URL('../drizzle/', import.meta.url));
 
 function rowsOf<T>(value: unknown): T[] {

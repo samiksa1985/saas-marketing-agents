@@ -10,9 +10,13 @@ import {
 } from './runtime-role-verify.js';
 import { runCrossTenantProbe } from './cross-tenant-probe.js';
 import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from './migration-url.js';
+import { productionPostgresOptions } from './postgres-connection.js';
 
 const config = loadConfig();
-const client = postgres(config.databaseUrl, { max: 1, prepare: false });
+const client = postgres(
+  config.databaseUrl,
+  productionPostgresOptions(config.databaseUrl, { max: 1, prepare: false }),
+);
 const migrationsDirectory = fileURLToPath(new URL('../drizzle/', import.meta.url));
 
 try {
@@ -57,7 +61,10 @@ try {
     // authority. The migration/owner connection is used only to seed and clean
     // up the synthetic tenant fixtures.
     const migrationUrl = resolveMigrationDatabaseUrl(process.env, config.databaseUrl, config.nodeEnv);
-    const migrationClient = postgres(migrationUrl, { max: 1, prepare: false });
+    const migrationClient = postgres(
+      migrationUrl,
+      productionPostgresOptions(migrationUrl, { max: 1, prepare: false }),
+    );
     let probe: Awaited<ReturnType<typeof runCrossTenantProbe>>;
     try {
       await assertMigrationAuthority(migrationClient);

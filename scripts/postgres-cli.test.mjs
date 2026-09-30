@@ -54,6 +54,35 @@ test('PostgreSQL CLI receives separated connection arguments and a private passf
       },
     });
 
+    test('production PostgreSQL CLI requires verify-full and forwards an external CA file', () => {
+      assert.throws(
+        () => runPostgresTool('psql', ['-tAc', 'SELECT 1'], {
+          environment: {
+            NODE_ENV: 'production',
+            DATABASE_URL: 'postgresql://runtime_user@db.example.com/platform?sslmode=require',
+          },
+          spawn: () => fakeResult(),
+        }),
+        /DATABASE_URL_SSLMODE_VERIFY_FULL_REQUIRED/,
+      );
+
+      let childEnvironment;
+      const result = runPostgresTool('psql', ['-tAc', 'SELECT 1'], {
+        environment: {
+          NODE_ENV: 'production',
+          DATABASE_URL: 'postgresql://runtime_user@db.example.com/platform?sslmode=verify-full',
+          DATABASE_SSL_CA_FILE: '/run/secrets/postgres_ca',
+        },
+        spawn: (_tool, _args, options) => {
+          childEnvironment = options.env;
+          return fakeResult();
+        },
+      });
+      assert.equal(result.status, 0);
+      assert.equal(childEnvironment.PGSSLMODE, 'verify-full');
+      assert.equal(childEnvironment.PGSSLROOTCERT, '/run/secrets/postgres_ca');
+    });
+
     assert.equal(result.status, 0);
     assert.equal(invocation.tool, 'pg_dump');
     assert.ok(invocation.args.includes('db.example.test'));

@@ -14,19 +14,22 @@ const baseEnv = {
     'test',
 
   WEB_URL:
-    'https://app.example.test',
+    'https://app.example.com',
+
+  API_PUBLIC_URL:
+    'https://api.example.com',
 
   RELEASE_VERSION:
     '1.0.0-test',
 
   CORS_ALLOWED_ORIGINS:
-    'https://app.example.test',
+    'https://app.example.com',
 
   TRUST_PROXY:
     'false',
 
   DATABASE_URL:
-    'postgresql://test',
+    'postgresql://test?sslmode=verify-full',
 
   TEMPORAL_ADDRESS:
     'localhost:7233',
@@ -513,4 +516,68 @@ test('production fails closed for missing CORS/trusted-proxy/release configurati
   assert.throws(() => loadConfig({ ...production, CORS_ALLOWED_ORIGINS: '' }), /CORS_ALLOWED_ORIGINS/i);
   assert.throws(() => loadConfig({ ...production, TRUST_PROXY: undefined }), /TRUST_PROXY/i);
   assert.throws(() => loadConfig({ ...production, RELEASE_VERSION: 'latest' }), /RELEASE_VERSION/i);
+});
+
+test('production database URLs require the single fully verified TLS mode', () => {
+  const production = {
+    ...baseEnv,
+    NODE_ENV: 'production',
+    OIDC_ISSUER_URL: 'https://issuer.example.com',
+    OIDC_AUDIENCE: 'platform-api',
+    RELEASE_VERSION: '1.0.0',
+  };
+  assert.equal(loadConfig({ ...production, DATABASE_URL: 'postgresql://app@db.example.com/platform?sslmode=verify-full' }).databaseUrl,
+    'postgresql://app@db.example.com/platform?sslmode=verify-full');
+
+  for (const mode of ['disable', 'allow', 'prefer', 'require', 'verify-ca']) {
+    assert.throws(
+      () => loadConfig({ ...production, DATABASE_URL: `postgresql://app@db.example.com/platform?sslmode=${mode}` }),
+      /DATABASE_URL must set sslmode=verify-full/i,
+    );
+  }
+  assert.throws(
+    () => loadConfig({ ...production, DATABASE_URL: 'postgresql://app@db.example.com/platform' }),
+    /DATABASE_URL must set sslmode=verify-full/i,
+  );
+  assert.throws(
+    () => loadConfig({ ...production, DATABASE_URL: 'postgresql://app@db.example.com/platform?sslmode=verify-full&sslmode=disable' }),
+    /DATABASE_URL must set sslmode=verify-full/i,
+  );
+});
+
+test('production web, API, issuer, and CORS origins require explicit public HTTPS domains', () => {
+  const production = {
+    ...baseEnv,
+    NODE_ENV: 'production',
+    RELEASE_VERSION: '1.0.0',
+    DATABASE_URL: 'postgresql://app@db.example.com/platform?sslmode=verify-full',
+    OIDC_ISSUER_URL: 'https://issuer.example.com',
+    OIDC_AUDIENCE: 'platform-api',
+  };
+  assert.throws(() => loadConfig({ ...production, API_PUBLIC_URL: undefined }), /API_PUBLIC_URL/i);
+  assert.throws(() => loadConfig({ ...production, API_PUBLIC_URL: 'http://api.example.com' }), /API_PUBLIC_URL/i);
+  assert.throws(() => loadConfig({ ...production, WEB_URL: 'https://localhost' }), /public DNS hostname/i);
+  assert.throws(() => loadConfig({ ...production, WEB_URL: 'https://192.168.1.10' }), /public DNS hostname/i);
+  assert.throws(() => loadConfig({ ...production, API_PUBLIC_URL: 'https://api' }), /public DNS hostname/i);
+  assert.throws(() => loadConfig({ ...production, OIDC_ISSUER_URL: 'https://issuer.internal' }), /public DNS hostname/i);
+  assert.throws(() => loadConfig({ ...production, CORS_ALLOWED_ORIGINS: 'https://attacker.example.com' }), /must include WEB_URL/i);
+  assert.throws(() => loadConfig({ ...production, CORS_ALLOWED_ORIGINS: '*' }), /CORS_ALLOWED_ORIGINS/i);
+});
+
+test('local development continues to accept explicit HTTP origins', () => {
+  const config = loadConfig({
+    ...baseEnv,
+    NODE_ENV: 'development',
+    WEB_URL: 'http://localhost:3000',
+    CORS_ALLOWED_ORIGINS: 'http://localhost:3000,http://127.0.0.1:3000',
+  });
+  assert.deepEqual(config.corsAllowedOrigins, ['http://localhost:3000', 'http://127.0.0.1:3000']);
+  assert.deepEqual(
+    loadConfig({ ...baseEnv, NODE_ENV: 'development', CORS_ALLOWED_ORIGINS: 'http://web:3000' }).corsAllowedOrigins,
+    ['http://web:3000'],
+  );
+  assert.throws(
+    () => loadConfig({ ...baseEnv, NODE_ENV: 'development', CORS_ALLOWED_ORIGINS: 'http://web:3000/path' }),
+    /CORS_ALLOWED_ORIGINS/i,
+  );
 });

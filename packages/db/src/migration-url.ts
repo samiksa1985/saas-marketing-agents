@@ -8,7 +8,7 @@
  * Neither URL is ever logged by callers of this helper.
  */
 import type postgres from 'postgres';
-import { readSecretEnvironmentValue } from '@platform/config';
+import { assertProductionDatabaseTls, readSecretEnvironmentValue } from '@platform/config';
 
 export function resolveMigrationDatabaseUrl(
   env: NodeJS.ProcessEnv,
@@ -21,7 +21,9 @@ export function resolveMigrationDatabaseUrl(
   }
   const runtimeUrl = runtimeDatabaseUrl.trim();
   if (!override && !runtimeUrl) throw new Error('DATABASE_URL_REQUIRED');
-  return override || runtimeUrl;
+  const migrationUrl = override || runtimeUrl;
+  if (nodeEnv === 'production') assertProductionDatabaseTls('MIGRATION_DATABASE_URL', migrationUrl);
+  return migrationUrl;
 }
 
 type SqlClient = Pick<ReturnType<typeof postgres>, 'unsafe'>;

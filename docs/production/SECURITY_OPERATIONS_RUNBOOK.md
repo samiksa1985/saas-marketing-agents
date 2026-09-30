@@ -2,7 +2,13 @@
 
 Production requires OIDC, server-side RBAC, transaction-local RLS, HTTPS origins, explicit CORS origins, proxy posture, semantic release metadata, and disabled provider mutations by default. Local-acceptance authentication is rejected in production.
 
-The API applies request IDs, no-sniff/frame/referrer/permissions headers, HSTS in production, origin allowlisting, sanitized JSON logging, safe error bodies, and a per-process request limiter. Reverse-proxy TLS, WAF/DDOS protection, distributed rate limiting, CSP for the web edge, webhook signature validation, secret manager policy, vulnerability scanning, and alert routing remain deployment-operator responsibilities.
+The API applies request IDs, no-sniff/frame/referrer/permissions headers, HSTS in production, exact origin allowlisting, sanitized JSON logging, safe health/readiness bodies, safe error bodies, and a per-process request limiter. The web server applies CSP and browser security headers. Reverse-proxy TLS, WAF/DDOS protection, distributed rate limiting, trusted forwarded-header replacement, webhook signature validation, secret manager policy, vulnerability scanning, and alert routing remain deployment-operator responsibilities.
+
+Production PostgreSQL clients require `sslmode=verify-full` on both runtime
+and migration URLs. An optional CA trust bundle is injected by file reference;
+PostgreSQL server certificate/key material is external to source control and
+container build inputs. The production Compose topology publishes no database
+port and limits web/API host listeners to loopback behind the trusted proxy.
 
 Never log request bodies, authorization headers, cookie values, credentials, provider tokens, or database URLs. Rotate an exposed secret in its secret manager, disable the related provider binding, and preserve an audit-safe incident record. Treat unknown provider/credential health as not mutation-ready.
 

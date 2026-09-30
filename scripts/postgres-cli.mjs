@@ -191,6 +191,9 @@ function childEnvironment(source, connection, passfilePath) {
   for (const name of LIBPQ_PARAMETERS.values()) {
     if (source[name] !== undefined && safe[name] === undefined) safe[name] = source[name];
   }
+  if (source.DATABASE_SSL_CA_FILE !== undefined && safe.PGSSLROOTCERT === undefined) {
+    safe.PGSSLROOTCERT = source.DATABASE_SSL_CA_FILE;
+  }
   for (const [name, value] of Object.entries(connection.libpqEnvironment)) safe[name] = value;
   if (passfilePath) safe.PGPASSFILE = passfilePath;
   else if (source.PGPASSFILE) safe.PGPASSFILE = source.PGPASSFILE;
@@ -220,6 +223,17 @@ export function runPostgresTool(tool, args, options = {}) {
   }
   const connectionUrl = resolveConnectionEnvironment(environment, connectionEnvironment);
   if (!connectionUrl?.trim()) throw new Error(`${connectionEnvironment}_REQUIRED`);
+  if (environment.NODE_ENV === 'production') {
+    let sslModes;
+    try {
+      sslModes = new URL(connectionUrl).searchParams.getAll('sslmode');
+    } catch {
+      throw new Error(`${connectionEnvironment}_URL_INVALID`);
+    }
+    if (sslModes.length !== 1 || sslModes[0] !== 'verify-full') {
+      throw new Error(`${connectionEnvironment}_SSLMODE_VERIFY_FULL_REQUIRED`);
+    }
+  }
   const connection = parsePostgresConnection(connectionUrl, options.database);
   assertNoPasswordInArguments(args, connection.password);
   if (
