@@ -45,6 +45,21 @@ test('release manifest records immutable image digests and rejects malformed ide
   );
 });
 
+test('release manifest excludes database, provider, and deployment secret inputs', async () => {
+  const secretInputs = {
+    DATABASE_URL: 'database-secret-canary',
+    MIGRATION_DATABASE_URL: 'migration-secret-canary',
+    GOOGLE_ADS_CLIENT_SECRET: 'google-secret-canary',
+    META_ADS_ACCESS_TOKEN: 'meta-secret-canary',
+    CODECORE_APP_PASSWORD: 'role-password-canary',
+  };
+  const manifest = await createReleaseManifest({ GIT_SHA: sha, ...secretInputs });
+  const serialized = JSON.stringify(manifest);
+  for (const secret of Object.values(secretInputs)) {
+    assert.equal(serialized.includes(secret), false);
+  }
+});
+
 test('release manifest carries previous image digests and migration reference for rollback', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'codecore-release-'));
   try {

@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import type { TenantContext } from '@platform/contracts';
@@ -135,4 +138,26 @@ test('credential diagnostics report names only and never return credential value
   assert.equal(result.valid, false);
   assert.ok(result.missing.includes('GOOGLE_ADS_REFRESH_TOKEN'));
   assert.deepEqual(Object.keys(result), ['valid', 'missing']);
+});
+
+test('Google Ads credential files override direct values without exposing secret contents', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'codecore-google-secret-'));
+  try {
+    const path = join(directory, 'client-secret.txt');
+    const canary = 'google-file-secret-canary';
+    writeFileSync(path, `${canary}\n`, { mode: 0o600 });
+    const resolver = new EnvironmentGoogleAdsCredentialResolver({
+      GOOGLE_ADS_DEVELOPER_TOKEN: 'developer-token-config',
+      GOOGLE_ADS_CLIENT_ID: 'client-id-config',
+      GOOGLE_ADS_CLIENT_SECRET: 'direct-secret-canary',
+      GOOGLE_ADS_CLIENT_SECRET_FILE: path,
+      GOOGLE_ADS_REFRESH_TOKEN: 'refresh-token-config',
+      GOOGLE_ADS_CUSTOMER_ID: '1234567890',
+    });
+    assert.equal(resolver.validate().valid, true);
+    assert.equal(resolver.resolve().clientSecret, canary);
+    assert.deepEqual(resolver.validate(), { valid: true, missing: [] });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

@@ -5,7 +5,8 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Set through the deployment secret/configuration boundary}
       POSTGRES_USER: ${POSTGRES_USER:?Set through the deployment secret/configuration boundary}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set through the deployment secret/configuration boundary}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
     volumes: [postgres-data:/var/lib/postgresql/data]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
@@ -20,7 +21,31 @@ services:
     restart: 'no'
     env_file: [.env.production]
     environment:
+      DATABASE_URL: ''
+      DATABASE_URL_FILE: /run/secrets/runtime_database_url
+      POSTGRES_PASSWORD: ''
+      CODECORE_POSTGRES_PASSWORD_FILE: ''
+      CODECORE_RUNTIME_DATABASE_URL_FILE: ''
+      CODECORE_MIGRATION_DATABASE_URL_FILE: ''
+      MIGRATION_DATABASE_URL: ''
+      MIGRATION_DATABASE_URL_FILE: /run/secrets/migration_database_url
+      CODECORE_APP_PASSWORD: ''
+      CODECORE_APP_PASSWORD_FILE: ''
+      ISOLATED_RESTORE_DATABASE_URL: ''
+      ISOLATED_RESTORE_DATABASE_URL_FILE: ''
+      OIDC_CLIENT_SECRET: ''
+      GOOGLE_ADS_DEVELOPER_TOKEN: ''
+      GOOGLE_ADS_DEVELOPER_TOKEN_FILE: ''
+      GOOGLE_ADS_CLIENT_SECRET: ''
+      GOOGLE_ADS_CLIENT_SECRET_FILE: ''
+      GOOGLE_ADS_REFRESH_TOKEN: ''
+      GOOGLE_ADS_REFRESH_TOKEN_FILE: ''
+      META_ADS_ACCESS_TOKEN: ''
+      META_ADS_ACCESS_TOKEN_FILE: ''
+      META_ADS_APP_SECRET: ''
+      META_ADS_APP_SECRET_FILE: ''
       NAWA_PRODUCTION_MIGRATION_CONFIRM: ${NAWA_PRODUCTION_MIGRATION_CONFIRM:-}
+    secrets: [runtime_database_url, migration_database_url]
     entrypoint:
       - sh
       - -ec
@@ -30,6 +55,31 @@ services:
     image: ${CODECORE_API_IMAGE:?Set to the API image by immutable @sha256 digest}
     restart: unless-stopped
     env_file: [.env.production]
+    environment:
+      DATABASE_URL: ''
+      DATABASE_URL_FILE: /run/secrets/runtime_database_url
+      POSTGRES_PASSWORD: ''
+      CODECORE_POSTGRES_PASSWORD_FILE: ''
+      CODECORE_RUNTIME_DATABASE_URL_FILE: ''
+      CODECORE_MIGRATION_DATABASE_URL_FILE: ''
+      MIGRATION_DATABASE_URL: ''
+      MIGRATION_DATABASE_URL_FILE: ''
+      CODECORE_APP_PASSWORD: ''
+      CODECORE_APP_PASSWORD_FILE: ''
+      ISOLATED_RESTORE_DATABASE_URL: ''
+      ISOLATED_RESTORE_DATABASE_URL_FILE: ''
+      OIDC_CLIENT_SECRET: ''
+      GOOGLE_ADS_DEVELOPER_TOKEN: ''
+      GOOGLE_ADS_DEVELOPER_TOKEN_FILE: ${GOOGLE_ADS_DEVELOPER_TOKEN_FILE:-}
+      GOOGLE_ADS_CLIENT_SECRET: ''
+      GOOGLE_ADS_CLIENT_SECRET_FILE: ${GOOGLE_ADS_CLIENT_SECRET_FILE:-}
+      GOOGLE_ADS_REFRESH_TOKEN: ''
+      GOOGLE_ADS_REFRESH_TOKEN_FILE: ${GOOGLE_ADS_REFRESH_TOKEN_FILE:-}
+      META_ADS_ACCESS_TOKEN: ''
+      META_ADS_ACCESS_TOKEN_FILE: ${META_ADS_ACCESS_TOKEN_FILE:-}
+      META_ADS_APP_SECRET: ''
+      META_ADS_APP_SECRET_FILE: ${META_ADS_APP_SECRET_FILE:-}
+    secrets: [runtime_database_url]
     depends_on: { postgres: { condition: service_healthy } }
     ports: ['127.0.0.1:4000:4000']
 
@@ -37,6 +87,31 @@ services:
     image: ${CODECORE_WORKER_IMAGE:?Set to the worker image by immutable @sha256 digest}
     restart: unless-stopped
     env_file: [.env.production]
+    environment:
+      DATABASE_URL: ''
+      DATABASE_URL_FILE: /run/secrets/runtime_database_url
+      POSTGRES_PASSWORD: ''
+      CODECORE_POSTGRES_PASSWORD_FILE: ''
+      CODECORE_RUNTIME_DATABASE_URL_FILE: ''
+      CODECORE_MIGRATION_DATABASE_URL_FILE: ''
+      MIGRATION_DATABASE_URL: ''
+      MIGRATION_DATABASE_URL_FILE: ''
+      CODECORE_APP_PASSWORD: ''
+      CODECORE_APP_PASSWORD_FILE: ''
+      ISOLATED_RESTORE_DATABASE_URL: ''
+      ISOLATED_RESTORE_DATABASE_URL_FILE: ''
+      OIDC_CLIENT_SECRET: ''
+      GOOGLE_ADS_DEVELOPER_TOKEN: ''
+      GOOGLE_ADS_DEVELOPER_TOKEN_FILE: ''
+      GOOGLE_ADS_CLIENT_SECRET: ''
+      GOOGLE_ADS_CLIENT_SECRET_FILE: ''
+      GOOGLE_ADS_REFRESH_TOKEN: ''
+      GOOGLE_ADS_REFRESH_TOKEN_FILE: ''
+      META_ADS_ACCESS_TOKEN: ''
+      META_ADS_ACCESS_TOKEN_FILE: ''
+      META_ADS_APP_SECRET: ''
+      META_ADS_APP_SECRET_FILE: ''
+    secrets: [runtime_database_url]
     depends_on: { postgres: { condition: service_healthy } }
 
   web:
@@ -51,3 +126,11 @@ services:
 
 volumes:
   postgres-data: {}
+
+secrets:
+  postgres_password:
+    file: ${CODECORE_POSTGRES_PASSWORD_FILE:?Set an operator-managed password file path}
+  runtime_database_url:
+    file: ${CODECORE_RUNTIME_DATABASE_URL_FILE:?Set an operator-managed runtime URL file path}
+  migration_database_url:
+    file: ${CODECORE_MIGRATION_DATABASE_URL_FILE:?Set an operator-managed migration URL file path}

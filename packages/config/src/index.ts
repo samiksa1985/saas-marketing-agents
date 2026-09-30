@@ -1,5 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
+import { resolveSecretEnvironment } from './secret-files.js';
+
+export { readSecretEnvironmentValue, resolveSecretEnvironment, SECRET_ENVIRONMENT_KEYS } from './secret-files.js';
 
 export type NodeEnvironment =
   | 'development'
@@ -185,6 +188,7 @@ function validateLocalAcceptanceTokenFile(tokenFile: string): void {
 export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RuntimeConfig {
+  env = resolveSecretEnvironment(env, ['DATABASE_URL']);
   const nodeEnv =
     (env.NODE_ENV ??
       'development') as NodeEnvironment;

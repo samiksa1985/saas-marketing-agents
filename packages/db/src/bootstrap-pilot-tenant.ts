@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import postgres from 'postgres';
+import { readSecretEnvironmentValue } from '@platform/config';
 
 type BootstrapInput = { tenantId: string; tenantName: string; adminSubject: string; adminDisplayName: string };
 const required = (name: string, value: string | undefined): string => { if (!value?.trim()) throw new Error(`${name}_REQUIRED`); return value.trim(); };
@@ -16,7 +17,7 @@ export function pilotBootstrapInput(env: NodeJS.ProcessEnv): BootstrapInput {
 /** The bootstrap touches PostgreSQL only; it must not require application,
  * Temporal, provider, artifact, or AI runtime configuration. */
 export function pilotBootstrapDatabaseUrl(env: NodeJS.ProcessEnv): string {
-  return required('DATABASE_URL', env.DATABASE_URL);
+  return required('DATABASE_URL', readSecretEnvironmentValue('DATABASE_URL', env));
 }
 
 export async function bootstrapPilotTenant(env: NodeJS.ProcessEnv = process.env): Promise<void> {

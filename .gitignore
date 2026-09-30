@@ -102,8 +102,25 @@ tmp/
 notes/
 scratch/
 personal/
+.env
+.env.*
+!.env.example
 .env.local
 .env.*.local
+.nawa-secrets/
+**/.nawa-secrets/
+secrets/
+**/secrets/
+*.pgpass
+pgpass.conf
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.crt
+*.cer
+*.p8
 debug.log
 
 # Generated build artifacts

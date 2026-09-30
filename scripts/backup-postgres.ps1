@@ -10,12 +10,15 @@ param([Parameter(Mandatory=$true)][string]$BackupOutputDirectory, [string]$Label
 # no credentials: database name and host only.
 $ErrorActionPreference = 'Stop'
 if ($env:NAWA_BACKUP_CONFIRM -ne 'YES') { throw 'Set NAWA_BACKUP_CONFIRM=YES after approved backup operation.' }
-if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL)) { throw 'DATABASE_URL is required but is never printed.' }
+if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL) -and [string]::IsNullOrWhiteSpace($env:DATABASE_URL_FILE)) {
+  throw 'DATABASE_URL or DATABASE_URL_FILE is required.'
+}
+Import-Module (Join-Path $PSScriptRoot 'postgres-cli.psm1') -Force
 
-$uri = [System.Uri]$env:DATABASE_URL
-$database = $uri.Segments[-1].Trim('/')
+$identity = Get-PostgresConnectionMetadata -ConnectionEnvironment 'DATABASE_URL'
+$database = $identity.database
 if ([string]::IsNullOrWhiteSpace($database) -or $database -notmatch '^[A-Za-z0-9_]+$') { throw 'DATABASE_URL must end in a simple database name.' }
-$dbUser = ($uri.UserInfo -split ':')[0]
+$dbUser = $identity.username
 if ([string]::IsNullOrWhiteSpace($dbUser)) { throw 'DATABASE_URL must include a user (password is never echoed).' }
 
 function Resolve-Tool([string]$explicit, [string]$name) {
@@ -44,8 +47,9 @@ $version = $null
 try {
   if ($mode -eq 'host-binaries') {
     $version = (& $pgDump --version) -join ' '
-    & $pgDump --format=custom --no-owner --no-privileges --file=$file $env:DATABASE_URL
-    if ($LASTEXITCODE -ne 0) { throw 'BACKUP_COMMAND_FAILED' }
+    $dump = Invoke-PostgresTool -Tool $pgDump -ConnectionEnvironment 'DATABASE_URL' `
+      -ToolArguments @('--format=custom', '--no-owner', '--no-privileges', "--file=$file")
+    if ($dump.ExitCode -ne 0) { throw 'BACKUP_COMMAND_FAILED' }
     $list = & $pgRestore --list $file
     if ($LASTEXITCODE -ne 0 -or -not $list -or $list.Count -lt 10) { throw 'BACKUP_STRUCTURAL_VALIDATION_FAILED' }
   } else {
@@ -70,7 +74,7 @@ $manifest = @{
   status = 'verified'
   timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
   database = $database
-  host = $uri.Host
+  host = $identity.host
   backupFile = $file
   sizeBytes = $sizeBytes
   sha256 = $sha256

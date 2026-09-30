@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import type { TenantContext } from '@platform/contracts';
@@ -223,6 +226,33 @@ test('Meta credential boundary exposes names only and maps safe Graph errors', a
   assert.deepEqual(resolver.validate(), { valid: false, missing: ['META_ADS_ACCESS_TOKEN'] });
   const revoked = new MetaAdsRestTransport({
     fetcher: async () => response(401, { error: { code: 190, message: 'token is invalid or revoked' } }),
+  });
+
+  test('Meta access-token files take precedence and broken references fail closed', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'codecore-meta-secret-'));
+    try {
+      const path = join(directory, 'access-token.txt');
+      const canary = 'meta-file-token-canary';
+      writeFileSync(path, `${canary}\n`, { mode: 0o600 });
+      const resolver = new EnvironmentMetaAdsCredentialResolver({
+        META_ADS_ACCESS_TOKEN: 'direct-token-canary',
+        META_ADS_ACCESS_TOKEN_FILE: path,
+        META_ADS_AD_ACCOUNT_ID: 'act_123456789',
+      });
+      assert.equal(resolver.validate().valid, true);
+      assert.equal(resolver.resolve().accessToken, canary);
+      assert.throws(
+        () =>
+          new EnvironmentMetaAdsCredentialResolver({
+            META_ADS_ACCESS_TOKEN: 'direct-token-canary',
+            META_ADS_ACCESS_TOKEN_FILE: join(directory, 'missing.txt'),
+            META_ADS_AD_ACCOUNT_ID: 'act_123456789',
+          }),
+        /META_ADS_ACCESS_TOKEN_FILE_UNREADABLE/,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
   await assert.rejects(
     () => revoked.validateConnection({ accessToken: 'not-a-real-token', adAccountId: 'act_123456789' }),

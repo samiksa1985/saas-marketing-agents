@@ -8,33 +8,21 @@ param(
 # ISOLATED_RESTORE_DATABASE_URL is consumed but never printed.
 $ErrorActionPreference = 'Stop'
 if ($env:NAWA_ISOLATED_RESTORE_CONFIRM -ne 'YES') { throw 'Set NAWA_ISOLATED_RESTORE_CONFIRM=YES only for an isolated restore target.' }
-if ([string]::IsNullOrWhiteSpace($env:ISOLATED_RESTORE_DATABASE_URL)) { throw 'ISOLATED_RESTORE_DATABASE_URL is required and is never printed.' }
-if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL)) { throw 'DATABASE_URL is required to prove the restore target is isolated.' }
+if ([string]::IsNullOrWhiteSpace($env:ISOLATED_RESTORE_DATABASE_URL) -and [string]::IsNullOrWhiteSpace($env:ISOLATED_RESTORE_DATABASE_URL_FILE)) {
+  throw 'ISOLATED_RESTORE_DATABASE_URL or ISOLATED_RESTORE_DATABASE_URL_FILE is required.'
+}
+if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL) -and [string]::IsNullOrWhiteSpace($env:DATABASE_URL_FILE)) {
+  throw 'DATABASE_URL or DATABASE_URL_FILE is required to prove the restore target is isolated.'
+}
+Import-Module (Join-Path $PSScriptRoot 'postgres-cli.psm1') -Force
 
-function Get-DatabaseIdentity([string]$value) {
-  try { $parsed = [System.Uri]$value } catch { throw 'Database URL is invalid.' }
-  if (-not $parsed.IsAbsoluteUri -or $parsed.Scheme -notin @('postgres', 'postgresql') -or [string]::IsNullOrWhiteSpace($parsed.Host)) {
-    throw 'Database URL must be an absolute PostgreSQL URL.'
-  }
-  if (-not [string]::IsNullOrWhiteSpace($parsed.Query)) {
-    throw 'Database URL must not contain query parameters; they can override connection identity and authority.'
-  }
-  $segments = $parsed.AbsolutePath.TrimStart('/').Split('/')
-  if ($segments.Count -ne 1 -or [string]::IsNullOrWhiteSpace($segments[0])) {
-    throw 'Database URL must identify exactly one database path component.'
-  }
-  $database = [System.Uri]::UnescapeDataString($segments[0])
-  if ($database -notmatch '^[A-Za-z0-9_]+$') {
-    throw 'Database URL must end in a simple, unencoded database name.'
-  }
-  $port = if ($parsed.IsDefaultPort -or $parsed.Port -lt 1) { 5432 } else { $parsed.Port }
+function Get-DatabaseIdentity([string]$environmentName) {
+  $parsed = Get-PostgresConnectionMetadata -ConnectionEnvironment $environmentName
   return [pscustomobject]@{
-    Uri = $parsed
-    HostName = $parsed.DnsSafeHost.TrimEnd('.').ToLowerInvariant()
-    Port = $port
-    Database = $database
-    User = [System.Uri]::UnescapeDataString(($parsed.UserInfo -split ':')[0])
-    Password = if ($parsed.UserInfo -match ':') { [System.Uri]::UnescapeDataString(($parsed.UserInfo -split ':', 2)[1]) } else { '' }
+    HostName = ([string]$parsed.host).TrimEnd('.').ToLowerInvariant()
+    Port = [int]$parsed.port
+    Database = [string]$parsed.database
+    User = [string]$parsed.username
   }
 }
 
@@ -42,17 +30,6 @@ function Get-NormalizedHostName([string]$value) {
   $h = $value.TrimEnd('.').ToLowerInvariant()
   if ($h -in @('localhost', '127.0.0.1', '::1')) { return 'localhost' }
   return $h
-}
-
-function Build-SanitizedUrl($identity) {
-  $builder = [System.UriBuilder]::new($identity.Uri.Scheme, $identity.HostName, $identity.Port, "/$($identity.Database)")
-  if (-not [string]::IsNullOrWhiteSpace($identity.User)) {
-    $builder.UserName = [System.Uri]::EscapeDataString($identity.User)
-    if (-not [string]::IsNullOrWhiteSpace($identity.Password)) {
-      $builder.Password = $identity.Password
-    }
-  }
-  return $builder.Uri.AbsoluteUri
 }
 
 function Resolve-Tool([string]$explicit, [string]$name) {
@@ -65,43 +42,32 @@ function Resolve-Tool([string]$explicit, [string]$name) {
   return $null
 }
 
-function Get-PostgresUrl($identity) {
-  $builder = [System.UriBuilder]::new($identity.Uri.Scheme, $identity.HostName, $identity.Port, '/postgres')
-  if (-not [string]::IsNullOrWhiteSpace($identity.User)) {
-    $builder.UserName = [System.Uri]::EscapeDataString($identity.User)
-    if (-not [string]::IsNullOrWhiteSpace($identity.Password)) {
-      $builder.Password = $identity.Password
-    }
-  }
-  return $builder.Uri.AbsoluteUri
-}
-
-function Invoke-PsqlProbe([string]$mode, [string]$url, [string]$sql, [string]$dockerContainer, [string]$dbUser, [string]$database) {
+function Invoke-PsqlProbe([string]$mode, [string]$connectionEnvironment, [string]$sql, [string]$dockerContainer, [string]$dbUser, [string]$database) {
   if ($mode -eq 'host-binaries') {
     $psql = Resolve-Tool $env:PG_PSQL_PATH 'psql'
     if (-not $psql) { throw 'Identity verification requires psql (PG_PSQL_PATH or PATH).' }
-    return & $psql $url -tAc $sql
+    return Invoke-PostgresTool -Tool $psql -ConnectionEnvironment $connectionEnvironment `
+      -Database $database -ToolArguments @('-tAc', $sql) -CaptureOutput
   }
-  return docker exec $dockerContainer psql -U $dbUser -d $database -tAc $sql
+  $output = docker exec $dockerContainer psql -U $dbUser -d $database -tAc $sql
+  return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = ($output -join "`n").Trim() }
 }
 
-function Assert-TargetIdentityNonDestructive([string]$mode, [string]$sanitizedUrl, $targetIdentity, $sourceIdentity, [string]$dockerContainer, [bool]$createDatabase) {
+function Assert-TargetIdentityNonDestructive([string]$mode, $targetIdentity, $sourceIdentity, [string]$dockerContainer, [bool]$createDatabase) {
   # First, prove the server identity from the safe postgres database.
-  $postgresUrl = Get-PostgresUrl $targetIdentity
-  $serverProbe = Invoke-PsqlProbe $mode $postgresUrl "SELECT COALESCE(inet_server_addr()::text, 'local') || ':' || inet_server_port()::text" $dockerContainer $targetIdentity.User 'postgres'
-  if ($LASTEXITCODE -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
+  $serverProbe = Invoke-PsqlProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' "SELECT COALESCE(inet_server_addr()::text, 'local') || ':' || inet_server_port()::text" $dockerContainer $targetIdentity.User 'postgres'
+  if ($serverProbe.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
 
-  # Then prove the target database state matches the intended destructive path.
-  $targetExists = Invoke-PsqlProbe $mode $postgresUrl "SELECT 1 FROM pg_database WHERE datname = '$($targetIdentity.Database)'" $dockerContainer $targetIdentity.User 'postgres'
-  if ($LASTEXITCODE -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
+  $targetExists = Invoke-PsqlProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' "SELECT 1 FROM pg_database WHERE datname = '$($targetIdentity.Database)'" $dockerContainer $targetIdentity.User 'postgres'
+  if ($targetExists.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
 
   if ($createDatabase) {
-    if ($targetExists -eq '1') { throw 'RESTORE_TARGET_DATABASE_ALREADY_EXISTS' }
+    if ($targetExists.Output -eq '1') { throw 'RESTORE_TARGET_DATABASE_ALREADY_EXISTS' }
   } else {
-    if ($targetExists -ne '1') { throw 'RESTORE_TARGET_DATABASE_MISSING' }
-    $databaseProbe = Invoke-PsqlProbe $mode $sanitizedUrl "SELECT current_database()" $dockerContainer $targetIdentity.User $targetIdentity.Database
-    if ($LASTEXITCODE -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
-    if ($databaseProbe -ne $targetIdentity.Database) { throw 'RESTORE_TARGET_IDENTITY_DATABASE_MISMATCH' }
+    if ($targetExists.Output -ne '1') { throw 'RESTORE_TARGET_DATABASE_MISSING' }
+    $databaseProbe = Invoke-PsqlProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' 'SELECT current_database()' $dockerContainer $targetIdentity.User $targetIdentity.Database
+    if ($databaseProbe.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
+    if ($databaseProbe.Output -ne $targetIdentity.Database) { throw 'RESTORE_TARGET_IDENTITY_DATABASE_MISMATCH' }
   }
 
   if ((Get-NormalizedHostName $targetIdentity.HostName) -eq (Get-NormalizedHostName $sourceIdentity.HostName) -and
@@ -112,12 +78,12 @@ function Assert-TargetIdentityNonDestructive([string]$mode, [string]$sanitizedUr
 }
 
 # Validate both identities before any database creation or pg_restore --clean.
-$target = Get-DatabaseIdentity $env:ISOLATED_RESTORE_DATABASE_URL
-$source = Get-DatabaseIdentity $env:DATABASE_URL
-$sanitizedTargetUrl = Build-SanitizedUrl $target
+$target = Get-DatabaseIdentity 'ISOLATED_RESTORE_DATABASE_URL'
+$source = Get-DatabaseIdentity 'DATABASE_URL'
 $targetDb = $target.Database
 $dbUser = $target.User
-if ([string]::IsNullOrWhiteSpace($dbUser)) { throw 'ISOLATED_RESTORE_DATABASE_URL must include a user (password is never echoed).' }
+if ([string]::IsNullOrWhiteSpace($dbUser)) { throw 'ISOLATED_RESTORE_DATABASE_URL must include a user.' }
+if ($target.Database -notmatch '^[A-Za-z0-9_]+$') { throw 'RESTORE_TARGET_DATABASE_INVALID' }
 if ($target.Database -in @('ai_marketing_phase1', 'platform', 'postgres', 'template0', 'template1')) {
   throw 'RESTORE_TARGET_CANONICAL_DATABASE'
 }
@@ -134,7 +100,7 @@ $dockerContainer = $env:PG_DOCKER_CONTAINER
 $mode = if ($pgRestore) { 'host-binaries' } elseif (-not [string]::IsNullOrWhiteSpace($dockerContainer)) { 'docker-exec' } else { throw 'No pg_restore available. Install PostgreSQL 16 client tools or set PG_DOCKER_CONTAINER for a local drill.' }
 
 # Non-destructive identity proof before any CREATE DATABASE or pg_restore --clean.
-Assert-TargetIdentityNonDestructive $mode $sanitizedTargetUrl $target $source $dockerContainer $CreateDatabase
+Assert-TargetIdentityNonDestructive $mode $target $source $dockerContainer $CreateDatabase
 
 # Structural pre-flight: refuse to copy/restore an artifact pg_restore cannot parse.
 if ($mode -eq 'host-binaries') {
@@ -146,17 +112,16 @@ if ($mode -eq 'host-binaries') {
   if ($CreateDatabase) {
     $psql = Resolve-Tool $env:PG_PSQL_PATH 'psql'
     if (-not $psql) { throw 'CreateDatabase requires psql (PG_PSQL_PATH or PATH) in host-binaries mode.' }
-    $builder = [System.UriBuilder]$sanitizedTargetUrl
-    $builder.Path = '/postgres'
-    $exists = & $psql $builder.Uri.AbsoluteUri -tAc "SELECT 1 FROM pg_database WHERE datname = '$targetDb'"
-    if ($LASTEXITCODE -ne 0) { throw 'RESTORE_TARGET_PROBE_FAILED' }
-    if ($exists -ne '1') {
-      & $psql $builder.Uri.AbsoluteUri -c "CREATE DATABASE `"$targetDb`""
-      if ($LASTEXITCODE -ne 0) { throw 'RESTORE_TARGET_CREATE_FAILED' }
+    $exists = Invoke-PsqlProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' "SELECT 1 FROM pg_database WHERE datname = '$targetDb'" $dockerContainer $target.User 'postgres'
+    if ($exists.ExitCode -ne 0) { throw 'RESTORE_TARGET_PROBE_FAILED' }
+    if ($exists.Output -ne '1') {
+      $create = Invoke-PsqlProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' "CREATE DATABASE `"$targetDb`"" $dockerContainer $target.User 'postgres'
+      if ($create.ExitCode -ne 0) { throw 'RESTORE_TARGET_CREATE_FAILED' }
     }
   }
-  & $pgRestore --exit-on-error --clean --if-exists --no-owner --no-privileges --dbname=$sanitizedTargetUrl $BackupFile
-  if ($LASTEXITCODE -ne 0) { throw 'Isolated restore failed.' }
+  $restore = Invoke-PostgresTool -Tool $pgRestore -ConnectionEnvironment 'ISOLATED_RESTORE_DATABASE_URL' `
+    -ToolArguments @('--exit-on-error', '--clean', '--if-exists', '--no-owner', '--no-privileges', $BackupFile)
+  if ($restore.ExitCode -ne 0) { throw 'Isolated restore failed.' }
 } else {
   $containerTmp = "/tmp/wsp03-restore-$targetDb.dump"
   try {
@@ -178,6 +143,10 @@ if ($mode -eq 'host-binaries') {
     docker exec $dockerContainer rm -f $containerTmp 2>$null | Out-Null
   }
 }
+
+$restoredIdentity = Invoke-PsqlProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' 'SELECT current_database()' $dockerContainer $target.User $targetDb
+if ($restoredIdentity.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
+if ($restoredIdentity.Output -ne $targetDb) { throw 'RESTORE_TARGET_IDENTITY_DATABASE_MISMATCH' }
 
 Write-Output (ConvertTo-Json -Compress @{
     status = 'restored'

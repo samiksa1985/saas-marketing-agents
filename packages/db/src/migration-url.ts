@@ -8,13 +8,14 @@
  * Neither URL is ever logged by callers of this helper.
  */
 import type postgres from 'postgres';
+import { readSecretEnvironmentValue } from '@platform/config';
 
 export function resolveMigrationDatabaseUrl(
-  env: { MIGRATION_DATABASE_URL?: string | undefined },
+  env: NodeJS.ProcessEnv,
   runtimeDatabaseUrl: string,
   nodeEnv = 'development',
 ): string {
-  const override = env.MIGRATION_DATABASE_URL?.trim();
+  const override = readSecretEnvironmentValue('MIGRATION_DATABASE_URL', env)?.trim();
   if (nodeEnv === 'production' && !override) {
     throw new Error('PRODUCTION_MIGRATION_DATABASE_URL_REQUIRED');
   }

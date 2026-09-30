@@ -3,6 +3,7 @@ import {
   isGovernedExternalActionDispatch,
   type GovernedExternalActionDispatch,
 } from '@platform/marketing-os-core';
+import { resolveSecretEnvironment } from '@platform/config';
 import type {
   ExternalActionProviderExecution,
   ExternalActionProviderReconciliation,
@@ -49,7 +50,15 @@ export interface GoogleAdsCredentialResolver {
 }
 
 export class EnvironmentGoogleAdsCredentialResolver implements GoogleAdsCredentialResolver {
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {}
+  private readonly env: NodeJS.ProcessEnv;
+
+  constructor(env: NodeJS.ProcessEnv = process.env) {
+    this.env = resolveSecretEnvironment(env, [
+      'GOOGLE_ADS_DEVELOPER_TOKEN',
+      'GOOGLE_ADS_CLIENT_SECRET',
+      'GOOGLE_ADS_REFRESH_TOKEN',
+    ]);
+  }
 
   validate(): { valid: boolean; missing: string[] } {
     const required = [

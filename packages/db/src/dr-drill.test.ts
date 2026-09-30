@@ -9,6 +9,7 @@
  * Gated off (skipped) when the pilot database or docker container is absent.
  */
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -27,7 +28,9 @@ const backupScript = join(repositoryRoot, 'scripts', 'backup-postgres.ps1');
 const restoreScript = join(repositoryRoot, 'scripts', 'restore-postgres-isolated.ps1');
 
 const DOCKER_CONTAINER = process.env.PG_DOCKER_CONTAINER ?? 'nawa-growth-phase1-postgres-1';
-const ISOLATED_DB = 'wsp03_restore_acceptance';
+const TEST_RUN_ID = randomUUID().replaceAll('-', '').slice(0, 12);
+const ISOLATED_DB = `wsp03_restore_acceptance_${TEST_RUN_ID}`;
+const CORRUPT_DB = `wsp03_corrupt_artifact_acceptance_${TEST_RUN_ID}`;
 
 function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
@@ -40,7 +43,14 @@ function resolvePilotDatabaseUrl(): string | undefined {
     const passwordFile = join(homedir(), '.nawa-secrets', 'phase1-postgres-password.txt');
     const password = readFileSync(passwordFile, 'utf8').trim();
     if (!password) return undefined;
-    return `postgresql://phase1_owner:${encodeURIComponent(password)}@127.0.0.1:55432/ai_marketing_phase1`;
+    const portMapping = spawnSync('docker', ['port', DOCKER_CONTAINER, '5432/tcp'], { encoding: 'utf8' });
+    if (portMapping.status !== 0) return undefined;
+    const binding = portMapping.stdout.trim().split(/\r?\n/)[0];
+    const match = /^(.+):(\d+)$/.exec(binding ?? '');
+    if (!match?.[1] || !match[2]) return undefined;
+    const host = match[1].replace(/^\[|\]$/g, '');
+    const connectionHost = ['0.0.0.0', '::'].includes(host) ? '127.0.0.1' : host;
+    return `postgresql://phase1_owner:${encodeURIComponent(password)}@${connectionHost}:${match[2]}/ai_marketing_phase1`;
   } catch {
     return undefined;
   }
@@ -231,8 +241,16 @@ test('WS-PROD-03 DR drill: backup, isolated restore, role model, isolation probe
     //    the codecore_app credential on the restored database (roles are
     //    cluster-global; grants/default privileges are per-database and are
     //    NOT restored from a --no-privileges dump by design).
+    const migrationUrl = urlWithDatabase(ISOLATED_DB);
+    const restoredAuthority = postgres(migrationUrl, { max: 1, prepare: false });
+    try {
+      const rows = Array.from((await restoredAuthority.unsafe('SELECT current_database() AS name')) as Iterable<{ name: string }>);
+      assert.equal(rows[0]?.name, ISOLATED_DB);
+    } finally {
+      await restoredAuthority.end();
+    }
     const provision = runTsx('scripts/provision-production-roles.ts', drillEnv({
-      MIGRATION_DATABASE_URL: urlWithDatabase(ISOLATED_DB),
+      MIGRATION_DATABASE_URL: migrationUrl,
       CODECORE_APP_PASSWORD: appPassword,
     }));
     assert.equal(provision.status, 0, `role re-provisioning failed: ${provision.stderr}`);
@@ -329,9 +347,9 @@ test('restore target guards reject malformed URLs, query parameters, and source 
   const queryWithMarker = new URL(targetUrl('plain_target'));
   queryWithMarker.search = '?mode=restore';
   const markerInQuery = runGuard(queryWithMarker.toString());
-  assert.match(markerInQuery.stderr, /Database URL must not contain query parameters/i);
+  assert.match(markerInQuery.stderr, /POSTGRES_CONNECTION_IDENTITY_FAILED/);
   const encodedPathTrick = runGuard(targetUrl('wsp03%2Frestore'));
-  assert.match(encodedPathTrick.stderr, /simple, unencoded database name/i);
+  assert.match(encodedPathTrick.stderr, /POSTGRES_CONNECTION_IDENTITY_FAILED/);
 
   const canonicalWithDifferentCredentials = runGuard(
     targetUrl('ai_marketing_phase1', 'different_user', 'different_password'),
@@ -379,7 +397,7 @@ test('restore tooling fails closed for missing and corrupt artifacts', { skip: !
   }));
   assert.notEqual(missing.status, 0);
 
-  const corruptDb = 'wsp03_corrupt_artifact_acceptance';
+  const corruptDb = CORRUPT_DB;
   const owner = postgres(ownerUrl!, { max: 1, prepare: false });
   try {
     await owner.unsafe(`DROP DATABASE IF EXISTS ${quoteIdentifier(corruptDb)}`);

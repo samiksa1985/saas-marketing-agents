@@ -17,6 +17,7 @@
  *   - Global identity and authorization tables are read-only to application code.
  */
 import postgres from 'postgres';
+import { resolveSecretEnvironment } from '@platform/config';
 import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from '../src/migration-url.js';
 
 const OWNER_ROLE = 'codecore_owner';
@@ -196,12 +197,18 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
 
 async function run(): Promise<void> {
   // Provisioning runs only through the explicit migration authority in production.
+  const secrets = resolveSecretEnvironment(process.env, [
+    'DATABASE_URL',
+    'MIGRATION_DATABASE_URL',
+    'CODECORE_APP_PASSWORD',
+  ]);
   const databaseUrl = resolveMigrationDatabaseUrl(
-    process.env,
-    process.env.DATABASE_URL?.trim() ?? '',
-    process.env.NODE_ENV,
+    secrets,
+    secrets.DATABASE_URL?.trim() ?? '',
+    secrets.NODE_ENV,
   );
-  const appPassword = process.env.CODECORE_APP_PASSWORD?.trim();
+  const appPassword = secrets.CODECORE_APP_PASSWORD?.trim();
+  if (secrets.NODE_ENV === 'production' && !appPassword) throw new Error('CODECORE_APP_PASSWORD_REQUIRED');
 
   const client = postgres(databaseUrl, { max: 1, prepare: false });
   try {
@@ -223,7 +230,16 @@ async function run(): Promise<void> {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
-    const code = /^[A-Z][A-Z0-9_]+/.exec(message)?.[0] ?? 'PROVISION_PRODUCTION_ROLES_FAILED';
+    const safeMessageCode = /^[A-Z][A-Z0-9_]+/.exec(message)?.[0];
+    const databaseCode =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof error.code === 'string' &&
+      /^[0-9A-Z]{5}$/.test(error.code)
+        ? `SQLSTATE_${error.code}`
+        : undefined;
+    const code = safeMessageCode ?? databaseCode ?? 'PROVISION_PRODUCTION_ROLES_FAILED';
     process.stderr.write(JSON.stringify({ status: 'failed', code }) + '\n');
     process.exitCode = 1;
   } finally {

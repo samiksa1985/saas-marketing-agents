@@ -11,11 +11,12 @@
  */
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
+import { readSecretEnvironmentValue } from '@platform/config';
 import { loadJournalMigrations } from './journal-migration-runner.js';
 import { assertRlsPolicyCoverage } from './runtime-role-verify.js';
 import { KNOWLEDGE_EMBEDDING_DIMENSIONS } from './schema.js';
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const databaseUrl = readSecretEnvironmentValue('DATABASE_URL')?.trim();
 if (!databaseUrl) {
   process.stderr.write(JSON.stringify({ status: 'failed', code: 'DATABASE_URL_REQUIRED' }) + '\n');
   process.exit(1);

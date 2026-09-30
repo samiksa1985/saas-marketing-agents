@@ -1,3 +1,4 @@
+import { resolveSecretEnvironment } from '@platform/config';
 import type { TenantContext } from '@platform/contracts';
 import {
   isGovernedExternalActionDispatch,
@@ -39,7 +40,11 @@ export interface MetaAdsCredentialResolver {
 }
 
 export class EnvironmentMetaAdsCredentialResolver implements MetaAdsCredentialResolver {
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {}
+  private readonly env: NodeJS.ProcessEnv;
+
+  constructor(env: NodeJS.ProcessEnv = process.env) {
+    this.env = resolveSecretEnvironment(env, ['META_ADS_ACCESS_TOKEN', 'META_ADS_APP_SECRET']);
+  }
 
   validate(): { valid: boolean; missing: string[] } {
     const required = ['META_ADS_ACCESS_TOKEN', 'META_ADS_AD_ACCOUNT_ID'];

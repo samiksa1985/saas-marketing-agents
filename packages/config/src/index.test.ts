@@ -56,6 +56,17 @@ function withTokenFile(callback: (tokenFile: string, token: string) => void): vo
   }
 }
 
+function withConfigFile(contents: string, callback: (file: string) => void): void {
+  const directory = mkdtempSync(join(tmpdir(), 'codecore-config-'));
+  const file = join(directory, 'secret.txt');
+  try {
+    writeFileSync(file, contents, { encoding: 'utf8', mode: 0o600 });
+    callback(file);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 test(
   'configuration rejects missing required infrastructure secrets',
   () => {
@@ -76,6 +87,34 @@ test(
       loadConfig(
         baseEnv,
       );
+
+      test('runtime database configuration accepts a secret file and prefers it over direct input', () => {
+        withConfigFile('postgresql://file-user:file-password@db.example.test/runtime\n', (file) => {
+          const config = loadConfig({
+            ...baseEnv,
+            DATABASE_URL: 'postgresql://direct-user:direct-password@wrong.example.test/wrong',
+            DATABASE_URL_FILE: file,
+          });
+          assert.equal(config.databaseUrl, 'postgresql://file-user:file-password@db.example.test/runtime');
+        });
+      });
+
+      test('an unreadable database secret file fails closed instead of using the direct URL', () => {
+        const privatePath = join(tmpdir(), 'missing-codecore-database-url');
+        assert.throws(
+          () =>
+            loadConfig({
+              ...baseEnv,
+              DATABASE_URL: 'postgresql://direct-user:direct-password@wrong.example.test/wrong',
+              DATABASE_URL_FILE: privatePath,
+            }),
+          (error: unknown) =>
+            error instanceof Error &&
+            error.message === 'DATABASE_URL_FILE_UNREADABLE' &&
+            !error.message.includes(privatePath) &&
+            !error.message.includes('direct-password'),
+        );
+      });
 
     assert.equal(
       config.apiPort,

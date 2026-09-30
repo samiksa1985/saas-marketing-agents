@@ -19,6 +19,7 @@
     "check": "tsx src/check.ts"
   },
   "dependencies": {
+    "@platform/config": "0.1.0",
     "drizzle-orm": "^0.36.4",
     "postgres": "^3.4.5"
   },
