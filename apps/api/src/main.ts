@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Controller, Get, Headers, Module, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Header, Headers, Module, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
@@ -93,6 +93,8 @@ import {
 } from '@platform/marketing-os-core';
 import {
   configureProductionRuntime,
+  apiMetrics,
+  metricsAuthorizationAllowed,
   safeHealthResponse,
   safeReadinessResponse,
   sanitizedRuntimeSummary,
@@ -123,6 +125,17 @@ const tenantDatabase = new ApiTenantDatabase(database);
     }
   }
   @Get('/version') version(){return {service:'api',...sanitizedRuntimeSummary(config)};}
+  @Get('/metrics')
+  @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+  metrics(@Headers('authorization') authorization?: string) {
+    if (
+      !config.observabilityMetricsEnabled ||
+      !metricsAuthorizationAllowed(authorization, config.observabilityMetricsToken)
+    ) {
+      throw new NotFoundException();
+    }
+    return apiMetrics.renderPrometheus();
+  }
   @Get('/i18n/context') context(@Headers('accept-language') language?:string){
     const locale=(supportedLocales.find((item)=>language?.includes(item))??'en') as Locale;
     return createLocaleContext(locale);

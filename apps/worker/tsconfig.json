@@ -4,7 +4,8 @@
   "references": [
     { "path": "../../packages/config" },
     { "path": "../../packages/db" },
-    { "path": "../../packages/marketing-os-persistence" }
+    { "path": "../../packages/marketing-os-persistence" },
+    { "path": "../../packages/observability" }
   ],
   "include": ["src/**/*.ts"]
 }

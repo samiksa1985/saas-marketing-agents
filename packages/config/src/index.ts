@@ -33,6 +33,8 @@ export interface RuntimeConfig {
   releaseVersion: string;
   corsAllowedOrigins: string[];
   trustProxy: boolean;
+  observabilityMetricsEnabled: boolean;
+  observabilityMetricsToken?: string;
   apiRateLimitWindowMs: number;
   apiRateLimitMax: number;
   databaseUrl: string;
@@ -214,7 +216,7 @@ function validateLocalAcceptanceTokenFile(tokenFile: string): void {
 export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RuntimeConfig {
-  env = resolveSecretEnvironment(env, ['DATABASE_URL']);
+  env = resolveSecretEnvironment(env, ['DATABASE_URL', 'OBSERVABILITY_METRICS_TOKEN']);
   const nodeEnv =
     (env.NODE_ENV ??
       'development') as NodeEnvironment;
@@ -254,6 +256,14 @@ export function loadConfig(
     throw new Error('Missing required environment variable: TRUST_PROXY');
   }
   const trustProxy = optionalBoolean('TRUST_PROXY', env.TRUST_PROXY);
+  const observabilityMetricsEnabled = optionalBoolean(
+    'OBSERVABILITY_METRICS_ENABLED',
+    env.OBSERVABILITY_METRICS_ENABLED,
+  );
+  const observabilityMetricsToken = optional(env.OBSERVABILITY_METRICS_TOKEN);
+  if (observabilityMetricsEnabled && (!observabilityMetricsToken || observabilityMetricsToken.length < 32)) {
+    throw new Error('OBSERVABILITY_METRICS_ENABLED requires OBSERVABILITY_METRICS_TOKEN with at least 32 characters');
+  }
   const apiRateLimitWindowMs = positiveInteger('API_RATE_LIMIT_WINDOW_MS', env.API_RATE_LIMIT_WINDOW_MS, 60_000);
   const apiRateLimitMax = positiveInteger('API_RATE_LIMIT_MAX', env.API_RATE_LIMIT_MAX, 300);
   const webUrl = httpsOrigin('WEB_URL', required('WEB_URL', env.WEB_URL), production);
@@ -438,6 +448,10 @@ export function loadConfig(
     corsAllowedOrigins,
 
     trustProxy,
+
+    observabilityMetricsEnabled,
+
+    ...(observabilityMetricsToken ? { observabilityMetricsToken } : {}),
 
     apiRateLimitWindowMs,
 

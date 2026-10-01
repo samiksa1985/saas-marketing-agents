@@ -1,0 +1,74 @@
+groups:
+  - name: codecore-platform
+    rules:
+      - alert: CodecoreApiUnavailable
+        expr: up{job="codecore-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: CODECORE API scrape target is unavailable
+          description: Check service health, deployment status, and the private scrape path.
+
+      - alert: CodecoreApiHighServerErrorRate
+        expr: |
+          (
+            sum(rate(codecore_http_requests_total{status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(codecore_http_requests_total[5m])), 0.001)
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: CODECORE API 5xx rate is above 5 percent
+          description: Compare affected route templates and release version before rollback.
+
+      - alert: CodecoreApiHighRequestLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(codecore_http_request_duration_seconds_bucket[10m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: CODECORE API p95 latency exceeds one second
+          description: Check database readiness, dependency latency, and recent release changes.
+
+      - alert: CodecoreAuthenticationRejectionsSpiking
+        expr: sum(rate(codecore_platform_events_total{signal="authentication",outcome="rejected"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Authentication rejections are elevated
+          description: Review sanitized authentication outcomes and identity-provider availability.
+
+      - alert: CodecoreWorkflowRequestsFailing
+        expr: sum(rate(codecore_platform_events_total{signal="workflow",outcome=~"failed|rejected"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Workflow API requests are failing
+          description: Inspect workflow request logs and the selected workflow runtime's health.
+
+      - alert: CodecoreProviderExecutionUncertain
+        expr: increase(codecore_platform_events_total{signal="provider",outcome="uncertain"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Provider outcome is uncertain
+          description: Reconcile provider state before any retry; do not bypass governed idempotency controls.
+
+      - alert: CodecoreProviderActionFailed
+        expr: increase(codecore_platform_events_total{signal="provider",outcome="failed"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: A governed provider action failed
+          description: Inspect the sanitized provider event and follow the existing retry or rollback policy.

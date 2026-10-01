@@ -10,6 +10,7 @@ export const SECRET_ENVIRONMENT_KEYS = [
   'GOOGLE_ADS_REFRESH_TOKEN',
   'META_ADS_ACCESS_TOKEN',
   'META_ADS_APP_SECRET',
+  'OBSERVABILITY_METRICS_TOKEN',
 ] as const;
 
 function readSecretFile(name: string, path: string): string {

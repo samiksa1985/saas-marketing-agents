@@ -24,11 +24,13 @@ import {
   type MarketingOSPersistenceDatabase,
 } from '@platform/marketing-os-persistence';
 import type { ExternalActionProviderRegistry } from '@platform/tool-gateway';
+import { createStructuredLogger, platformMetrics } from '@platform/observability';
 
 import type { ApprovalApiService } from './approval.controller.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 
 type ExternalActionTransaction = TenantScopedTransaction & MarketingOSPersistenceDatabase;
+const providerLogger = createStructuredLogger('api');
 
 /** Nest token for the single canonical external-action application instance. */
 export const EXTERNAL_ACTION_APPLICATION_SERVICE =
@@ -333,9 +335,30 @@ export class ExternalActionApplicationService<TTransaction extends ExternalActio
           ...(errorCode ? { errorCode } : {}),
         }),
       );
+      const outcome = eventType.includes('UNCERTAIN')
+        ? 'uncertain'
+        : eventType.includes('FAILURE') || eventType.includes('FAILED') || eventType.includes('MISMATCH')
+          ? 'failed'
+          : eventType === 'EXECUTE_ATTEMPT'
+            ? 'started'
+            : eventType.includes('VERIFIED') || eventType.includes('SUCCEEDED')
+              ? 'verified'
+              : 'succeeded';
+      const safeErrorCode = errorCode && /^[A-Z0-9_.-]{1,80}$/.test(errorCode)
+        ? errorCode
+        : errorCode ? 'UNCLASSIFIED' : undefined;
+      platformMetrics.recordSignal('provider', outcome);
+      providerLogger.emit(outcome === 'failed' || outcome === 'uncertain' ? 'warn' : 'info', 'provider.action.event', {
+        provider: action.proposal.provider, eventType, outcome,
+        ...(startedAt !== undefined ? { latencyMs: Math.max(0, Date.now() - startedAt) } : {}),
+        ...(safeErrorCode ? { errorCode: safeErrorCode } : {}),
+      });
     } catch {
       // Operational events are intentionally non-blocking. The durable action
       // state and the provider gate remain the governing system of record.
+      providerLogger.emit('error', 'provider.operational_event.persist_failed', {
+        provider: action.proposal.provider, eventType,
+      });
     }
   }
 }

@@ -581,3 +581,33 @@ test('local development continues to accept explicit HTTP origins', () => {
     /CORS_ALLOWED_ORIGINS/i,
   );
 });
+
+test('metrics endpoint configuration is disabled by default and requires a high-entropy token when enabled', () => {
+  assert.equal(loadConfig(baseEnv).observabilityMetricsEnabled, false);
+  assert.throws(
+    () => loadConfig({ ...baseEnv, OBSERVABILITY_METRICS_ENABLED: 'true' }),
+    /requires OBSERVABILITY_METRICS_TOKEN/i,
+  );
+  assert.throws(
+    () => loadConfig({ ...baseEnv, OBSERVABILITY_METRICS_ENABLED: 'true', OBSERVABILITY_METRICS_TOKEN: 'too-short' }),
+    /at least 32 characters/i,
+  );
+  const config = loadConfig({
+    ...baseEnv,
+    OBSERVABILITY_METRICS_ENABLED: 'true',
+    OBSERVABILITY_METRICS_TOKEN: 'a'.repeat(40),
+  });
+  assert.equal(config.observabilityMetricsEnabled, true);
+  assert.equal(config.observabilityMetricsToken, 'a'.repeat(40));
+});
+
+test('metrics endpoint token can be loaded from a secret file', () => {
+  withConfigFile('b'.repeat(48), (file) => {
+    const config = loadConfig({
+      ...baseEnv,
+      OBSERVABILITY_METRICS_ENABLED: 'true',
+      OBSERVABILITY_METRICS_TOKEN_FILE: file,
+    });
+    assert.equal(config.observabilityMetricsToken, 'b'.repeat(48));
+  });
+});

@@ -22,6 +22,9 @@ import {
 import {
   authorize,
 } from '@platform/auth';
+import { createStructuredLogger, platformMetrics } from '@platform/observability';
+
+const authorizationLogger = createStructuredLogger('api');
 
 import type {
   Locale,
@@ -186,6 +189,8 @@ export class WorkflowApiService {
     } catch (
       error
     ) {
+      platformMetrics.recordSignal('authorization', 'rejected');
+      authorizationLogger.emit('warn', 'security.authorization.rejected', { permission });
       if (
         error instanceof
         Error

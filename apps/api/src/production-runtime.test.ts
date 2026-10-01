@@ -5,6 +5,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { loadConfig } from '@platform/config';
 import {
   configureProductionRuntime,
+  metricsAuthorizationAllowed,
   requestIdFor,
   safeHealthResponse,
   safeReadinessResponse,
@@ -34,6 +35,15 @@ function productionConfig(trustProxy = false) {
 test('request correlation accepts bounded safe IDs and replaces unsafe values', () => {
   assert.equal(requestIdFor('pilot-request-123'), 'pilot-request-123');
   assert.notEqual(requestIdFor('bad value with spaces'), 'bad value with spaces');
+});
+
+test('metrics access requires an exact bearer token and rejects missing or malformed credentials', () => {
+  const token = 'a'.repeat(40);
+  assert.equal(metricsAuthorizationAllowed(`Bearer ${token}`, token), true);
+  assert.equal(metricsAuthorizationAllowed(`bearer ${token}`, token), false);
+  assert.equal(metricsAuthorizationAllowed(`Bearer ${token}x`, token), false);
+  assert.equal(metricsAuthorizationAllowed(undefined, token), false);
+  assert.equal(metricsAuthorizationAllowed(`Bearer ${token}`, undefined), false);
 });
 
 test('runtime summary does not expose provider or database credentials', () => {

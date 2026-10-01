@@ -10,6 +10,7 @@
 | `packages/registry` | Agent, workstream, graph, and readiness registry. |
 | `packages/db` | Drizzle schema definitions, PostgreSQL configuration, and SQL migrations. |
 | `packages/config` | Runtime environment schema and configuration loading. |
+| `packages/observability` | Structured logs, request correlation, redaction, and process-local Prometheus metrics. |
 | `packages/workflow-runtime` | Workflow lifecycle, tasks, handoffs, persistence seams, and execution modes. |
 | `packages/agent-runtime` | Agent execution/runtime controls and tests. |
 | `packages/approvals`, `packages/governance`, `packages/tool-gateway` | Approval policy, governance decisions, and guarded tool execution. |
@@ -19,7 +20,7 @@
 
 ## Package inventory
 
-The workspace includes acquisition graph, agent runtime, AI gateway, approvals, artifacts, audit, auth, automation engine, billing entitlements, business mentor, CFO intelligence, company intelligence, configuration, context engine, contracts, customer-success intelligence, database, domain, governance, handoffs, i18n, market intelligence, marketing commander, marketing execution, Marketing OS core/execution/persistence, measurement engine, registry, sales intelligence, strategy intelligence, tool gateway, validation, and workflow runtime packages.
+The workspace includes acquisition graph, agent runtime, AI gateway, approvals, artifacts, audit, auth, automation engine, billing entitlements, business mentor, CFO intelligence, company intelligence, configuration, context engine, contracts, customer-success intelligence, database, domain, governance, handoffs, i18n, market intelligence, marketing commander, marketing execution, Marketing OS core/execution/persistence, measurement engine, observability, registry, sales intelligence, strategy intelligence, tool gateway, validation, and workflow runtime packages.
 
 ## Data and migration inventory
 

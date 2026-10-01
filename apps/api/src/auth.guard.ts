@@ -15,6 +15,9 @@ import {
   AuthenticationError,
   type AuthProvider,
 } from '@platform/auth';
+import { createStructuredLogger, platformMetrics } from '@platform/observability';
+
+const securityLogger = createStructuredLogger('api');
 
 export const AUTH_PROVIDER =
   'PLATFORM_AUTH_PROVIDER';
@@ -79,6 +82,10 @@ export class ApiAuthGuard
     } catch (
       error
     ) {
+      platformMetrics.recordSignal('authentication', 'rejected');
+      securityLogger.emit('warn', 'security.authentication.rejected', {
+        reason: error instanceof AuthenticationError ? 'invalid_credentials' : 'authentication_failed',
+      });
       if (
         error instanceof
         AuthenticationError
