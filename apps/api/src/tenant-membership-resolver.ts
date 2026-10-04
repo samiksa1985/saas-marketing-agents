@@ -39,7 +39,9 @@ export class DatabaseTenantMembershipResolver<TTransaction extends TenantScopedT
   async resolve(subject: string, claimedTenantId: string): Promise<TenantMembership | null> {
     if (!subject.trim() || !claimedTenantId.trim()) return null;
     // Tenant ids are UUIDs; anything else cannot match tenant_members anyway.
-    if (!/^[0-9a-fA-F-]{36}$/.test(claimedTenantId)) return null;
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(claimedTenantId)) {
+      return null;
+    }
 
     // The claimed tenant id scopes the RLS transaction. If the subject has no
     // active membership in that tenant, no rows are visible and resolution

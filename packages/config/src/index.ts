@@ -57,6 +57,8 @@ export interface RuntimeConfig {
   aiModel: string;
   oidcIssuerUrl?: string;
   oidcAudience?: string;
+  oidcClientId?: string;
+  oidcClientSecret?: string;
   localAcceptanceAuthEnabled: boolean;
   /**
    * Explicit local-only switch used to rehearse durable approval recovery
@@ -216,7 +218,11 @@ function validateLocalAcceptanceTokenFile(tokenFile: string): void {
 export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RuntimeConfig {
-  env = resolveSecretEnvironment(env, ['DATABASE_URL', 'OBSERVABILITY_METRICS_TOKEN']);
+  env = resolveSecretEnvironment(env, [
+    'DATABASE_URL',
+    'OBSERVABILITY_METRICS_TOKEN',
+    'OIDC_CLIENT_SECRET',
+  ]);
   const nodeEnv =
     (env.NODE_ENV ??
       'development') as NodeEnvironment;
@@ -293,6 +299,8 @@ export function loadConfig(
     optional(
       env.OIDC_AUDIENCE,
     );
+  const oidcClientId = optional(env.OIDC_CLIENT_ID);
+  const oidcClientSecret = optional(env.OIDC_CLIENT_SECRET);
 
   const normalizedIssuerUrl = oidcIssuerUrl
     ? absoluteUrl('OIDC_ISSUER_URL', oidcIssuerUrl, { httpsOnly: nodeEnv === 'production' })
@@ -528,6 +536,10 @@ export function loadConfig(
           oidcAudience,
         }
       : {}),
+
+    ...(oidcClientId ? { oidcClientId } : {}),
+
+    ...(oidcClientSecret ? { oidcClientSecret } : {}),
 
     localAcceptanceAuthEnabled,
 

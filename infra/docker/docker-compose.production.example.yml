@@ -61,6 +61,7 @@ services:
       ISOLATED_RESTORE_DATABASE_URL: ''
       ISOLATED_RESTORE_DATABASE_URL_FILE: ''
       OIDC_CLIENT_SECRET: ''
+      OIDC_CLIENT_SECRET_FILE: ''
       GOOGLE_ADS_DEVELOPER_TOKEN: ''
       GOOGLE_ADS_DEVELOPER_TOKEN_FILE: ''
       GOOGLE_ADS_CLIENT_SECRET: ''
@@ -101,6 +102,7 @@ services:
       ISOLATED_RESTORE_DATABASE_URL: ''
       ISOLATED_RESTORE_DATABASE_URL_FILE: ''
       OIDC_CLIENT_SECRET: ''
+      OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
       GOOGLE_ADS_DEVELOPER_TOKEN: ''
       GOOGLE_ADS_DEVELOPER_TOKEN_FILE: ${GOOGLE_ADS_DEVELOPER_TOKEN_FILE:-}
       GOOGLE_ADS_CLIENT_SECRET: ''
@@ -111,7 +113,7 @@ services:
       META_ADS_ACCESS_TOKEN_FILE: ${META_ADS_ACCESS_TOKEN_FILE:-}
       META_ADS_APP_SECRET: ''
       META_ADS_APP_SECRET_FILE: ${META_ADS_APP_SECRET_FILE:-}
-    secrets: [runtime_database_url, postgres_ca]
+    secrets: [runtime_database_url, postgres_ca, oidc_client_secret]
     depends_on: { postgres: { condition: service_healthy } }
     ports: ['127.0.0.1:4000:4000']
     networks: [app_internal, database_internal, provider_egress]
@@ -138,6 +140,7 @@ services:
       ISOLATED_RESTORE_DATABASE_URL: ''
       ISOLATED_RESTORE_DATABASE_URL_FILE: ''
       OIDC_CLIENT_SECRET: ''
+      OIDC_CLIENT_SECRET_FILE: ''
       GOOGLE_ADS_DEVELOPER_TOKEN: ''
       GOOGLE_ADS_DEVELOPER_TOKEN_FILE: ''
       GOOGLE_ADS_CLIENT_SECRET: ''
@@ -187,3 +190,5 @@ secrets:
     file: ${CODECORE_MIGRATION_DATABASE_URL_FILE:?Set an operator-managed migration URL file path}
   postgres_ca:
     file: ${CODECORE_POSTGRES_CA_FILE:?Set an operator-managed PostgreSQL trust-bundle file path}
+  oidc_client_secret:
+    file: ${OIDC_CLIENT_SECRET_FILE:?Set an operator-managed OIDC client-secret file path}

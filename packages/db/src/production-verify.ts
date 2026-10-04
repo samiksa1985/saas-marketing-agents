@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import { loadJournalMigrations } from './journal-migration-runner.js';
 import {
   PRODUCTION_APP_ROLE,
+  assertBrowserAuthRuntimePrivileges,
   assertExpectedProductionRoles,
   assertProductionRuntimeAuthority,
   assertRlsPolicyCoverage,
@@ -29,6 +30,7 @@ try {
   let runtimeRole: string | undefined;
   if (config.nodeEnv === 'production') {
     runtimeRole = await assertProductionRuntimeAuthority(client);
+    await assertBrowserAuthRuntimePrivileges(client, runtimeRole);
     await assertExpectedProductionRoles(client);
   }
 
@@ -75,6 +77,7 @@ try {
     result.runtimeRole = runtimeRole!;
     result.appRole = PRODUCTION_APP_ROLE;
     result.runtimeRoleSafe = true;
+    result.browserAuthAuthority = 'restricted-functions';
     result.tenantPolicyCoverage = 'enabled';
     result.crossTenantSelectIsolation = probe.selectIsolation ? 'enforced' : 'unproven';
     result.crossTenantInsertIsolation = probe.insertIsolation ? 'enforced' : 'unproven';

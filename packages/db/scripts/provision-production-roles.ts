@@ -23,6 +23,7 @@ import { productionPostgresOptions } from '../src/postgres-connection.js';
 
 const OWNER_ROLE = 'codecore_owner';
 const APP_ROLE = 'codecore_app';
+const RESTRICTED_AUTH_TABLES = ['codecore_oidc_login_transactions', 'codecore_web_sessions'];
 
 /** SQL identifier quoting: ALTER ROLE "x", GRANT ... TO "x". */
 function quoteIdentifier(value: string): string {
@@ -145,9 +146,28 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
       );
       continue;
     }
+    if (RESTRICTED_AUTH_TABLES.includes(relname)) {
+      await client.unsafe(
+        `REVOKE ALL PRIVILEGES ON TABLE ${table} FROM PUBLIC, ${quoteIdentifier(APP_ROLE)}`,
+      );
+      continue;
+    }
     await client.unsafe(
       `GRANT INSERT, UPDATE, DELETE ON TABLE ${table} TO ${quoteIdentifier(APP_ROLE)}`,
     );
+  }
+
+  const authFunctions = [
+    'codecore_start_oidc_login(char, char, character varying, character varying, character varying)',
+    'codecore_consume_oidc_login(char, char)',
+    'codecore_create_web_session(char, character varying, uuid, character varying)',
+    'codecore_lookup_web_session(char)',
+    'codecore_revoke_web_session(char)',
+    'codecore_rotate_web_session(char, char, character varying, uuid, character varying)',
+    'codecore_list_user_tenants(character)',
+  ];
+  for (const signature of authFunctions) {
+    await client.unsafe(`GRANT EXECUTE ON FUNCTION ${signature} TO ${quoteIdentifier(APP_ROLE)}`);
   }
 
   await client.unsafe(

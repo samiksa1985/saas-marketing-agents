@@ -232,6 +232,13 @@
       "when": 1788629864187,
       "tag": "0032_tenant_admin_rbac_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788629864188,
+      "tag": "0033_browser_oidc_sessions",
+      "breakpoints": true
     }
   ]
 }

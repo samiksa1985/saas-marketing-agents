@@ -15,6 +15,8 @@ import {
 import { GrowthCommandCenter } from './growth-command-center';
 import { CommercialSurface } from './commercial-surface';
 import { pilotAccess, signedOutAccess } from './pilot-access';
+import { BrowserAuthControl } from './browser-auth-control';
+import type { BrowserAuthSession } from './browser-auth-types';
 
 import { ProductDataState } from './product-model';
 
@@ -23,6 +25,7 @@ type ProductShellProps = {
   pilotDataState?: ProductDataState<unknown> | undefined;
   isPilotAuthenticated?: boolean;
   pilotTenantName?: string;
+  browserSession?: BrowserAuthSession;
 };
 
 // Pilot config from build-time env (NEXT_PUBLIC_ prefix - non-secret only)
@@ -355,6 +358,7 @@ export function ProductShell({
   pilotDataState,
   isPilotAuthenticated = false,
   pilotTenantName = 'CODECORE Growth Pilot',
+  browserSession = { authenticated: false },
 }: ProductShellProps) {
   const [locale, setLocale] = useState<ProductLocale>('en-US');
   const [period, setPeriod] = useState('30D');
@@ -362,7 +366,18 @@ export function ProductShell({
     () => productViews.find((candidate) => candidate.id === initialView) ?? productViews[0]!,
     [initialView],
   );
-  const access = assessProductAccess(view, isPilotAuthenticated ? pilotAccess : signedOutAccess);
+  const browserAccess = browserSession.authenticated
+    ? {
+        tenantContext: 'available' as const,
+        permissions: browserSession.permissions ?? [],
+        entitlements: [],
+      }
+    : signedOutAccess;
+  const hasTenantSession = isPilotAuthenticated || browserSession.authenticated;
+  const access = assessProductAccess(
+    view,
+    isPilotAuthenticated ? pilotAccess : browserAccess,
+  );
   const direction = directionFor(locale);
   const group = productNavigation.find((candidate) => candidate.id === view.group)!;
 
@@ -412,20 +427,22 @@ export function ProductShell({
                 ? locale === 'ar-SA'
                   ? `جلسة نشطة: ${pilotTenantName} (Pilot)`
                   : `Active session: ${pilotTenantName} (Pilot)`
+                : browserSession.authenticated
+                  ? `${locale === 'ar-SA' ? 'جلسة نشطة: ' : 'Active session: '}${
+                      browserSession.tenants?.find((tenant) => tenant.id === browserSession.tenantId)?.name ??
+                      browserSession.tenantId
+                    }`
                 : locale === 'ar-SA'
                   ? 'لا توجد جلسة مستأجر نشطة'
                   : 'No active tenant session'}
             </span>
           </div>
           <div className="topbar__controls">
-            <label className="topbar-select">
-              <span>{ui(locale, 'Workspace', 'مساحة العمل')}</span>
-              <select disabled value={isPilotAuthenticated ? pilotTenantName! : 'unavailable'}>
-                <option value={isPilotAuthenticated ? pilotTenantName! : 'unavailable'}>
-                  {isPilotAuthenticated ? pilotTenantName! : ui(locale, 'Unavailable', 'غير متاح')}
-                </option>
-              </select>
-            </label>
+            <BrowserAuthControl
+              initialSession={browserSession}
+              isPilot={isPilotAuthenticated}
+              locale={locale}
+            />
             <label className="topbar-select">
               <span>{ui(locale, 'Date range', 'النطاق الزمني')}</span>
               <select value={period} onChange={(event) => setPeriod(event.target.value)}>
@@ -443,23 +460,16 @@ export function ProductShell({
             <button
               className="topbar-icon"
               type="button"
-              disabled={!isPilotAuthenticated}
+              disabled={!hasTenantSession}
               aria-label={ui(
                 locale,
-                isPilotAuthenticated
+                hasTenantSession
                   ? 'Notifications'
                   : 'Notifications unavailable without a session',
-                isPilotAuthenticated ? 'الإشعارات' : 'الإشعارات غير متاحة من دون جلسة',
+                hasTenantSession ? 'الإشعارات' : 'الإشعارات غير متاحة من دون جلسة',
               )}
             >
               ◌
-            </button>
-            <button className="topbar-account" type="button" disabled={!isPilotAuthenticated}>
-              {isPilotAuthenticated
-                ? locale === 'ar-SA'
-                  ? 'الحساب: تجريبي'
-                  : 'Account: Pilot'
-                : ui(locale, 'Account', 'الحساب')}
             </button>
           </div>
           <button
@@ -482,10 +492,10 @@ export function ProductShell({
               <span>{ui(locale, 'Access and evidence', 'الوصول والأدلة')}</span>
               <strong>
                 {access === 'available'
-                  ? isPilotAuthenticated
+                  ? hasTenantSession
                     ? locale === 'ar-SA'
-                      ? 'متاح — جلسة تجريبية نشطة'
-                      : 'Available — Active pilot session'
+                      ? 'متاح — جلسة نشطة'
+                      : 'Available — Active session'
                     : ui(locale, 'Available', 'متاح')
                   : ui(locale, 'Real session required', 'تتطلب جلسة حقيقية')}
               </strong>
@@ -494,6 +504,8 @@ export function ProductShell({
                   ? locale === 'ar-SA'
                     ? `مستأجر تجريبي: ${pilotTenantName} · دور: tenant_admin`
                     : `Pilot tenant: ${pilotTenantName} · Role: tenant_admin`
+                  : browserSession.authenticated
+                    ? ui(locale, 'Tenant permissions are server-verified.', 'تم التحقق من صلاحيات المستأجر على الخادم.')
                   : view.requiredPermission ||
                     ui(locale, 'Tenant role permissions', 'صلاحيات دور المستأجر')}
               </p>

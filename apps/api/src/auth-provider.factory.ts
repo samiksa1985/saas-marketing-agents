@@ -34,12 +34,20 @@ export function createApiAuthProvider(
       throw new Error('PRODUCTION_TENANT_MEMBERSHIP_RESOLVER_REQUIRED');
     }
     return new TenantMembershipAuthProvider(
-      new OidcAuthProvider({ issuerUrl: config.oidcIssuerUrl, audience: config.oidcAudience }),
+      new OidcAuthProvider({
+        issuerUrl: config.oidcIssuerUrl,
+        audience: config.oidcAudience,
+        requireHttpsEndpoints: true,
+      }),
       dependencies.membershipResolver,
     );
   }
   if (config.oidcIssuerUrl && config.oidcAudience) {
-    const oidc = new OidcAuthProvider({ issuerUrl: config.oidcIssuerUrl, audience: config.oidcAudience });
+    const oidc = new OidcAuthProvider({
+      issuerUrl: config.oidcIssuerUrl,
+      audience: config.oidcAudience,
+      requireHttpsEndpoints: false,
+    });
     return dependencies.membershipResolver
       ? new TenantMembershipAuthProvider(oidc, dependencies.membershipResolver)
       : oidc;

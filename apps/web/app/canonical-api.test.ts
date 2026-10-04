@@ -52,4 +52,28 @@ test('a failed canonical request throws instead of reporting a fake external suc
     assert.equal(error.status, 403);
     return true;
   });
+
+  test('browser session requests use the same-origin BFF without forwarding bearer or tenant authority', async () => {
+    const calls: Array<{ url: string; headers: Record<string, string> }> = [];
+    const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({
+        url: String(input),
+        headers: init?.headers as Record<string, string>,
+      });
+      return new Response(JSON.stringify([]), { status: 200 });
+    }) as typeof fetch;
+    const client = new CanonicalApiClient({
+      baseUrl: 'https://app.example.test',
+      mode: 'bff',
+      cookie: 'codecore_session=abcdefghijklmnopqrstuvwxyzABCDEFG_123456789',
+    }, fetcher);
+    await client.approvals();
+    assert.equal(calls[0]?.url, 'https://app.example.test/api/bff/approvals');
+    assert.equal(
+      calls[0]?.headers.cookie,
+      'codecore_session=abcdefghijklmnopqrstuvwxyzABCDEFG_123456789',
+    );
+    assert.equal('authorization' in calls[0]!.headers, false);
+    assert.equal('x-tenant-id' in calls[0]!.headers, false);
+  });
 });

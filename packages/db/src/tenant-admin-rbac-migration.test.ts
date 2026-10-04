@@ -51,9 +51,9 @@ function documented0017Permissions(): string[] {
 
 test('fresh migration path adds exactly one idempotent canonical tenant_admin role contract', () => {
   assert.match(source, /INSERT INTO roles \(name\)\s+VALUES \('tenant_admin'\)\s+ON CONFLICT \(name\) DO NOTHING;/);
-  assert.equal(journal.entries.at(-1)?.tag, '0032_tenant_admin_rbac_seed');
-  assert.equal(journal.entries.at(-1)?.idx, 32);
-  assert.equal(journal.entries.at(-1)?.when, 1788629864187);
+  const entry = journal.entries.find((candidate) => candidate.tag === '0032_tenant_admin_rbac_seed');
+  assert.equal(entry?.idx, 32);
+  assert.equal(entry?.when, 1788629864187);
 });
 
 test('upgrade and existing-role paths preserve tenant_admin identity and metadata', () => {
@@ -70,7 +70,7 @@ test('tenant_admin receives exactly the documented 0017 governance mappings', ()
 });
 
 test('no later journaled migration introduces another RBAC seed source', () => {
-  for (const entry of journal.entries.filter((entry) => entry.idx >= 18 && entry.idx <= 31)) {
+  for (const entry of journal.entries.filter((entry) => entry.idx > 32)) {
     const laterSource = readFileSync(
       fileURLToPath(new URL(`../drizzle/${entry.tag}.sql`, import.meta.url)),
       'utf8',

@@ -725,6 +725,38 @@ body {
   justify-content: flex-end;
   gap: 0.55rem;
 }
+.auth-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.auth-control__pilot {
+  color: #9d9a91;
+  font-size: 0.69rem;
+}
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #111214;
+  color: #eee9dd;
+}
+.login-card {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 30rem);
+  padding: 2rem;
+  border: 1px solid #3a3935;
+  border-radius: 0.75rem;
+  background: #1a1b1d;
+}
+.login-card p {
+  color: #b6b1a8;
+}
+.login-card a {
+  color: #e2bd69;
+}
 .topbar-select {
   display: inline-flex;
   align-items: center;

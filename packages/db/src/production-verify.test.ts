@@ -25,6 +25,7 @@ import { runCrossTenantProbe } from './cross-tenant-probe.js';
 import {
   PRODUCTION_APP_ROLE,
   assertNoProtectedTablesOwnedByRuntime,
+  assertBrowserAuthRuntimePrivileges,
   assertRuntimeRoleHasNoMemberships,
   assertRuntimeRoleIsSafe,
 } from './runtime-role-verify.js';
@@ -32,6 +33,45 @@ import { assertMigrationAuthority } from './migration-url.js';
 import { sharedTestAppPassword } from './test-app-password.js';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+test('browser authentication state requires function-only runtime privileges', async () => {
+  const safeClient = {
+    async unsafe(query: string) {
+      if (query.includes('FROM pg_class')) {
+        return [
+          { relname: 'codecore_oidc_login_transactions', has_table_access: false, has_column_access: false },
+          { relname: 'codecore_web_sessions', has_table_access: false, has_column_access: false },
+        ];
+      }
+      return [
+        'codecore_start_oidc_login',
+        'codecore_consume_oidc_login',
+        'codecore_create_web_session',
+        'codecore_lookup_web_session',
+        'codecore_revoke_web_session',
+        'codecore_rotate_web_session',
+        'codecore_list_user_tenants',
+      ].map((proname) => ({ proname, executable: true }));
+    },
+  };
+  await assertBrowserAuthRuntimePrivileges(safeClient as never, PRODUCTION_APP_ROLE);
+
+  const unsafeClient = {
+    async unsafe(query: string) {
+      if (query.includes('FROM pg_class')) {
+        return [
+          { relname: 'codecore_oidc_login_transactions', has_table_access: false, has_column_access: false },
+          { relname: 'codecore_web_sessions', has_table_access: true, has_column_access: false },
+        ];
+      }
+      return [];
+    },
+  };
+  await assert.rejects(
+    () => assertBrowserAuthRuntimePrivileges(unsafeClient as never, PRODUCTION_APP_ROLE),
+    /PRODUCTION_BROWSER_AUTH_TABLE_ACCESS_FORBIDDEN/,
+  );
+});
 
 function resolvePilotDatabaseUrl(): string | undefined {
   const envUrl = process.env.DATABASE_URL?.trim();

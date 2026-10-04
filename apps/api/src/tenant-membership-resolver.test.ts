@@ -86,6 +86,7 @@ test('database resolver fails closed before DB access for malformed tenant ids o
   const resolver = new DatabaseTenantMembershipResolver(runner);
 
   assert.equal(await resolver.resolve('subject-a', 'tenant-not-uuid'), null);
+  assert.equal(await resolver.resolve('subject-a', '111111111111-1111-1111-1111-111111111111'), null);
   assert.equal(await resolver.resolve('', TENANT_A), null);
   assert.equal(runner.transactionCalls, 0);
 });

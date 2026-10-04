@@ -8,6 +8,11 @@ export interface PilotApiSession {
   mode: 'pilot';
 }
 
+export interface BrowserBffApiSession {
+  baseUrl: string;
+  mode: 'bff';
+  cookie?: string;
+}
 export interface CanonicalAgentSummary {
   agentId: string;
   name: string;
@@ -123,12 +128,16 @@ type Fetcher = typeof fetch;
  */
 export class CanonicalApiClient {
   constructor(
-    private readonly session: CanonicalApiSession | PilotApiSession,
+    private readonly session: CanonicalApiSession | PilotApiSession | BrowserBffApiSession,
     private readonly fetcher: Fetcher = fetch,
   ) {}
 
   private isPilot(): boolean {
     return 'mode' in this.session && this.session.mode === 'pilot';
+  }
+
+  private isBff(): boolean {
+    return 'mode' in this.session && this.session.mode === 'bff';
   }
 
   private getPilotUrl(path: string): string {
@@ -203,11 +212,17 @@ export class CanonicalApiClient {
     const isPilot = this.isPilot();
     const url = isPilot
       ? this.getPilotUrl(path)
+      : this.isBff()
+        ? `${this.session.baseUrl.replace(/\/+$/, '')}/api/bff${path}`
       : `${this.session.baseUrl.replace(/\/+$/, '')}${path}`;
 
     const headers: Record<string, string> = { accept: 'application/json' };
-    if (requiresAuth && !isPilot) {
+    if (requiresAuth && !isPilot && !this.isBff()) {
       headers.authorization = `Bearer ${(this.session as CanonicalApiSession).accessToken}`;
+    }
+    if (this.isBff()) {
+      const cookie = (this.session as BrowserBffApiSession).cookie;
+      if (cookie) headers.cookie = cookie;
     }
 
     const response = await this.fetcher(url, {

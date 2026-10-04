@@ -3,7 +3,11 @@ import { Controller, Get, Header, Headers, Module, NotFoundException, ServiceUna
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { loadConfig } from '@platform/config';
-import { assertProductionRuntimeAuthority, createDb } from '@platform/db';
+import {
+  assertBrowserAuthRuntimePrivileges,
+  assertProductionRuntimeAuthority,
+  createDb,
+} from '@platform/db';
 import { sql } from 'drizzle-orm';
 import { createWorkflowRuntime } from '@platform/workflow-runtime';
 import { createLocaleContext, supportedLocales, type Locale } from '@platform/i18n';
@@ -27,6 +31,8 @@ import { ApprovalApiService, ApprovalController } from './approval.controller.js
 import { DURABLE_APPROVAL_REPOSITORY } from './approval.controller.js';
 import { InMemoryDurableApprovalRepository } from '@platform/approvals';
 import { AUTH_PROVIDER, ApiAuthGuard } from './auth.guard.js';
+import { BROWSER_AUTH_SERVICE, BrowserAuthController } from './browser-auth.controller.js';
+import { BrowserAuthService, DatabaseBrowserAuthStore } from './browser-auth.service.js';
 import { ApiTenantDurableApprovalRepository } from './durable-approval.repository.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
@@ -102,11 +108,15 @@ import {
 
 export const API_TENANT_DATABASE = Symbol('API_TENANT_DATABASE');
 const config=loadConfig();
+if (config.nodeEnv === 'production' && (!config.oidcClientId || !config.oidcClientSecret)) {
+  throw new Error('PRODUCTION_BROWSER_OIDC_CLIENT_CONFIGURATION_REQUIRED');
+}
 // This factory only creates a client; readiness opens a connection with SELECT 1.
 const database = createDb(config.databaseUrl);
 if (config.nodeEnv === 'production') {
   try {
     await assertProductionRuntimeAuthority(database.$client);
+    await assertBrowserAuthRuntimePrivileges(database.$client, 'codecore_app');
   } catch (error) {
     await database.$client.end();
     throw error;
@@ -205,9 +215,14 @@ const externalActionProviders = new ExternalActionProviderRegistry({
 // WS-PROD-04: OIDC tokens are bound to authoritative tenant_members rows; the
 // resolver runs on the runtime database identity (codecore_app in production).
 const membershipResolver = new DatabaseTenantMembershipResolver(database);
+const browserAuthService = new BrowserAuthService(
+  config,
+  new DatabaseBrowserAuthStore(database),
+  membershipResolver,
+);
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{membershipResolver});
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController,BrowserAuthController],
   providers:[
     RegistryService,
     {
@@ -323,7 +338,14 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{members
       inject: [ApprovalApiService, API_TENANT_DATABASE],
     },
     {provide:AUTH_PROVIDER,useFactory:authProviderFactory},
-    {provide:ApiAuthGuard,useFactory(provider:AuthProvider){return new ApiAuthGuard(provider);},inject:[AUTH_PROVIDER]}
+    { provide: BROWSER_AUTH_SERVICE, useValue: browserAuthService },
+    {
+      provide: ApiAuthGuard,
+      useFactory(provider: AuthProvider, sessions: BrowserAuthService) {
+        return new ApiAuthGuard(provider, sessions, config.nodeEnv === 'production');
+      },
+      inject: [AUTH_PROVIDER, BROWSER_AUTH_SERVICE],
+    },
   ]
 })
 class AppModule {}

@@ -17,6 +17,8 @@ Never copy real values, secrets, connection strings, or tokens into source contr
 | `AI_MODEL` | Required by configuration. | Approved model/version and evaluation record. | Non-secret identifier. |
 | `OIDC_ISSUER_URL` | Required in production. | Absolute issuer URL; production requires HTTPS and rejects query/fragment components. | Sensitive endpoint. |
 | `OIDC_AUDIENCE` | Required in production. | Exact API audience. | Sensitive identifier. |
+| `OIDC_CLIENT_ID` | Required by the production API for browser login; optional for migration/worker processes. | Confidential OIDC client registered with the exact `${WEB_URL}/api/auth/callback` redirect URI. | Non-secret identifier. |
+| `OIDC_CLIENT_SECRET` / `OIDC_CLIENT_SECRET_FILE` | Required by the production API only. | Operator-managed confidential client secret; mounted read-only to API, never to web, worker, or migration. | Secret. |
 | `LOCAL_ACCEPTANCE_AUTH_ENABLED`, `LOCAL_ACCEPTANCE_AUTH_TOKEN_FILE`, `LOCAL_ACCEPTANCE_AUTH_TENANT_ID`, `LOCAL_ACCEPTANCE_AUTH_USER_ID` | Disabled by default. When explicitly enabled outside production, configuration requires an external, readable, non-empty high-entropy token file and a fixed tenant/user identity. | Forbidden in production; OIDC remains mandatory. | Local acceptance only. Never put the bearer token in `.env`, source control, logs, or an API response. |
 | `GOOGLE_ADS_EXECUTION_MODE` | Defaults to `DISABLED`; accepts `DISABLED`, `DRY_RUN`, `MOCK`, or `REAL`. | Keep `DISABLED` until the G9 provider gate is approved. Production rejects `MOCK`. | Non-secret control. |
 | `GOOGLE_ADS_EXECUTION_ENABLED` | Defaults to `false`; only has effect with `REAL`. | Requires a documented and approved enablement change. | Non-secret control. |

@@ -16,6 +16,8 @@ import {
   type AuthProvider,
 } from '@platform/auth';
 import { createStructuredLogger, platformMetrics } from '@platform/observability';
+import type { BrowserSessionAuthenticator } from './browser-auth.service.js';
+import { cookieValue, sessionCookieName } from './browser-auth.service.js';
 
 const securityLogger = createStructuredLogger('api');
 
@@ -31,7 +33,11 @@ export interface AuthenticatedRequest {
       | string
       | string[]
       | undefined;
+    cookie?: string | string[] | undefined;
+    origin?: string | string[] | undefined;
+    'x-csrf-token'?: string | string[] | undefined;
   };
+  method?: string;
 
   [AUTH_CONTEXT]?:
     TenantContext;
@@ -44,6 +50,8 @@ export class ApiAuthGuard
     @Inject(AUTH_PROVIDER)
     private readonly provider:
       AuthProvider,
+    private readonly browserSessions?: BrowserSessionAuthenticator,
+    private readonly production = process.env.NODE_ENV === 'production',
   ) {}
 
   async canActivate(
@@ -68,15 +76,35 @@ export class ApiAuthGuard
         : rawAuthorization;
 
     try {
-      const tenantContext =
-        await authenticate(
-          this.provider,
-          authorization,
-        );
+      let tenantContext: TenantContext;
+      if (!authorization && this.browserSessions) {
+        const rawCookie = request.headers.cookie;
+        const cookies = Array.isArray(rawCookie) ? rawCookie[0] : rawCookie;
+        const sessionId = cookieValue(cookies, sessionCookieName(this.production));
+        if (sessionId) {
+          const rawOrigin = request.headers.origin;
+          const origin = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
+          const rawCsrf = request.headers['x-csrf-token'];
+          const csrfToken = Array.isArray(rawCsrf) ? rawCsrf[0] : rawCsrf;
+          tenantContext = (
+            await this.browserSessions.authenticateRequest(
+              sessionId,
+              request.method ?? 'GET',
+              origin,
+              csrfToken,
+            )
+          ).context;
+        } else {
+          tenantContext = await authenticate(this.provider, authorization);
+        }
+      } else {
+        tenantContext = await authenticate(this.provider, authorization);
+      }
 
       request[
         AUTH_CONTEXT
       ] = tenantContext;
+      platformMetrics.recordSignal('authentication', 'accepted');
 
       return true;
     } catch (

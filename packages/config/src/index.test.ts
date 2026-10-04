@@ -170,6 +170,21 @@ test(
       'https://issuer.example.com',
     );
 
+    test('browser OIDC client secret supports the existing secret-file boundary', () => {
+      withConfigFile('oidc-client-secret-value\n', (file) => {
+        const config = loadConfig({
+          ...baseEnv,
+          OIDC_ISSUER_URL: 'https://issuer.example.com',
+          OIDC_AUDIENCE: 'platform-api',
+          OIDC_CLIENT_ID: 'browser-client',
+          OIDC_CLIENT_SECRET: '',
+          OIDC_CLIENT_SECRET_FILE: file,
+        });
+        assert.equal(config.oidcClientId, 'browser-client');
+        assert.equal(config.oidcClientSecret, 'oidc-client-secret-value');
+      });
+    });
+
     assert.equal(
       config.oidcAudience,
       'platform-api',

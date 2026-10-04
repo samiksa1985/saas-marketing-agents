@@ -19,6 +19,7 @@ import {
   AUTH_CONTEXT,
   type AuthenticatedRequest,
 } from './auth.guard.js';
+import type { BrowserSessionAuthenticator } from './browser-auth.service.js';
 
 function context(): TenantContext {
   return {
@@ -47,15 +48,19 @@ function context(): TenantContext {
 function executionContext(
   authorization?:
     string,
+  headers: AuthenticatedRequest['headers'] = {},
+  method = 'GET',
 ) {
   const request: AuthenticatedRequest = {
     headers: {
+      ...headers,
       ...(authorization
         ? {
             authorization,
           }
         : {}),
     },
+    method,
   };
 
   const context =
@@ -115,6 +120,54 @@ test(
       new StaticProvider(
         context(),
       );
+
+      test('API auth guard resolves a server-side session and revalidates request context', async () => {
+        const sessions: BrowserSessionAuthenticator = {
+          async authenticateSession() {
+            return { context: context(), csrfToken: 'csrf-token-0123456789' };
+          },
+          async authenticateRequest(_sessionId, method, origin, csrfToken) {
+            assert.equal(method, 'GET');
+            assert.equal(origin, undefined);
+            assert.equal(csrfToken, undefined);
+            return { context: context(), csrfToken: 'csrf-token-0123456789' };
+          },
+        };
+        const guard = new ApiAuthGuard(new StaticProvider(context()), sessions, false);
+        const { context: execution, request } = executionContext(undefined, {
+          cookie: 'codecore_session=abcdefghijklmnopqrstuvwxyzABCDEFG_123456789',
+        });
+        await guard.canActivate(execution);
+        assert.deepEqual(request[AUTH_CONTEXT], context());
+      });
+
+      test('API auth guard requires origin and CSRF validation for browser mutations', async () => {
+        const sessions: BrowserSessionAuthenticator = {
+          async authenticateSession() {
+            return { context: context(), csrfToken: 'csrf-token-0123456789' };
+          },
+          async authenticateRequest(_sessionId, _method, origin, csrfToken) {
+            if (origin !== 'https://app.example.com' || csrfToken !== 'csrf-token-0123456789') {
+              throw new Error('CSRF rejected');
+            }
+            return { context: context(), csrfToken };
+          },
+        };
+        const guard = new ApiAuthGuard(new StaticProvider(context()), sessions, false);
+        const valid = executionContext(undefined, {
+          cookie: 'codecore_session=abcdefghijklmnopqrstuvwxyzABCDEFG_123456789',
+          origin: 'https://app.example.com',
+          'x-csrf-token': 'csrf-token-0123456789',
+        }, 'POST');
+        assert.equal(await guard.canActivate(valid.context), true);
+
+        const invalid = executionContext(undefined, {
+          cookie: 'codecore_session=abcdefghijklmnopqrstuvwxyzABCDEFG_123456789',
+          origin: 'https://attacker.example.com',
+          'x-csrf-token': 'csrf-token-0123456789',
+        }, 'POST');
+        await assert.rejects(() => guard.canActivate(invalid.context), /authentication failed/i);
+      });
 
     const guard =
       new ApiAuthGuard(

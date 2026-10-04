@@ -11,6 +11,7 @@ export const SECRET_ENVIRONMENT_KEYS = [
   'META_ADS_ACCESS_TOKEN',
   'META_ADS_APP_SECRET',
   'OBSERVABILITY_METRICS_TOKEN',
+  'OIDC_CLIENT_SECRET',
 ] as const;
 
 function readSecretFile(name: string, path: string): string {

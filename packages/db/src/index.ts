@@ -88,6 +88,7 @@ export {
   assertExpectedProductionRoles,
   assertNoProtectedTablesOwnedByRuntime,
   assertProductionRuntimeAuthority,
+  assertBrowserAuthRuntimePrivileges,
   assertRlsPolicyCoverage,
   assertRuntimeRoleHasNoMemberships,
   assertRuntimeRoleIsSafe,

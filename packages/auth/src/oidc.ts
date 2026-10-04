@@ -24,12 +24,22 @@ export interface OidcAuthProviderOptions {
   localeClaim?: string;
 
   defaultLocale?: Locale;
+
+  expectedNonce?: string;
+
+  discoveryRetryDelayMs?: number;
+
+  requireHttpsEndpoints?: boolean;
 }
 
 interface OidcDiscoveryDocument {
   issuer: string;
 
   jwks_uri: string;
+
+  authorization_endpoint?: string;
+
+  token_endpoint?: string;
 }
 
 type TokenClaims = JWTPayload & Record<string, unknown>;
@@ -123,7 +133,15 @@ export class OidcAuthProvider implements AuthProvider {
 
   private readonly defaultLocale: Locale;
 
+  private readonly expectedNonce: string | undefined;
+
+  private readonly discoveryRetryDelayMs: number;
+
+  private readonly requireHttpsEndpoints: boolean;
+
   private discoveryPromise: Promise<OidcDiscoveryDocument> | undefined;
+
+  private discoveryRetryAfter = 0;
 
   private jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
 
@@ -145,6 +163,12 @@ export class OidcAuthProvider implements AuthProvider {
     this.localeClaim = options.localeClaim ?? DEFAULT_LOCALE_CLAIM;
 
     this.defaultLocale = options.defaultLocale ?? DEFAULT_LOCALE;
+
+    this.expectedNonce = options.expectedNonce;
+
+    this.discoveryRetryDelayMs = options.discoveryRetryDelayMs ?? 1000;
+
+    this.requireHttpsEndpoints = options.requireHttpsEndpoints ?? false;
 
     if (!this.issuerUrl) {
       throw new Error('OIDC issuer URL is required');
@@ -175,6 +199,10 @@ export class OidcAuthProvider implements AuthProvider {
         requiredClaims: ['exp'],
       });
 
+      if (this.expectedNonce && verified.payload.nonce !== this.expectedNonce) {
+        throw new AuthenticationError('OIDC nonce does not match the authorization request');
+      }
+
       return this.contextFromClaims(verified.payload);
     } catch (error) {
       if (error instanceof AuthenticationError) {
@@ -185,14 +213,39 @@ export class OidcAuthProvider implements AuthProvider {
     }
   }
 
+  async getAuthorizationEndpoints(): Promise<{
+    authorizationEndpoint: string;
+    tokenEndpoint: string;
+  }> {
+    const discovery = await this.getDiscovery();
+    if (!discovery.authorization_endpoint || !discovery.token_endpoint) {
+      throw new AuthenticationError('OIDC provider does not support browser authorization');
+    }
+    return {
+      authorizationEndpoint: discovery.authorization_endpoint,
+      tokenEndpoint: discovery.token_endpoint,
+    };
+  }
+
   private async getDiscovery(): Promise<OidcDiscoveryDocument> {
     if (this.discoveryPromise) {
       return this.discoveryPromise;
     }
 
-    this.discoveryPromise = this.loadDiscovery();
-
-    return this.discoveryPromise;
+    if (Date.now() < this.discoveryRetryAfter) {
+      throw new Error('OIDC discovery retry is temporarily throttled');
+    }
+    const pending = this.loadDiscovery();
+    this.discoveryPromise = pending;
+    try {
+      return await pending;
+    } catch (error) {
+      if (this.discoveryPromise === pending) {
+        this.discoveryPromise = undefined;
+        this.discoveryRetryAfter = Date.now() + this.discoveryRetryDelayMs;
+      }
+      throw error;
+    }
   }
 
   private async loadDiscovery(): Promise<OidcDiscoveryDocument> {
@@ -204,6 +257,7 @@ export class OidcAuthProvider implements AuthProvider {
       headers: {
         accept: 'application/json',
       },
+      redirect: 'error',
     });
 
     if (!response.ok) {
@@ -222,11 +276,42 @@ export class OidcAuthProvider implements AuthProvider {
       throw new Error('OIDC discovery issuer does not match configured issuer');
     }
 
+    const jwksUri = this.validateEndpoint(document.jwks_uri, 'jwks_uri');
+    const authorizationEndpoint = document.authorization_endpoint === undefined
+      ? undefined
+      : this.validateEndpoint(document.authorization_endpoint, 'authorization_endpoint');
+    const tokenEndpoint = document.token_endpoint === undefined
+      ? undefined
+      : this.validateEndpoint(document.token_endpoint, 'token_endpoint');
+
     return {
       issuer: normalizedIssuer,
 
-      jwks_uri: document.jwks_uri,
+      jwks_uri: jwksUri,
+
+      ...(authorizationEndpoint ? { authorization_endpoint: authorizationEndpoint } : {}),
+
+      ...(tokenEndpoint ? { token_endpoint: tokenEndpoint } : {}),
     };
+  }
+
+  private validateEndpoint(value: string, claim: string): string {
+    let endpoint: URL;
+    try {
+      endpoint = new URL(value);
+    } catch {
+      throw new Error(`OIDC discovery ${claim} is not an absolute URL`);
+    }
+    if (
+      !['https:', 'http:'].includes(endpoint.protocol) ||
+      (this.requireHttpsEndpoints && endpoint.protocol !== 'https:') ||
+      endpoint.username ||
+      endpoint.password ||
+      endpoint.hash
+    ) {
+      throw new Error(`OIDC discovery ${claim} is not a permitted endpoint`);
+    }
+    return endpoint.toString();
   }
 
   private getJwks(discovery: OidcDiscoveryDocument) {

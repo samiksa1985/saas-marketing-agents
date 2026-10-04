@@ -74,6 +74,75 @@ export async function assertRuntimeRoleHasNoMemberships(client: SqlClient): Prom
   }
 }
 
+/** Browser authentication state is accessible only through narrow definer functions. */
+export async function assertBrowserAuthRuntimePrivileges(client: SqlClient, runtimeRole: string): Promise<void> {
+  const tables = rowsOf<{
+    relname: string;
+    has_table_access: boolean;
+    has_column_access: boolean;
+  }>(
+    await client.unsafe(
+      `SELECT c.relname,
+              has_table_privilege($1, c.oid, 'SELECT')
+                OR has_table_privilege($1, c.oid, 'INSERT')
+                OR has_table_privilege($1, c.oid, 'UPDATE')
+                OR has_table_privilege($1, c.oid, 'DELETE')
+                OR has_table_privilege($1, c.oid, 'TRUNCATE')
+                OR has_table_privilege($1, c.oid, 'REFERENCES')
+                OR has_table_privilege($1, c.oid, 'TRIGGER') AS has_table_access,
+              EXISTS (
+                SELECT 1
+                FROM pg_attribute a
+                WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                  AND (
+                    has_column_privilege($1, c.oid, a.attnum, 'SELECT')
+                    OR has_column_privilege($1, c.oid, a.attnum, 'INSERT')
+                    OR has_column_privilege($1, c.oid, a.attnum, 'UPDATE')
+                    OR has_column_privilege($1, c.oid, a.attnum, 'REFERENCES')
+                  )
+              ) AS has_column_access
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = ANY($2::text[])
+         AND c.relkind IN ('r', 'p')`,
+      [runtimeRole, ['codecore_oidc_login_transactions', 'codecore_web_sessions']],
+    ),
+  );
+  const expectedTables = new Set(['codecore_oidc_login_transactions', 'codecore_web_sessions']);
+  if (
+    tables.length !== expectedTables.size ||
+    tables.some((table) => !expectedTables.has(table.relname) || table.has_table_access || table.has_column_access)
+  ) {
+    throw new Error('PRODUCTION_BROWSER_AUTH_TABLE_ACCESS_FORBIDDEN');
+  }
+
+  const functions = rowsOf<{ proname: string; executable: boolean }>(
+    await client.unsafe(
+      `SELECT p.proname, has_function_privilege($1, p.oid, 'EXECUTE') AS executable
+       FROM pg_proc p
+       JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public'
+         AND p.proname = ANY($2::text[])`,
+      [
+        runtimeRole,
+        [
+          'codecore_start_oidc_login',
+          'codecore_consume_oidc_login',
+          'codecore_create_web_session',
+          'codecore_lookup_web_session',
+          'codecore_revoke_web_session',
+          'codecore_rotate_web_session',
+          'codecore_list_user_tenants',
+        ],
+      ],
+    ),
+  );
+  if (functions.length !== 7 || functions.some((fn) => !fn.executable)) {
+    throw new Error('PRODUCTION_BROWSER_AUTH_FUNCTION_GRANTS_INVALID');
+  }
+}
+
 /** The runtime identity must not own any protected tenant-scoped table. */
 export async function assertNoProtectedTablesOwnedByRuntime(
   client: SqlClient,

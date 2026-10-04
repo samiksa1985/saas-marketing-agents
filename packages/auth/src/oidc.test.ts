@@ -19,6 +19,8 @@ interface Fixture {
   issuer: string;
   audience: string;
   server: Server;
+  setDiscoveryUnavailable: (unavailable: boolean) => void;
+  discoveryRequests: () => number;
   sign: (
     claims: Record<string, unknown>,
     options?: { audience?: string; expired?: boolean; notBefore?: string; omitExpiration?: boolean },
@@ -35,11 +37,23 @@ async function startFixtureIdp(): Promise<Fixture> {
   jwk.use = 'sig';
 
   const audience = 'growth-os-api';
+  let discoveryUnavailable = false;
+  let discoveryRequestCount = 0;
   const server = createServer((request, response) => {
     const issuer = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     if (request.url === '/.well-known/openid-configuration') {
+      discoveryRequestCount += 1;
+      if (discoveryUnavailable) {
+        response.writeHead(503).end();
+        return;
+      }
       response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ issuer, jwks_uri: `${issuer}/jwks.json` }));
+      response.end(JSON.stringify({
+        issuer,
+        jwks_uri: `${issuer}/jwks.json`,
+        authorization_endpoint: `${issuer}/authorize`,
+        token_endpoint: `${issuer}/token`,
+      }));
       return;
     }
     if (request.url === '/jwks.json') {
@@ -79,7 +93,15 @@ async function startFixtureIdp(): Promise<Fixture> {
       .setExpirationTime('5m')
       .sign(attacker.privateKey as never);
 
-  return { issuer, audience, server, sign, attackerSign };
+  return {
+    issuer,
+    audience,
+    server,
+    sign,
+    attackerSign,
+    setDiscoveryUnavailable: (unavailable) => { discoveryUnavailable = unavailable; },
+    discoveryRequests: () => discoveryRequestCount,
+  };
 }
 
 test('valid OIDC token passes issuer, audience, signature, and expiry verification', async () => {
@@ -204,6 +226,65 @@ test('OIDC rejects tokens without a subject or tenant claim', async () => {
     const provider = new OidcAuthProvider({ issuerUrl: fixture.issuer, audience: fixture.audience });
     const noTenant = await fixture.sign({ tenant_id: undefined });
     await assert.rejects(() => provider.verifyAccessToken(noTenant), /tenant identifier/);
+  } finally {
+    await new Promise((resolve) => fixture.server.close(resolve));
+  }
+});
+
+test('OIDC discovery failure is not cached and a later request can recover', async () => {
+  const fixture = await startFixtureIdp();
+  try {
+    const provider = new OidcAuthProvider({
+      issuerUrl: fixture.issuer,
+      audience: fixture.audience,
+      discoveryRetryDelayMs: 0,
+    });
+    const token = await fixture.sign({});
+    fixture.setDiscoveryUnavailable(true);
+    await assert.rejects(() => provider.verifyAccessToken(token), AuthenticationError);
+    fixture.setDiscoveryUnavailable(false);
+    const context = await provider.verifyAccessToken(token);
+    assert.equal(context.userId, 'wsp04-subject');
+    assert.equal(fixture.discoveryRequests(), 2);
+  } finally {
+    await new Promise((resolve) => fixture.server.close(resolve));
+  }
+});
+
+test('OIDC discovery requests are deduplicated and expose browser endpoints', async () => {
+  const fixture = await startFixtureIdp();
+  try {
+    const provider = new OidcAuthProvider({
+      issuerUrl: fixture.issuer,
+      audience: fixture.audience,
+    });
+    const [first, second, endpoints] = await Promise.all([
+      provider.verifyAccessToken(await fixture.sign({})),
+      provider.verifyAccessToken(await fixture.sign({ sub: 'another-subject' })),
+      provider.getAuthorizationEndpoints(),
+    ]);
+    assert.equal(first.userId, 'wsp04-subject');
+    assert.equal(second.userId, 'another-subject');
+    assert.equal(endpoints.authorizationEndpoint, `${fixture.issuer}/authorize`);
+    assert.equal(endpoints.tokenEndpoint, `${fixture.issuer}/token`);
+    assert.equal(fixture.discoveryRequests(), 1);
+  } finally {
+    await new Promise((resolve) => fixture.server.close(resolve));
+  }
+});
+
+test('OIDC ID token validation enforces the expected nonce', async () => {
+  const fixture = await startFixtureIdp();
+  try {
+    const provider = new OidcAuthProvider({
+      issuerUrl: fixture.issuer,
+      audience: fixture.audience,
+      expectedNonce: 'expected-nonce',
+    });
+    const matching = await fixture.sign({ nonce: 'expected-nonce' });
+    const mismatched = await fixture.sign({ nonce: 'other-nonce' });
+    await provider.verifyAccessToken(matching);
+    await assert.rejects(() => provider.verifyAccessToken(mismatched), AuthenticationError);
   } finally {
     await new Promise((resolve) => fixture.server.close(resolve));
   }
