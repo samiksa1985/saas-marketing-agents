@@ -22,8 +22,7 @@ function productionConfig(trustProxy = false) {
     CORS_ALLOWED_ORIGINS: 'https://app.example.com',
     TRUST_PROXY: String(trustProxy),
     DATABASE_URL: 'postgresql://app@db.example.com/platform?sslmode=verify-full',
-    TEMPORAL_ADDRESS: 'localhost:7233',
-    TEMPORAL_NAMESPACE: 'test',
+    WORKFLOW_RUNTIME_MODE: 'postgres',
     OIDC_ISSUER_URL: 'https://issuer.example.com',
     OIDC_AUDIENCE: 'platform-api',
     ARTIFACT_BUCKET: 'test',
@@ -49,7 +48,7 @@ test('metrics access requires an exact bearer token and rejects missing or malfo
 test('runtime summary does not expose provider or database credentials', () => {
   const summary = sanitizedRuntimeSummary({
     releaseVersion: '1.0.0',
-    workflowRuntimeMode: 'temporal',
+    workflowRuntimeMode: 'postgres',
     databaseUrl: 'synthetic-database-url-canary',
     googleAdsExecutionEnabled: false,
     googleAdsExecutionMode: 'DISABLED',

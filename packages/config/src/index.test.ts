@@ -234,7 +234,24 @@ test(
           WORKFLOW_RUNTIME_MODE:
             'in-memory',
         }),
-      /WORKFLOW_RUNTIME_MODE=temporal/i,
+      /WORKFLOW_RUNTIME_MODE=postgres/i,
+    );
+  },
+);
+
+test(
+  'production rejects the retired Temporal workflow runtime',
+  () => {
+    assert.throws(
+      () =>
+        loadConfig({
+          ...baseEnv,
+          NODE_ENV: 'production',
+          OIDC_ISSUER_URL: 'https://issuer.example.com',
+          OIDC_AUDIENCE: 'platform-api',
+          WORKFLOW_RUNTIME_MODE: 'temporal',
+        }),
+      /WORKFLOW_RUNTIME_MODE must be in-memory or postgres/i,
     );
   },
 );
@@ -325,7 +342,7 @@ test('local acceptance auth rejects production and unreadable or empty token fil
       NODE_ENV: 'production',
       OIDC_ISSUER_URL: 'https://issuer.example.com',
       OIDC_AUDIENCE: 'platform-api',
-      WORKFLOW_RUNTIME_MODE: 'temporal',
+      WORKFLOW_RUNTIME_MODE: 'postgres',
       LOCAL_ACCEPTANCE_AUTH_ENABLED: 'true',
     }),
     /LOCAL_ACCEPTANCE_AUTH_ENABLED is forbidden in production/i,
@@ -521,7 +538,7 @@ test(
 
     assert.equal(
       config.workflowRuntimeMode,
-      'temporal',
+      'postgres',
     );
   },
 );

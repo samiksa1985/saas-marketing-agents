@@ -925,6 +925,7 @@ export class LocalWorkflowExecutor implements WorkflowRuntime {
   }
 }
 
-export * from './temporal.js';
 export * from './provider.js';
 export * from './query.js';
+export * from './postgres.js';
+export * from './postgres-query.js';

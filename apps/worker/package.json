@@ -15,7 +15,8 @@
     "@platform/config": "0.1.0",
     "@platform/db": "0.1.0",
     "@platform/marketing-os-persistence": "0.1.0",
-    "@platform/observability": "0.1.0"
+    "@platform/observability": "0.1.0",
+    "@platform/workflow-runtime": "0.1.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

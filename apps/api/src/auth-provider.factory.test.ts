@@ -71,7 +71,7 @@ test('production requires OIDC plus an authoritative tenant membership resolver'
     TRUST_PROXY: 'false',
     OIDC_ISSUER_URL: 'https://issuer.example.com',
     OIDC_AUDIENCE: 'platform-api',
-    WORKFLOW_RUNTIME_MODE: 'temporal',
+    WORKFLOW_RUNTIME_MODE: 'postgres',
     RELEASE_VERSION: '1.0.0',
   };
   const productionConfig = loadConfig(productionEnv);

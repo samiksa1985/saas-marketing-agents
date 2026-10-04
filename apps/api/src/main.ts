@@ -151,10 +151,11 @@ const tenantDatabase = new ApiTenantDatabase(database);
     return createLocaleContext(locale);
   }
 }
-// Build the single workflow provider before Nest composition. Temporal mode is
-// deliberately fail-closed until deployment injects both command and read adapters.
+// V1 production uses the PostgreSQL durable workflow runtime; Temporal is not
+// selected or required. In-memory remains available only for explicit dev/test.
 const workflowRuntime = createWorkflowRuntime({
   mode: config.workflowRuntimeMode,
+  ...(config.workflowRuntimeMode === 'postgres' ? { postgresClient: database.$client } : {}),
 });
 // Production, durable-workflow composition, and explicit local acceptance
 // rehearsal recover approvals after an API restart. The in-memory repository

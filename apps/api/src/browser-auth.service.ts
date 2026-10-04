@@ -8,6 +8,7 @@ import { createStructuredLogger, platformMetrics } from '@platform/observability
 import { sql, type SQLWrapper } from 'drizzle-orm';
 
 const logger = createStructuredLogger('api');
+export const BROWSER_AUTH_SERVICE = 'PLATFORM_BROWSER_AUTH_SERVICE';
 const SESSION_LIFETIME_SECONDS = 8 * 60 * 60;
 const LOGIN_TRANSACTION_LIFETIME_SECONDS = 5 * 60;
 

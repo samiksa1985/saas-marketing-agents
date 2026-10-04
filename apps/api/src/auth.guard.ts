@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Inject,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 
@@ -17,7 +18,7 @@ import {
 } from '@platform/auth';
 import { createStructuredLogger, platformMetrics } from '@platform/observability';
 import type { BrowserSessionAuthenticator } from './browser-auth.service.js';
-import { cookieValue, sessionCookieName } from './browser-auth.service.js';
+import { BROWSER_AUTH_SERVICE, cookieValue, sessionCookieName } from './browser-auth.service.js';
 
 const securityLogger = createStructuredLogger('api');
 
@@ -50,7 +51,10 @@ export class ApiAuthGuard
     @Inject(AUTH_PROVIDER)
     private readonly provider:
       AuthProvider,
+    @Optional()
+    @Inject(BROWSER_AUTH_SERVICE)
     private readonly browserSessions?: BrowserSessionAuthenticator,
+    @Optional()
     private readonly production = process.env.NODE_ENV === 'production',
   ) {}
 

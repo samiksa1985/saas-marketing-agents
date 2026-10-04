@@ -24,6 +24,29 @@ import { productionPostgresOptions } from '../src/postgres-connection.js';
 const OWNER_ROLE = 'codecore_owner';
 const APP_ROLE = 'codecore_app';
 const RESTRICTED_AUTH_TABLES = ['codecore_oidc_login_transactions', 'codecore_web_sessions'];
+const CONTROL_TABLES = ['tenants', 'users', 'roles', 'permissions', 'role_permissions', 'tenant_members'];
+const OPERATIONAL_RUNTIME_TABLES = [
+  'artifacts',
+  'artifact_versions',
+  'audit_events',
+  'engagements',
+  'execution_errors',
+  'execution_leases',
+  'execution_runs',
+  'execution_steps',
+  'handoffs',
+  'provider_calls',
+  'provider_usage',
+  'retry_attempts',
+  'task_attempts',
+  'task_dependencies',
+  'tasks',
+  'workflow_events',
+  'workflows',
+  'codecore_workflow_executions',
+  'codecore_workflow_execution_events',
+  'marketing_os_approval_records',
+];
 
 /** SQL identifier quoting: ALTER ROLE "x", GRANT ... TO "x". */
 function quoteIdentifier(value: string): string {
@@ -125,11 +148,10 @@ async function assertTableOwnershipGuard(client: SqlClient): Promise<{ checked: 
 }
 
 async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
-  // Runtime needs reads across the schema, but write authority is explicit.
+  // Runtime reads broadly, but mutation authority is explicitly allowlisted.
   await client.unsafe(`GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`);
   await client.unsafe(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`);
 
-  const protectedTables = ['tenants', 'users', 'roles', 'permissions', 'role_permissions', 'tenant_members'];
   const tables = Array.from(
     (await client.unsafe(
       `SELECT c.relname
@@ -140,21 +162,21 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
   );
   for (const { relname } of tables) {
     const table = `${quoteIdentifier('public')}.${quoteIdentifier(relname)}`;
-    if (protectedTables.includes(relname)) {
-      await client.unsafe(
-        `REVOKE INSERT, UPDATE, DELETE ON TABLE ${table} FROM PUBLIC, ${quoteIdentifier(APP_ROLE)}`,
-      );
-      continue;
-    }
+    await client.unsafe(
+      `REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE ${table} FROM PUBLIC, ${quoteIdentifier(APP_ROLE)}`,
+    );
+    if (CONTROL_TABLES.includes(relname)) continue;
     if (RESTRICTED_AUTH_TABLES.includes(relname)) {
       await client.unsafe(
-        `REVOKE ALL PRIVILEGES ON TABLE ${table} FROM PUBLIC, ${quoteIdentifier(APP_ROLE)}`,
+        `REVOKE SELECT ON TABLE ${table} FROM PUBLIC, ${quoteIdentifier(APP_ROLE)}`,
       );
       continue;
     }
-    await client.unsafe(
-      `GRANT INSERT, UPDATE, DELETE ON TABLE ${table} TO ${quoteIdentifier(APP_ROLE)}`,
-    );
+    if (OPERATIONAL_RUNTIME_TABLES.includes(relname)) {
+      await client.unsafe(
+        `GRANT INSERT, UPDATE, DELETE ON TABLE ${table} TO ${quoteIdentifier(APP_ROLE)}`,
+      );
+    }
   }
 
   const authFunctions = [

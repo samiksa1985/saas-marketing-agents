@@ -10,6 +10,22 @@ import type postgres from 'postgres';
 
 export const PRODUCTION_OWNER_ROLE = 'codecore_owner';
 export const PRODUCTION_APP_ROLE = 'codecore_app';
+export const PRODUCTION_WORKFLOW_RUNTIME_TABLES = [
+  'codecore_workflow_executions',
+  'codecore_workflow_execution_events',
+];
+export const PRODUCTION_CONTROL_TABLES = [
+  'tenants',
+  'users',
+  'roles',
+  'permissions',
+  'role_permissions',
+  'tenant_members',
+];
+export const PRODUCTION_RESTRICTED_BROWSER_AUTH_TABLES = [
+  'codecore_oidc_login_transactions',
+  'codecore_web_sessions',
+];
 
 type SqlClient = Pick<ReturnType<typeof postgres>, 'unsafe'>;
 
@@ -140,6 +156,55 @@ export async function assertBrowserAuthRuntimePrivileges(client: SqlClient, runt
   );
   if (functions.length !== 7 || functions.some((fn) => !fn.executable)) {
     throw new Error('PRODUCTION_BROWSER_AUTH_FUNCTION_GRANTS_INVALID');
+  }
+}
+
+/** Runtime DML is allowlisted; browser-auth tables remain function-only. */
+export async function assertWorkflowRuntimePrivileges(client: SqlClient, runtimeRole: string): Promise<void> {
+  const tableNames = [
+    ...PRODUCTION_WORKFLOW_RUNTIME_TABLES,
+    ...PRODUCTION_CONTROL_TABLES,
+    ...PRODUCTION_RESTRICTED_BROWSER_AUTH_TABLES,
+  ];
+  const rows = rowsOf<{
+    relname: string;
+    has_select: boolean;
+    has_insert: boolean;
+    has_update: boolean;
+    has_delete: boolean;
+  }>(
+    await client.unsafe(
+      `SELECT c.relname,
+              has_table_privilege($1, c.oid, 'SELECT') AS has_select,
+              has_table_privilege($1, c.oid, 'INSERT') AS has_insert,
+              has_table_privilege($1, c.oid, 'UPDATE') AS has_update,
+              has_table_privilege($1, c.oid, 'DELETE') AS has_delete
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = ANY($2::text[])
+         AND c.relkind IN ('r', 'p')`,
+      [runtimeRole, tableNames],
+    ),
+  );
+  const byName = new Map(rows.map((row) => [row.relname, row]));
+  for (const table of PRODUCTION_WORKFLOW_RUNTIME_TABLES) {
+    const row = byName.get(table);
+    if (!row || !row.has_select || !row.has_insert || !row.has_update || !row.has_delete) {
+      throw new Error('PRODUCTION_WORKFLOW_RUNTIME_GRANTS_INVALID');
+    }
+  }
+  for (const table of PRODUCTION_CONTROL_TABLES) {
+    const row = byName.get(table);
+    if (!row || row.has_insert || row.has_update || row.has_delete) {
+      throw new Error('PRODUCTION_CONTROL_TABLE_MUTATION_FORBIDDEN');
+    }
+  }
+  for (const table of PRODUCTION_RESTRICTED_BROWSER_AUTH_TABLES) {
+    const row = byName.get(table);
+    if (!row || row.has_select || row.has_insert || row.has_update || row.has_delete) {
+      throw new Error('PRODUCTION_BROWSER_AUTH_TABLE_ACCESS_FORBIDDEN');
+    }
   }
 }
 

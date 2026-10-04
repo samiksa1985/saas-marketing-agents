@@ -8,6 +8,7 @@ import {
   assertExpectedProductionRoles,
   assertProductionRuntimeAuthority,
   assertRlsPolicyCoverage,
+  assertWorkflowRuntimePrivileges,
 } from './runtime-role-verify.js';
 import { runCrossTenantProbe } from './cross-tenant-probe.js';
 import { assertMigrationAuthority, resolveMigrationDatabaseUrl } from './migration-url.js';
@@ -31,6 +32,7 @@ try {
   if (config.nodeEnv === 'production') {
     runtimeRole = await assertProductionRuntimeAuthority(client);
     await assertBrowserAuthRuntimePrivileges(client, runtimeRole);
+    await assertWorkflowRuntimePrivileges(client, runtimeRole);
     await assertExpectedProductionRoles(client);
   }
 
@@ -78,6 +80,7 @@ try {
     result.appRole = PRODUCTION_APP_ROLE;
     result.runtimeRoleSafe = true;
     result.browserAuthAuthority = 'restricted-functions';
+    result.workflowRuntimeAuthority = 'allowlisted';
     result.tenantPolicyCoverage = 'enabled';
     result.crossTenantSelectIsolation = probe.selectIsolation ? 'enforced' : 'unproven';
     result.crossTenantInsertIsolation = probe.insertIsolation ? 'enforced' : 'unproven';

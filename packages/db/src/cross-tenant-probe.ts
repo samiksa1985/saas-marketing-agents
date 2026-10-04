@@ -69,14 +69,16 @@ async function runProbeBody(
   probeTenantA: string,
   probeTenantB: string,
 ): Promise<void> {
-  const table = 'marketing_memory_records';
+  // The probe table is part of the CC-RR-002 operational DML allowlist so the
+  // runtime identity reaches the RLS policy rather than a grant denial.
+  const table = 'codecore_workflow_executions';
 
   // Tenant A context: write a fixture row and confirm own-tenant visibility.
   await tx.unsafe(`SELECT set_config('app.tenant_id', $1, true)`, [probeTenantA]);
   await tx.unsafe(
-    `INSERT INTO ${table} (id, tenant_id, scope, scope_id, statement)
-     VALUES ($1::uuid, $2::uuid, 'ws-prod-02-probe', $3::uuid, $4)`,
-    [probeId, probeTenantA, randomUUID(), 'probe fixture (rolled back)'],
+    `INSERT INTO ${table} (id, tenant_id, workflow_id, workflow_type, idempotency_key)
+     VALUES ($1::uuid, $2::uuid, $3, 'ws-prod-probe', $4)`,
+    [probeId, probeTenantA, `probe-${probeId}`, `probe-${randomUUID()}`],
   );
   const ownVisible = rows(await tx.unsafe(`SELECT 1 AS one FROM ${table} WHERE id = $1::uuid`, [probeId]));
   if (ownVisible.length !== 1) throw new Error('PROBE_SANITY_OWN_TENANT_FAILED');
@@ -88,7 +90,7 @@ async function runProbeBody(
 
   const updated = rows(
     await tx.unsafe(
-      `UPDATE ${table} SET statement = 'cross-tenant update (must be denied)'
+      `UPDATE ${table} SET workflow_type = 'cross-tenant update (must be denied)'
        WHERE id = $1::uuid RETURNING id`,
       [probeId],
     ),
@@ -104,9 +106,9 @@ async function runProbeBody(
   try {
     await tx.savepoint(async (savepoint) => {
       await savepoint.unsafe(
-        `INSERT INTO ${table} (id, tenant_id, scope, scope_id, statement)
-         VALUES ($1::uuid, $2::uuid, 'ws-prod-02-probe', $3::uuid, $4)`,
-        [randomUUID(), probeTenantA, randomUUID(), 'cross-tenant insert (must be denied)'],
+        `INSERT INTO ${table} (id, tenant_id, workflow_id, workflow_type, idempotency_key)
+         VALUES ($1::uuid, $2::uuid, $3, 'ws-prod-probe', $4)`,
+        [randomUUID(), probeTenantA, `probe-${randomUUID()}`, `probe-${randomUUID()}`],
       );
     });
   } catch (error) {
@@ -117,8 +119,8 @@ async function runProbeBody(
   }
 
   await tx.unsafe(`SELECT set_config('app.tenant_id', $1, true)`, [probeTenantA]);
-  const intact = rows(await tx.unsafe(`SELECT statement FROM ${table} WHERE id = $1::uuid`, [probeId]));
-  if (intact.length !== 1 || intact[0]?.statement !== 'probe fixture (rolled back)') {
+  const intact = rows(await tx.unsafe(`SELECT workflow_type FROM ${table} WHERE id = $1::uuid`, [probeId]));
+  if (intact.length !== 1 || intact[0]?.workflow_type !== 'ws-prod-probe') {
     throw new Error('PROBE_SANITY_OWN_TENANT_MUTATED');
   }
   throw ROLLBACK_PROBE;
@@ -132,7 +134,7 @@ export async function runCrossTenantProbe(
   const probeId = randomUUID();
   const probeTenantA = randomUUID();
   const probeTenantB = randomUUID();
-  const table = 'marketing_memory_records';
+  const table = 'codecore_workflow_executions';
 
   if (options.seedClient) {
     await seedProbeTenants(options.seedClient, probeTenantA, probeTenantB, probeId);

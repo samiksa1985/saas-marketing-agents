@@ -28,11 +28,47 @@ import {
   assertBrowserAuthRuntimePrivileges,
   assertRuntimeRoleHasNoMemberships,
   assertRuntimeRoleIsSafe,
+  assertWorkflowRuntimePrivileges,
 } from './runtime-role-verify.js';
 import { assertMigrationAuthority } from './migration-url.js';
 import { sharedTestAppPassword } from './test-app-password.js';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+test('workflow runtime requires allowlisted DML and preserves control/browser boundaries', async () => {
+  const safeRows = [
+    { relname: 'codecore_workflow_executions', has_select: true, has_insert: true, has_update: true, has_delete: true },
+    { relname: 'codecore_workflow_execution_events', has_select: true, has_insert: true, has_update: true, has_delete: true },
+    ...['tenants', 'users', 'roles', 'permissions', 'role_permissions', 'tenant_members'].map((relname) => ({
+      relname,
+      has_select: true,
+      has_insert: false,
+      has_update: false,
+      has_delete: false,
+    })),
+    ...['codecore_oidc_login_transactions', 'codecore_web_sessions'].map((relname) => ({
+      relname,
+      has_select: false,
+      has_insert: false,
+      has_update: false,
+      has_delete: false,
+    })),
+  ];
+  const safeClient = { async unsafe() { return safeRows; } };
+  await assertWorkflowRuntimePrivileges(safeClient as never, PRODUCTION_APP_ROLE);
+
+  const mutableControlRows = safeRows.map((row) => row.relname === 'tenant_members' ? { ...row, has_update: true } : row);
+  await assert.rejects(
+    () => assertWorkflowRuntimePrivileges({ async unsafe() { return mutableControlRows; } } as never, PRODUCTION_APP_ROLE),
+    /PRODUCTION_CONTROL_TABLE_MUTATION_FORBIDDEN/,
+  );
+
+  const readableBrowserRows = safeRows.map((row) => row.relname === 'codecore_web_sessions' ? { ...row, has_select: true } : row);
+  await assert.rejects(
+    () => assertWorkflowRuntimePrivileges({ async unsafe() { return readableBrowserRows; } } as never, PRODUCTION_APP_ROLE),
+    /PRODUCTION_BROWSER_AUTH_TABLE_ACCESS_FORBIDDEN/,
+  );
+});
 
 test('browser authentication state requires function-only runtime privileges', async () => {
   const safeClient = {
@@ -147,6 +183,7 @@ function baseConfigEnv(): NodeJS.ProcessEnv {
     TEMPORAL_ADDRESS: 'localhost:7233',
     TEMPORAL_NAMESPACE: 'default',
     ARTIFACT_BUCKET: 'wsp02-test-artifacts',
+    WORKFLOW_RUNTIME_MODE: 'postgres',
     AI_PROVIDER: 'mock',
     AI_MODEL: 'foundation-mock',
   };
@@ -201,21 +238,21 @@ test('cross-tenant probe fails closed on prerequisite errors and missing own-ten
         call += 1;
         if (call === 10) {
           throw Object.assign(
-            new Error('new row violates row-level security policy for table "marketing_memory_records"'),
+            new Error('new row violates row-level security policy for table "codecore_workflow_executions"'),
             { code: '42501' },
           );
         }
         if (call === failAt) {
           throw Object.assign(new Error('permission denied'), { code: '42501' });
         }
-        if (query.includes('SELECT 1 AS one FROM marketing_memory_records')) {
+        if (query.includes('SELECT 1 AS one FROM codecore_workflow_executions')) {
           return call === 5 && !emptyOwnRead ? [{ one: 1 }] : [];
         }
-        if (query.includes('UPDATE marketing_memory_records') || query.includes('DELETE FROM marketing_memory_records')) {
+        if (query.includes('UPDATE codecore_workflow_executions') || query.includes('DELETE FROM codecore_workflow_executions')) {
           return [];
         }
-        if (query.includes('SELECT statement FROM marketing_memory_records')) {
-          return [{ statement: 'probe fixture (rolled back)' }];
+        if (query.includes('SELECT workflow_type FROM codecore_workflow_executions')) {
+          return [{ workflow_type: 'ws-prod-probe' }];
         }
         return [];
       },
@@ -244,7 +281,7 @@ test('cross-tenant probe fails closed on prerequisite errors and missing own-ten
     /PROBE_SANITY_OWN_TENANT_FAILED/,
   );
   assert.deepEqual(await runCrossTenantProbe(makeClient()), {
-    table: 'marketing_memory_records',
+    table: 'codecore_workflow_executions',
     selectIsolation: true,
     insertIsolation: true,
     updateIsolation: true,
@@ -522,7 +559,7 @@ test('cross-tenant probe proves SELECT, INSERT, UPDATE, and DELETE isolation wit
   try {
     const result = await runCrossTenantProbe(client, { appRole: PRODUCTION_APP_ROLE });
     assert.deepEqual(result, {
-      table: 'marketing_memory_records',
+      table: 'codecore_workflow_executions',
       selectIsolation: true,
       insertIsolation: true,
       updateIsolation: true,
@@ -538,7 +575,7 @@ test('cross-tenant probe proves SELECT, INSERT, UPDATE, and DELETE isolation wit
     assert.equal(Number(leftovers[0]?.count ?? -1), 0, 'probe tenants must roll back');
     const fixtureLeftovers = Array.from(
       (await client.unsafe(
-        `SELECT count(*)::int AS count FROM marketing_memory_records WHERE scope = 'ws-prod-02-probe'`,
+        `SELECT count(*)::int AS count FROM codecore_workflow_executions WHERE workflow_type = 'ws-prod-probe'`,
       )) as Iterable<{ count: number }>,
     );
     assert.equal(Number(fixtureLeftovers[0]?.count ?? -1), 0, 'probe fixtures must roll back');

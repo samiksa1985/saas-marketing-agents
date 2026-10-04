@@ -14,7 +14,7 @@ export type NodeEnvironment =
 
 export type WorkflowRuntimeMode =
   | 'in-memory'
-  | 'temporal';
+  | 'postgres';
 
 export type GoogleAdsExecutionMode =
   | 'DISABLED'
@@ -324,17 +324,17 @@ export function loadConfig(
   const workflowRuntimeMode =
     (env.WORKFLOW_RUNTIME_MODE ??
       (nodeEnv === 'production'
-        ? 'temporal'
+        ? 'postgres'
         : 'in-memory')) as WorkflowRuntimeMode;
 
   if (
     ![
       'in-memory',
-      'temporal',
+      'postgres',
     ].includes(workflowRuntimeMode)
   ) {
     throw new Error(
-      'WORKFLOW_RUNTIME_MODE must be in-memory or temporal',
+      'WORKFLOW_RUNTIME_MODE must be in-memory or postgres',
     );
   }
 
@@ -370,10 +370,10 @@ export function loadConfig(
 
   if (
     nodeEnv === 'production' &&
-    workflowRuntimeMode !== 'temporal'
+    workflowRuntimeMode !== 'postgres'
   ) {
     throw new Error(
-      'Production requires WORKFLOW_RUNTIME_MODE=temporal',
+      'Production requires WORKFLOW_RUNTIME_MODE=postgres',
     );
   }
 
@@ -471,15 +471,9 @@ export function loadConfig(
 
     databaseUrl,
 
-    temporalAddress: required(
-      'TEMPORAL_ADDRESS',
-      env.TEMPORAL_ADDRESS,
-    ),
+    temporalAddress: optional(env.TEMPORAL_ADDRESS) ?? '',
 
-    temporalNamespace: required(
-      'TEMPORAL_NAMESPACE',
-      env.TEMPORAL_NAMESPACE,
-    ),
+    temporalNamespace: optional(env.TEMPORAL_NAMESPACE) ?? '',
 
     workflowRuntimeMode,
 

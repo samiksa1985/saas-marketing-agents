@@ -35,6 +35,8 @@ const requiredTables = [
   'retryAttempts',
   'workflowEvents',
   'executionErrors',
+  'codecoreWorkflowExecutions',
+  'codecoreWorkflowExecutionEvents',
 ];
 const missing = requiredTables.filter((table) => !(table in schema));
 if (missing.length > 0)

@@ -659,6 +659,63 @@ export const executionErrors = pgTable(
   (table) => [index('execution_errors_tenant_execution_idx').on(table.tenantId, table.executionId)],
 );
 
+/** WS-PROD-06 canonical PostgreSQL-backed durable execution state. */
+export const codecoreWorkflowExecutions = pgTable(
+  'codecore_workflow_executions',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    workflowId: varchar('workflow_id', { length: 255 }).notNull(),
+    workflowType: varchar('workflow_type', { length: 120 }).notNull(),
+    engagementId: varchar('engagement_id', { length: 255 }),
+    locale: varchar('locale', { length: 16 }).notNull().default('en'),
+    selectedWorkstreamIds: jsonb('selected_workstream_ids').notNull().default([]),
+    status: varchar('status', { length: 40 }).notNull().default('pending'),
+    version: integer('version').notNull().default(1),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(3),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    leaseOwner: varchar('lease_owner', { length: 200 }),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    terminalAt: timestamp('terminal_at', { withTimezone: true }),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    errorCode: varchar('error_code', { length: 120 }),
+    errorMessage: text('error_message'),
+    approvalId: varchar('approval_id', { length: 255 }),
+    approvalStatus: varchar('approval_status', { length: 40 }),
+    inputMetadata: jsonb('input_metadata').notNull().default({}),
+    resultMetadata: jsonb('result_metadata').notNull().default({}),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('codecore_workflow_execution_tenant_key_uidx').on(table.tenantId, table.idempotencyKey),
+    index('codecore_workflow_execution_claim_idx').on(table.status, table.nextAttemptAt, table.id),
+    index('codecore_workflow_execution_tenant_idx').on(table.tenantId, table.id),
+    index('codecore_workflow_execution_approval_idx').on(table.tenantId, table.approvalId),
+  ],
+);
+
+export const codecoreWorkflowExecutionEvents = pgTable(
+  'codecore_workflow_execution_events',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    executionId: uuid('execution_id')
+      .notNull()
+      .references(() => codecoreWorkflowExecutions.id, { onDelete: 'cascade' }),
+    eventType: varchar('event_type', { length: 120 }).notNull(),
+    actor: varchar('actor', { length: 255 }).notNull(),
+    reason: text('reason'),
+    payload: jsonb('payload').notNull().default({}),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('codecore_workflow_execution_events_tenant_idx').on(table.tenantId, table.executionId, table.occurredAt),
+  ],
+);
+
 export const documentSourceTypeEnum = pgEnum('document_source_type', ['file', 'url', 'inline']);
 
 export const documentStatusEnum = pgEnum('document_status', [

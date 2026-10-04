@@ -15,6 +15,7 @@ import {
 import { AuthenticationError } from '@platform/auth';
 import { createStructuredLogger, currentRequestId, platformMetrics } from '@platform/observability';
 import {
+  BROWSER_AUTH_SERVICE,
   BrowserAuthService,
   type BrowserLoginStart,
   cookieValue,
@@ -25,7 +26,7 @@ import {
   transactionCookieName,
 } from './browser-auth.service.js';
 
-export const BROWSER_AUTH_SERVICE = 'PLATFORM_BROWSER_AUTH_SERVICE';
+export { BROWSER_AUTH_SERVICE };
 const logger = createStructuredLogger('api');
 
 interface ApiResponse {

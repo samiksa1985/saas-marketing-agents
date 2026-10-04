@@ -129,7 +129,7 @@ class TenantIsolationExceptionFilter
 
 @Injectable()
 export class WorkflowApiService {
-  /** Commands are provider-neutral; production selection supplies Temporal. */
+  /** Commands are provider-neutral; production selection supplies PostgreSQL. */
   runtime: WorkflowRuntime;
 
   /** All API read endpoints use this durable-query boundary. */

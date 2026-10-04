@@ -25,7 +25,7 @@
                     "dev:worker":  "npm --workspace apps/worker run dev",
                     "typecheck":  "tsc -b --pretty false \u0026\u0026 npm --workspace apps/web run typecheck",
                     "lint":  "prettier --check apps packages",
-                    "test":  "tsx --test packages/*/src/**/*.test.ts",
+                    "test":  "tsx --test --test-concurrency=1 packages/*/src/**/*.test.ts",
                     "db:generate":  "npm --workspace packages/db run generate",
                     "db:migrate":  "npm --workspace packages/db run migrate",
                     "db:check":  "npm --workspace packages/db run check",

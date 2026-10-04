@@ -3,19 +3,14 @@ import {
   type WorkflowTaskCommandRuntime,
   type WorkflowRuntime,
 } from './index.js';
-import {
-  TemporalWorkflowRuntime,
-  type TemporalWorkflowAdapter,
-} from './temporal.js';
-import {
-  InMemoryWorkflowQuery,
-  TemporalWorkflowQuery,
-  type TemporalWorkflowReadModel,
-  type WorkflowRuntimeQuery,
-} from './query.js';
+import { InMemoryWorkflowQuery, type WorkflowRuntimeQuery } from './query.js';
+import { PostgresWorkflowRuntime } from './postgres.js';
+import { PostgresWorkflowQuery } from './postgres-query.js';
+
+import type { PostgresWorkflowSqlClient } from './postgres.js';
 
 /** Runtime selection is explicit; the in-memory implementation is dev/test only. */
-export type WorkflowRuntimeMode = 'in-memory' | 'temporal';
+export type WorkflowRuntimeMode = 'in-memory' | 'postgres';
 
 export interface WorkflowRuntimeSelection {
   mode: WorkflowRuntimeMode;
@@ -29,15 +24,12 @@ export interface WorkflowRuntimeSelection {
 export interface WorkflowRuntimeProviderOptions {
   mode: WorkflowRuntimeMode;
   repositoryRoot?: string;
-  temporalAdapter?: TemporalWorkflowAdapter;
-  temporalReadModel?: TemporalWorkflowReadModel;
+  postgresClient?: PostgresWorkflowSqlClient;
 }
 
 /**
- * Builds the single canonical workflow runtime abstraction.
- *
- * Production composition supplies a Temporal adapter; this package deliberately
- * does not create a second workflow engine or connect to Temporal itself.
+ * Builds the canonical workflow runtime abstraction. Production selects the
+ * PostgreSQL durable runtime; in-memory remains explicitly dev/test only.
  */
 export function createWorkflowRuntime(
   options: WorkflowRuntimeProviderOptions,
@@ -53,18 +45,16 @@ export function createWorkflowRuntime(
     };
   }
 
-  if (!options.temporalAdapter) {
-    throw new Error('A Temporal workflow adapter is required when WORKFLOW_RUNTIME_MODE=temporal');
+  if (!options.postgresClient) {
+    throw new Error('A PostgreSQL workflow client is required when WORKFLOW_RUNTIME_MODE=postgres');
   }
 
-  if (!options.temporalReadModel) {
-    throw new Error('A Temporal workflow read model is required when WORKFLOW_RUNTIME_MODE=temporal');
-  }
-
+  const runtime = new PostgresWorkflowRuntime(options.postgresClient);
   return {
-    mode: 'temporal',
-    runtime: new TemporalWorkflowRuntime(options.temporalAdapter),
-    query: new TemporalWorkflowQuery(options.temporalReadModel),
+    mode: 'postgres',
+    runtime,
+    query: new PostgresWorkflowQuery(runtime),
+    taskCommands: runtime,
     durable: true,
   };
 }

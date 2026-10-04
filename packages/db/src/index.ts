@@ -92,4 +92,5 @@ export {
   assertRlsPolicyCoverage,
   assertRuntimeRoleHasNoMemberships,
   assertRuntimeRoleIsSafe,
+  assertWorkflowRuntimePrivileges,
 } from './runtime-role-verify.js';

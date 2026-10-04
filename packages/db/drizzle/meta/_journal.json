@@ -239,6 +239,13 @@
       "when": 1788629864188,
       "tag": "0033_browser_oidc_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788629864189,
+      "tag": "0034_postgres_durable_workflow_runtime",
+      "breakpoints": true
     }
   ]
 }
