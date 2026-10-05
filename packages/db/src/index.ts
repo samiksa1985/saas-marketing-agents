@@ -93,4 +93,5 @@ export {
   assertRuntimeRoleHasNoMemberships,
   assertRuntimeRoleIsSafe,
   assertWorkflowRuntimePrivileges,
+  assertWorkflowSchedulerPrivileges,
 } from './runtime-role-verify.js';

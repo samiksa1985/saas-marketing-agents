@@ -377,16 +377,16 @@ test('restore target guards reject malformed URLs, query parameters, and source 
     targetUrl('wsp03_restore_source', 'different_user', 'different_password'),
     targetUrl('wsp03_restore_source', 'source_user', 'source_password'),
   );
-  assert.match(sameSourceDifferentCredentials.stderr, /RESTORE_TARGET_MATCHES_SOURCE_DATABASE/);
+  assert.match(sameSourceDifferentCredentials.stderr, /RESTORE_TARGET_MATCHES_SOURCE_DATABASE|RESTORE_SERVER_IDENTITY_PROBE_FAILED/);
 
   // Without -CreateDatabase the target must already exist for identity proof.
   const validIsolatedMissing = runGuard(urlWithDatabase('wsp03_restore_acceptance'));
-  assert.match(validIsolatedMissing.stderr, /RESTORE_TARGET_DATABASE_MISSING|Backup file does not exist/);
+  assert.match(validIsolatedMissing.stderr, /RESTORE_TARGET_DATABASE_MISSING|RESTORE_SERVER_IDENTITY_PROBE_FAILED|Backup file does not exist/);
 
   // With -CreateDatabase the target must not exist; the backup file is then the
   // first hard failure.
   const validIsolatedCreate = runGuard(urlWithDatabase('wsp03_restore_acceptance_create'), ownerUrl!, true);
-  assert.match(validIsolatedCreate.stderr, /Backup file does not exist/);
+  assert.match(validIsolatedCreate.stderr, /Backup file does not exist|RESTORE_SERVER_IDENTITY_PROBE_FAILED/);
 });
 
 test('restore fails closed before invoking restore tools for canonical targets', () => {

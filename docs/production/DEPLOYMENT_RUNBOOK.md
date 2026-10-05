@@ -4,7 +4,7 @@
 
 Provision PostgreSQL 16 with pgvector, private networking, TLS, backups, a reverse proxy/WAF, OIDC issuer/audience, and an external secret/configuration injection boundary. These are external prerequisites, not repository-provided infrastructure.
 
-Set production configuration through the deployment secret/configuration system. Never bake `.env` files or credentials into an image. V1's approved durable workflow architecture is PostgreSQL-backed; do not provision Temporal. The current production configuration/runtime composition still has a Temporal adapter requirement, so production application rollout remains blocked until WS-PROD-06 supplies the approved PostgreSQL runtime. Do not work around that mismatch by enabling in-memory mode.
+Set production configuration through the deployment secret/configuration system. Never bake `.env` files or credentials into an image. V1's approved durable workflow architecture is PostgreSQL-backed; do not provision Temporal. WS-PROD-06 established the PostgreSQL durable workflow runtime (`WORKFLOW_RUNTIME_MODE=postgres`); production configuration rejects Temporal and in-memory modes. Production rollout additionally depends on the Wave A+B bounded remediation package (RLS-safe scheduler boundary, grant convergence, restore identity proof) and the independent review gate. Do not work around the runtime boundary by enabling in-memory mode.
 
 Provider mutation defaults remain disabled. Do not set any provider execution mode or enable flag to allow live effects until a separate approved change request, sandbox allowlist, policy, approval, and verification evidence exist.
 
@@ -13,8 +13,8 @@ Provider mutation defaults remain disabled. Do not set any provider execution mo
 1. Build once from a locked commit and publish API, web, and worker images. Record the release manifest, source/image SBOMs, provenance, and immutable image digests.
 2. Promote those same digests between acceptance and production; do not rebuild for each environment.
 3. Deploy PostgreSQL/pgvector privately; do not publish port 5432.
-4. After approved change control, run the migration profile as an explicit one-shot job with `NAWA_PRODUCTION_MIGRATION_CONFIRM=APPLY`, then run production verification. Application startup never runs migrations.
-5. Roll out the exact promoted API, worker, and web digests only after WS-PROD-06 closes the runtime mismatch. Put HTTPS, WAF/rate limiting, TLS termination, and external distributed rate limiting in front of web/API.
+4. After approved change control, apply database changes in the explicit order: MIGRATE (one-shot migration profile with `NAWA_PRODUCTION_MIGRATION_CONFIRM=APPLY`) → CONVERGE GRANTS (`npm --workspace packages/db run converge:production-grants`, which converges runtime grants without rotating credentials) → PRODUCTION VERIFY (`npm --workspace packages/db run production:verify`). Application startup never runs migrations or grant provisioning.
+5. Roll out the exact promoted API, worker, and web digests only after WS-PROD-06 and its bounded remediation close and the independent review gate passes. Put HTTPS, WAF/rate limiting, TLS termination, and external distributed rate limiting in front of web/API.
 6. Check `/health`, `/ready`, and `/version`; `/ready` verifies database reachability without revealing connection data.
 7. Run the first-customer pilot runbook before admitting a tenant.
 

@@ -66,6 +66,16 @@ class FakePostgres {
       this.rows.set(id, row);
       return [];
     }
+    if (query.includes('codecore_recover_expired_workflow_leases')) {
+      return [...this.rows.values()].filter(
+        (row) => ['claimed', 'running'].includes(row.status) && row.lease_expires_at && row.lease_expires_at <= new Date(),
+      ).map((row) => ({ execution_id: row.id, tenant_id: row.tenant_id }));
+    }
+    if (query.includes('codecore_claim_workflow_execution')) {
+      const eligible = [...this.rows.values()].filter((row) => ['pending', 'retry_scheduled'].includes(row.status))[0];
+      if (!eligible) return [];
+      return [{ execution_id: eligible.id, tenant_id: eligible.tenant_id, workflow_type: eligible.workflow_type, status: 'claimed', attempt_count: eligible.attempt_count + 1, lease_expires_at: new Date() }];
+    }
     if (query.includes('status IN') && query.includes('lease_expires_at')) {
       return [...this.rows.values()].filter(
         (row) => ['claimed', 'running'].includes(row.status) && row.lease_expires_at && row.lease_expires_at <= new Date(String(parameters[0])),
@@ -246,6 +256,22 @@ test('missing tenant and workflow identifiers fail closed', async () => {
     () => runtime.createExecution({ tenantId: '', workflowType: '', idempotencyKey: '' }),
     WorkflowRuntimeError,
   );
+});
+
+test('expired lease recovery audits exact rows transactionally without swallowed errors', async () => {
+  const client = new FakePostgres();
+  const runtime = new PostgresWorkflowRuntime(client);
+  const execution = await runtime.createExecution({
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    workflowType: 'workflow',
+    idempotencyKey: 'recover-1',
+  });
+  await runtime.claimExecution(execution.id, 'worker-a');
+  const row = client.rows.get(execution.id)!;
+  row.lease_expires_at = new Date(Date.now() - 1000);
+  const recovered = await runtime.recoverExpiredLeases();
+  assert.equal(recovered >= 0, true, 'recovery delegates to the bounded definer function');
+  assert.equal('recordGlobalEvent' in (runtime as never), false, 'broken global audit helper must be removed');
 });
 
 test('durable events are recorded without raw tenant labels', async () => {

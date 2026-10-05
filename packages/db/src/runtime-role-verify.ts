@@ -208,6 +208,42 @@ export async function assertWorkflowRuntimePrivileges(client: SqlClient, runtime
   }
 }
 
+/** Scheduler boundary: narrow SECURITY DEFINER functions, owner-controlled. */
+export async function assertWorkflowSchedulerPrivileges(client: SqlClient, runtimeRole: string): Promise<void> {
+  const functions = rowsOf<{
+    proname: string;
+    executable: boolean;
+    owner_is_app: boolean;
+    public_execute: boolean;
+    security_definer: boolean;
+    search_path: string | null;
+  }>(
+    await client.unsafe(
+      `SELECT p.proname,
+              has_function_privilege($1, p.oid, 'EXECUTE') AS executable,
+              (pg_get_userbyid(p.proowner) = $1) AS owner_is_app,
+              has_function_privilege(0, p.oid, 'EXECUTE') AS public_execute,
+              p.prosecdef AS security_definer,
+              (SELECT string_agg(s, ',') FROM unnest(p.proconfig) AS s WHERE s LIKE 'search_path=%') AS search_path
+       FROM pg_proc p
+       JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public'
+         AND p.proname IN ('codecore_claim_workflow_execution', 'codecore_recover_expired_workflow_leases')`,
+      [runtimeRole],
+    ),
+  );
+  if (functions.length !== 2) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_FUNCTIONS_MISSING');
+  for (const fn of functions) {
+    if (!fn.executable) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_EXECUTE_MISSING');
+    if (fn.owner_is_app) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_OWNED_BY_RUNTIME');
+    if (fn.public_execute) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_PUBLIC_EXECUTE');
+    if (!fn.security_definer) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_NOT_DEFINER');
+    if (!fn.search_path || !/search_path=pg_catalog,\s*public/.test(fn.search_path)) {
+      throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_SEARCH_PATH_INVALID');
+    }
+  }
+}
+
 /** The runtime identity must not own any protected tenant-scoped table. */
 export async function assertNoProtectedTablesOwnedByRuntime(
   client: SqlClient,

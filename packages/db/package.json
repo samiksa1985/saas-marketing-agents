@@ -13,6 +13,7 @@
     "migrate": "tsx src/migrate.ts",
     "production:verify": "tsx src/production-verify.ts",
     "provision:production-roles": "tsx scripts/provision-production-roles.ts",
+    "converge:production-grants": "tsx scripts/converge-production-grants.ts",
     "restore:verify": "tsx src/restore-verify.ts",
     "pilot:bootstrap": "tsx src/bootstrap-pilot-tenant.ts",
     "phase1:postgres": "tsx scripts/phase1-postgres.ts",

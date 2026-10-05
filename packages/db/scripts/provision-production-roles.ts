@@ -192,6 +192,27 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
     await client.unsafe(`GRANT EXECUTE ON FUNCTION ${signature} TO ${quoteIdentifier(APP_ROLE)}`);
   }
 
+  // WAVE-AB P1: the RLS-safe scheduler boundary is granted narrowly; workers
+  // claim/recover only through these owner-controlled definer functions.
+  const schedulerFunctions = [
+    'codecore_claim_workflow_execution(character varying, integer)',
+    'codecore_recover_expired_workflow_leases()',
+  ];
+  const existingSchedulerFunctions = Array.from(
+    (await client.unsafe(
+      `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname IN ('codecore_claim_workflow_execution', 'codecore_recover_expired_workflow_leases')`,
+    )) as Iterable<{ proname: string }>,
+  );
+  for (const signature of schedulerFunctions) {
+    if (existingSchedulerFunctions.some((f) => signature.startsWith(f.proname))) {
+      // Freshly created functions carry default PUBLIC EXECUTE; revoke it so
+      // the runtime role holds the only application grant.
+      await client.unsafe(`REVOKE EXECUTE ON FUNCTION ${signature} FROM PUBLIC`);
+      await client.unsafe(`GRANT EXECUTE ON FUNCTION ${signature} TO ${quoteIdentifier(APP_ROLE)}`);
+    }
+  }
+
   await client.unsafe(
     `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${quoteIdentifier(APP_ROLE)}`,
   );
@@ -240,10 +261,13 @@ async function grantBoundedRuntimePrivileges(client: SqlClient): Promise<void> {
 
 async function run(): Promise<void> {
   // Provisioning runs only through the explicit migration authority in production.
+  // CODECORE_GRANTS_CONVERGE_ONLY=true skips password rotation so upgrade-time
+  // grant convergence never rotates credentials.
+  const convergeOnly = process.env.CODECORE_GRANTS_CONVERGE_ONLY === 'true';
   const secrets = resolveSecretEnvironment(process.env, [
     'DATABASE_URL',
     'MIGRATION_DATABASE_URL',
-    'CODECORE_APP_PASSWORD',
+    ...(convergeOnly ? [] : ['CODECORE_APP_PASSWORD']),
   ]);
   const databaseUrl = resolveMigrationDatabaseUrl(
     secrets,
@@ -251,7 +275,7 @@ async function run(): Promise<void> {
     secrets.NODE_ENV,
   );
   const appPassword = secrets.CODECORE_APP_PASSWORD?.trim();
-  if (secrets.NODE_ENV === 'production' && !appPassword) throw new Error('CODECORE_APP_PASSWORD_REQUIRED');
+  if (secrets.NODE_ENV === 'production' && !convergeOnly && !appPassword) throw new Error('CODECORE_APP_PASSWORD_REQUIRED');
 
   const client = postgres(databaseUrl, productionPostgresOptions(databaseUrl, { max: 1, prepare: false }, secrets));
   try {
@@ -267,7 +291,7 @@ async function run(): Promise<void> {
         ownerRole: OWNER_ROLE,
         appRole: APP_ROLE,
         attributes: 'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT',
-        passwordRotation: appPassword ? 'applied' : 'skipped',
+        passwordRotation: convergeOnly ? 'skipped-converge-only' : (appPassword ? 'applied' : 'skipped'),
         protectedTablesChecked: guard.checked,
       }) + '\n',
     );

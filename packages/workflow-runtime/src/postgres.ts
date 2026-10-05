@@ -251,34 +251,34 @@ export class PostgresWorkflowRuntime implements WorkflowRuntime, WorkflowTaskCom
 
   async claimNext(workerId: string, now = new Date()): Promise<DurableExecution | undefined> {
     if (!workerId.trim()) throw new WorkflowRuntimeError('workerId is required');
+    // Scheduling goes through the owner-controlled SECURITY DEFINER boundary
+    // so the runtime role never needs RLS bypass to discover eligible work.
     const result = await this.client.begin(async (transaction) => {
-      const row = first(await transaction.unsafe(
-        `SELECT * FROM codecore_workflow_executions
-         WHERE status IN ('pending','retry_scheduled')
-           AND next_attempt_at <= $1
-         ORDER BY next_attempt_at, id
-         LIMIT 1
-         FOR UPDATE SKIP LOCKED`,
-        [now.toISOString()],
+      const claimed = first(await transaction.unsafe(
+        `SELECT * FROM public.codecore_claim_workflow_execution($1, $2)`,
+        [workerId, this.leaseMs],
       ));
-      if (!row) return undefined;
-      const current = mapExecution(row);
-      const claimed = await this.updateExecution(transaction, current, ['pending', 'retry_scheduled'], {
-        status: 'claimed',
-        leaseOwner: workerId,
-        leaseExpiresAt: new Date(now.getTime() + this.leaseMs),
-        attemptCount: current.attemptCount + 1,
-        startedAt: current.startedAt ?? now,
-      });
-      await this.recordEvent(transaction, claimed, 'workflow_claimed', workerId, 'Execution claimed');
-      return claimed;
+      if (!claimed) return undefined;
+      return first(await transaction.unsafe(
+        `SELECT * FROM codecore_workflow_executions WHERE id = $1::uuid`,
+        [String(claimed.execution_id)],
+      ));
     });
-    return result as DurableExecution | undefined;
+    return result ? mapExecution(result) : undefined;
   }
 
   async claimExecution(executionId: string, workerId: string, now = new Date(), context?: TenantContext): Promise<DurableExecution> {
     const claimed = await this.client.begin(async (transaction) => {
+      // Tenant validation happens before any mutation or tenant scoping: a
+      // caller with the wrong tenant is rejected without touching state.
       if (context?.tenantId) {
+        const probe = first(await transaction.unsafe(
+          `SELECT tenant_id FROM codecore_workflow_executions WHERE id = $1::uuid`,
+          [executionId],
+        ));
+        if (probe && String(probe.tenant_id) !== context.tenantId) {
+          throw new TenantIsolationError('Cross-tenant access denied');
+        }
         await transaction.unsafe(`SELECT set_config('app.tenant_id', $1, true)`, [context.tenantId]);
       }
       const row = first(await transaction.unsafe(
@@ -506,19 +506,12 @@ export class PostgresWorkflowRuntime implements WorkflowRuntime, WorkflowTaskCom
   }
 
   async recoverExpiredLeases(now = new Date()): Promise<number> {
-    const result = await this.client.unsafe(
-      `UPDATE codecore_workflow_executions
-       SET status = 'retry_scheduled', next_attempt_at = now(), lease_owner = NULL, lease_expires_at = NULL,
-           error_code = 'LEASE_EXPIRED', error_message = 'Worker lease expired'
-       WHERE status IN ('claimed','running') AND lease_expires_at IS NOT NULL AND lease_expires_at <= $1
-       RETURNING id`,
-      [now.toISOString()],
-    );
-    const recovered = rows(result).length;
-    if (recovered > 0) {
-      await this.recordGlobalEvent('workflow_recovered', 'system', `${recovered} expired lease(s) recovered`);
-    }
-    return recovered;
+    // The definer function audits exactly the rows it recovered inside the
+    // same transaction; failures propagate rather than being swallowed.
+    const result = rows(await this.client.unsafe(
+      `SELECT * FROM public.codecore_recover_expired_workflow_leases()`,
+    ));
+    return result.length;
   }
 
   async createWorkflow(input: CreateWorkflowInput): Promise<Workflow> {
@@ -746,17 +739,6 @@ export class PostgresWorkflowRuntime implements WorkflowRuntime, WorkflowTaskCom
        VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6::jsonb)`,
       [execution.tenantId, execution.id, eventType, actor.slice(0, 255), reason.slice(0, 500), '{}'],
     );
-  }
-
-  private async recordGlobalEvent(eventType: string, actor: string, reason: string): Promise<void> {
-    // Recovery is system-owned; no tenant context is established by a pooled worker.
-    await this.client.unsafe(
-      `INSERT INTO codecore_workflow_execution_events (tenant_id, execution_id, event_type, actor, reason, payload)
-       SELECT tenant_id, id, $2, $3, $4, '{}'::jsonb
-       FROM codecore_workflow_executions
-       WHERE error_code = 'LEASE_EXPIRED' AND updated_at > now() - interval '1 minute'`,
-      [eventType, actor.slice(0, 255), reason.slice(0, 500)],
-    ).catch(() => undefined);
   }
 
   toLegacyWorkflow(execution: DurableExecution): Workflow {

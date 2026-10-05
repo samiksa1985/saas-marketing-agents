@@ -74,6 +74,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0032_tenant_admin_rbac_seed',
     '0033_browser_oidc_sessions',
     '0034_postgres_durable_workflow_runtime',
+    '0035_workflow_scheduler_functions',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(

@@ -1,7 +1,13 @@
 ﻿import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { loadConfig } from '@platform/config';
-import { createDb } from '@platform/db';
+import {
+  assertBrowserAuthRuntimePrivileges,
+  assertProductionRuntimeAuthority,
+  assertWorkflowRuntimePrivileges,
+  assertWorkflowSchedulerPrivileges,
+  createDb,
+} from '@platform/db';
 import { createStructuredLogger, platformMetrics } from '@platform/observability';
 import { PostgresWorkflowRuntime } from '@platform/workflow-runtime';
 
@@ -9,6 +15,15 @@ const config = loadConfig();
 const logger = createStructuredLogger('worker');
 const database = createDb(config.databaseUrl);
 const client = database.$client;
+
+// WAVE-AB P1: the worker fails closed unless its runtime identity is safe and
+// the narrow scheduler/DML boundaries are exactly as expected.
+const runtimeRole = await assertProductionRuntimeAuthority(client);
+await assertBrowserAuthRuntimePrivileges(client, runtimeRole);
+await assertWorkflowRuntimePrivileges(client, runtimeRole);
+await assertWorkflowSchedulerPrivileges(client, runtimeRole);
+logger.emit('info', 'worker.authority_verified', { role: runtimeRole });
+
 const runtime = new PostgresWorkflowRuntime(client);
 const workerId = `${hostname()}-${process.pid}-${randomUUID()}`;
 let stopping = false;
