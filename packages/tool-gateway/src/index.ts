@@ -168,6 +168,9 @@ export class InMemoryToolGateway
 }
 
 export * from './google-ads.js';
+export * from './google-ads-oauth.js';
+export * from './google-ads-connection.js';
+export * from './google-ads-reconciliation.js';
 export * from './meta-ads.js';
 export * from './external-action-provider-registry.js';
 export * from './provider-integration-runtime.js';

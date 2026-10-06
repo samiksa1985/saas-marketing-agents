@@ -46,6 +46,20 @@ const OPERATIONAL_RUNTIME_TABLES = [
   'codecore_workflow_executions',
   'codecore_workflow_execution_events',
   'marketing_os_approval_records',
+  // WS-PROD-09 governed provider activation state.
+  'google_ads_connections',
+  'google_ads_account_mappings',
+  'external_marketing_actions',
+  'external_marketing_action_evidence',
+  'external_action_policies',
+  'external_action_policy_audit',
+  'external_action_workflow_outbox',
+  'external_action_operational_events',
+  'external_provider_health',
+  'external_provider_credential_health',
+  'tenant_provider_bindings',
+  'tenant_provider_capabilities',
+  'provider_integration_verifications',
 ];
 
 /** SQL identifier quoting: ALTER ROLE "x", GRANT ... TO "x". */

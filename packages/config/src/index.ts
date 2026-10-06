@@ -46,6 +46,17 @@ export interface RuntimeConfig {
   googleAdsApiVersion: string;
   googleAdsApprovedCustomerId?: string;
   googleAdsSandboxCustomerIds: string[];
+  /** WS-PROD-09: connection/read-only gate; default off, never implies mutation. */
+  googleAdsConnectionEnabled: boolean;
+  /** WS-PROD-09: validate-only gate; default off, never implies execution. */
+  googleAdsValidateOnlyEnabled: boolean;
+  /** WS-PROD-09: live-mutation gate; default off; production also requires REAL mode + enabled flag. */
+  googleAdsLiveMutationEnabled: boolean;
+  googleAdsClientId?: string;
+  googleAdsClientSecret?: string;
+  googleAdsDeveloperToken?: string;
+  googleAdsOauthRedirectUri?: string;
+  googleAdsLoginCustomerId?: string;
   metaAdsExecutionMode: MetaAdsExecutionMode;
   metaAdsExecutionEnabled: boolean;
   metaAdsApiVersion: string;
@@ -222,6 +233,8 @@ export function loadConfig(
     'DATABASE_URL',
     'OBSERVABILITY_METRICS_TOKEN',
     'OIDC_CLIENT_SECRET',
+    'GOOGLE_ADS_CLIENT_SECRET',
+    'GOOGLE_ADS_DEVELOPER_TOKEN',
   ]);
   const nodeEnv =
     (env.NODE_ENV ??
@@ -398,6 +411,26 @@ export function loadConfig(
     'GOOGLE_ADS_SANDBOX_CUSTOMER_IDS',
     env.GOOGLE_ADS_SANDBOX_CUSTOMER_IDS,
   );
+  const googleAdsConnectionEnabled = optionalBoolean('GOOGLE_ADS_CONNECTION_ENABLED', env.GOOGLE_ADS_CONNECTION_ENABLED);
+  const googleAdsValidateOnlyEnabled = optionalBoolean('GOOGLE_ADS_VALIDATE_ONLY_ENABLED', env.GOOGLE_ADS_VALIDATE_ONLY_ENABLED);
+  const googleAdsLiveMutationEnabled = optionalBoolean('GOOGLE_ADS_LIVE_MUTATION_ENABLED', env.GOOGLE_ADS_LIVE_MUTATION_ENABLED);
+  const googleAdsClientId = optional(env.GOOGLE_ADS_CLIENT_ID);
+  const googleAdsClientSecret = optional(env.GOOGLE_ADS_CLIENT_SECRET);
+  const googleAdsDeveloperToken = optional(env.GOOGLE_ADS_DEVELOPER_TOKEN);
+  const googleAdsOauthRedirectUriValue = optional(env.GOOGLE_ADS_OAUTH_REDIRECT_URI);
+  const googleAdsOauthRedirectUri = googleAdsOauthRedirectUriValue
+    ? absoluteUrl('GOOGLE_ADS_OAUTH_REDIRECT_URI', googleAdsOauthRedirectUriValue, { httpsOnly: nodeEnv === 'production' })
+    : undefined;
+  const googleAdsLoginCustomerId = googleAdsCustomerId('GOOGLE_ADS_LOGIN_CUSTOMER_ID', env.GOOGLE_ADS_LOGIN_CUSTOMER_ID);
+  if (googleAdsConnectionEnabled && (!googleAdsClientId || !googleAdsClientSecret || !googleAdsOauthRedirectUri)) {
+    throw new Error('GOOGLE_ADS_CONNECTION_ENABLED requires GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET(_FILE), and GOOGLE_ADS_OAUTH_REDIRECT_URI');
+  }
+  if (googleAdsLiveMutationEnabled && !googleAdsExecutionEnabled) {
+    throw new Error('GOOGLE_ADS_LIVE_MUTATION_ENABLED requires GOOGLE_ADS_EXECUTION_ENABLED=true');
+  }
+  if (nodeEnv === 'production' && googleAdsLiveMutationEnabled && googleAdsExecutionMode !== 'REAL') {
+    throw new Error('Production live Google Ads mutation requires GOOGLE_ADS_EXECUTION_MODE=REAL');
+  }
   if (googleAdsExecutionMode === 'REAL') {
     if (!googleAdsApprovedCustomerId) {
       throw new Error('GOOGLE_ADS_EXECUTION_MODE=REAL requires GOOGLE_ADS_CUSTOMER_ID');
@@ -486,6 +519,22 @@ export function loadConfig(
     ...(googleAdsApprovedCustomerId ? { googleAdsApprovedCustomerId } : {}),
 
     googleAdsSandboxCustomerIds,
+
+    googleAdsConnectionEnabled,
+
+    googleAdsValidateOnlyEnabled,
+
+    googleAdsLiveMutationEnabled,
+
+    ...(googleAdsClientId ? { googleAdsClientId } : {}),
+
+    ...(googleAdsClientSecret ? { googleAdsClientSecret } : {}),
+
+    ...(googleAdsDeveloperToken ? { googleAdsDeveloperToken } : {}),
+
+    ...(googleAdsOauthRedirectUri ? { googleAdsOauthRedirectUri } : {}),
+
+    ...(googleAdsLoginCustomerId ? { googleAdsLoginCustomerId } : {}),
 
     metaAdsExecutionMode,
 

@@ -33,6 +33,12 @@ import { InMemoryDurableApprovalRepository } from '@platform/approvals';
 import { AUTH_PROVIDER, ApiAuthGuard } from './auth.guard.js';
 import { BROWSER_AUTH_SERVICE, BrowserAuthController } from './browser-auth.controller.js';
 import { BrowserAuthService, DatabaseBrowserAuthStore } from './browser-auth.service.js';
+import {
+  GOOGLE_ADS_CONNECTION_SERVICE,
+  GoogleAdsConnectionsController,
+  PostgresGoogleAdsConnectionStore,
+} from './google-ads-connections.controller.js';
+import { GoogleAdsConnectionService, GoogleAdsOAuthFetchTransport } from '@platform/tool-gateway';
 import { ApiTenantDurableApprovalRepository } from './durable-approval.repository.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
@@ -223,7 +229,7 @@ const browserAuthService = new BrowserAuthService(
 );
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{membershipResolver});
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController,BrowserAuthController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController,BrowserAuthController,GoogleAdsConnectionsController],
   providers:[
     RegistryService,
     {
@@ -339,6 +345,32 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{members
       inject: [ApprovalApiService, API_TENANT_DATABASE],
     },
     {provide:AUTH_PROVIDER,useFactory:authProviderFactory},
+    { provide: 'PLATFORM_CONFIG', useValue: config },
+    {
+      provide: GOOGLE_ADS_CONNECTION_SERVICE,
+      useFactory: () => {
+        // The service exists only when the connection gate and OAuth config
+        // are complete. No approved credential vault exists yet, so OAuth
+        // completion fails closed instead of persisting refresh material.
+        if (
+          !config.googleAdsConnectionEnabled ||
+          !config.googleAdsClientId ||
+          !config.googleAdsClientSecret ||
+          !config.googleAdsOauthRedirectUri
+        ) {
+          return undefined;
+        }
+        return new GoogleAdsConnectionService({
+          oauth: {
+            clientId: config.googleAdsClientId,
+            clientSecret: config.googleAdsClientSecret,
+            redirectUri: config.googleAdsOauthRedirectUri,
+          },
+          oauthTransport: new GoogleAdsOAuthFetchTransport(),
+          store: new PostgresGoogleAdsConnectionStore(tenantDatabase as never),
+        });
+      },
+    },
     { provide: BROWSER_AUTH_SERVICE, useValue: browserAuthService },
     {
       provide: ApiAuthGuard,

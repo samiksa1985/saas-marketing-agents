@@ -260,6 +260,13 @@
       "when": 1788629864191,
       "tag": "0036_workflow_scheduler_final_attempt",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788629864192,
+      "tag": "0037_google_ads_connections",
+      "breakpoints": true
     }
   ]
 }

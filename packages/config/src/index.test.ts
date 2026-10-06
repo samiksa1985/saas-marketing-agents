@@ -409,6 +409,60 @@ test('local acceptance can explicitly require durable approvals without changing
   });
 });
 
+test('Google Ads connection/validate-only/live-mutation gates are separate and fail closed', () => {
+  const defaults = loadConfig({ ...baseEnv });
+  assert.equal(defaults.googleAdsConnectionEnabled, false);
+  assert.equal(defaults.googleAdsValidateOnlyEnabled, false);
+  assert.equal(defaults.googleAdsLiveMutationEnabled, false);
+
+  assert.throws(
+    () => loadConfig({ ...baseEnv, GOOGLE_ADS_CONNECTION_ENABLED: 'true' }),
+    /GOOGLE_ADS_CLIENT_ID/,
+  );
+  const connected = loadConfig({
+    ...baseEnv,
+    GOOGLE_ADS_CONNECTION_ENABLED: 'true',
+    GOOGLE_ADS_CLIENT_ID: 'client-1',
+    GOOGLE_ADS_CLIENT_SECRET: 'synthetic-secret',
+    GOOGLE_ADS_OAUTH_REDIRECT_URI: 'https://app.example.com/callback',
+  });
+  assert.equal(connected.googleAdsConnectionEnabled, true);
+  assert.equal(connected.googleAdsLiveMutationEnabled, false, 'connection never implies mutation');
+
+  assert.throws(
+    () => loadConfig({ ...baseEnv, GOOGLE_ADS_LIVE_MUTATION_ENABLED: 'true' }),
+    /GOOGLE_ADS_EXECUTION_ENABLED/,
+  );
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        NODE_ENV: 'production',
+        OIDC_ISSUER_URL: 'https://issuer.example.com',
+        OIDC_AUDIENCE: 'platform-api',
+        GOOGLE_ADS_LIVE_MUTATION_ENABLED: 'true',
+        GOOGLE_ADS_EXECUTION_ENABLED: 'true',
+        GOOGLE_ADS_EXECUTION_MODE: 'DRY_RUN',
+      }),
+    /GOOGLE_ADS_EXECUTION_MODE=REAL/,
+  );
+
+  assert.throws(
+    () =>
+      loadConfig({
+        ...baseEnv,
+        NODE_ENV: 'production',
+        OIDC_ISSUER_URL: 'https://issuer.example.com',
+        OIDC_AUDIENCE: 'platform-api',
+        GOOGLE_ADS_CONNECTION_ENABLED: 'true',
+        GOOGLE_ADS_CLIENT_ID: 'client-1',
+        GOOGLE_ADS_CLIENT_SECRET: 'synthetic-secret',
+        GOOGLE_ADS_OAUTH_REDIRECT_URI: 'http://app.example.com/callback',
+      }),
+    /GOOGLE_ADS_OAUTH_REDIRECT_URI must use HTTPS/,
+  );
+});
+
 test('REAL Google Ads mode requires an explicit numeric sandbox allowlist containing the approved account', () => {
   assert.throws(
     () => loadConfig({ ...baseEnv, GOOGLE_ADS_EXECUTION_MODE: 'REAL', GOOGLE_ADS_CUSTOMER_ID: '1234567890' }),

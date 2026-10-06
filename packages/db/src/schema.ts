@@ -697,6 +697,60 @@ export const codecoreWorkflowExecutions = pgTable(
   ],
 );
 
+/** WS-PROD-09: governed Google Ads connection state (no token material). */
+export const googleAdsConnections = pgTable(
+  'google_ads_connections',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    provider: varchar('provider', { length: 32 }).notNull().default('GOOGLE_ADS'),
+    status: varchar('status', { length: 24 }).notNull().default('PENDING'),
+    principalRef: varchar('principal_ref', { length: 255 }),
+    credentialRef: varchar('credential_ref', { length: 512 }),
+    scopes: text('scopes').array().notNull().default([]),
+    oauthStateHash: varchar('oauth_state_hash', { length: 64 }),
+    oauthStateExpiresAt: timestamp('oauth_state_expires_at', { withTimezone: true }),
+    connectedAt: timestamp('connected_at', { withTimezone: true }),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    verificationRequestId: varchar('verification_request_id', { length: 128 }),
+    disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('google_ads_connection_tenant_key_uidx').on(table.tenantId, table.idempotencyKey),
+    index('google_ads_connections_tenant_status_idx').on(table.tenantId, table.status),
+  ],
+);
+
+export const googleAdsAccountMappings = pgTable(
+  'google_ads_account_mappings',
+  {
+    id: id(),
+    tenantId: tenant(() => tenants.id),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => googleAdsConnections.id, { onDelete: 'cascade' }),
+    customerId: varchar('customer_id', { length: 32 }).notNull(),
+    loginCustomerId: varchar('login_customer_id', { length: 32 }),
+    descriptiveName: varchar('descriptive_name', { length: 255 }),
+    currencyCode: varchar('currency_code', { length: 3 }),
+    isManager: boolean('is_manager').notNull().default(false),
+    accessible: boolean('accessible').notNull().default(true),
+    selected: boolean('selected').notNull().default(false),
+    discoveredAt: timestamp('discovered_at', { withTimezone: true }).notNull().defaultNow(),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('google_ads_account_mapping_connection_key_uidx').on(
+      table.tenantId,
+      table.connectionId,
+      table.customerId,
+    ),
+    index('google_ads_account_mappings_tenant_idx').on(table.tenantId, table.connectionId),
+  ],
+);
+
 export const codecoreWorkflowExecutionEvents = pgTable(
   'codecore_workflow_execution_events',
   {
