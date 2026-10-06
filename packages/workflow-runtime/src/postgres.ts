@@ -259,10 +259,16 @@ export class PostgresWorkflowRuntime implements WorkflowRuntime, WorkflowTaskCom
         [workerId, this.leaseMs],
       ));
       if (!claimed) return undefined;
-      return first(await transaction.unsafe(
+      // Authoritative tenant comes from the scheduler; every post-claim read
+      // in this transaction runs under that tenant scope, never unscoped.
+      const authoritativeTenant = String(claimed.tenant_id);
+      await transaction.unsafe(`SELECT set_config('app.tenant_id', $1, true)`, [authoritativeTenant]);
+      const row = first(await transaction.unsafe(
         `SELECT * FROM codecore_workflow_executions WHERE id = $1::uuid`,
         [String(claimed.execution_id)],
       ));
+      if (!row) throw new WorkflowRuntimeError('Claimed execution is not visible under its authoritative tenant');
+      return row;
     });
     return result ? mapExecution(result) : undefined;
   }

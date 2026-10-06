@@ -253,6 +253,13 @@
       "when": 1788629864190,
       "tag": "0035_workflow_scheduler_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788629864191,
+      "tag": "0036_workflow_scheduler_final_attempt",
+      "breakpoints": true
     }
   ]
 }

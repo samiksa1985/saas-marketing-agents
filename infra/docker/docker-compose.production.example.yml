@@ -78,7 +78,7 @@ services:
     entrypoint:
       - sh
       - -ec
-      - test "$$NAWA_PRODUCTION_MIGRATION_CONFIRM" = APPLY; node packages/db/dist/migrate.js && exec node packages/db/dist/production-verify.js
+      - test "$$NAWA_PRODUCTION_MIGRATION_CONFIRM" = APPLY; node packages/db/dist/migrate.js && node packages/db/dist/converge-production-grants.js && exec node packages/db/dist/production-verify.js
 
   api:
     image: ${CODECORE_API_IMAGE:?Set to the API image by immutable @sha256 digest}

@@ -3,11 +3,19 @@
   [switch]$CreateDatabase
 )
 # WS-PROD-03 isolated restore with WAVE-AB P0 canonical identity proof.
-# Destructive steps (CREATE/DROP/pg_restore --clean) run ONLY after the live
-# server identity behind BOTH URLs has been probed and compared, and — in
-# docker-exec drill mode — the configured container has been proven to
-# represent the same server the target URL reaches.
-# URLs are consumed but never printed; passwords never enter argv/output.
+#
+# Mode binding: exactly ONE connection mode is selected before any proof and
+# used for source probe, target probe, existence checks, AND the destructive
+# restore. Host mode requires BOTH host psql and host pg_restore; exactly one
+# host tool is a hard error (never mixed host/Docker). Docker mode requires
+# PG_DOCKER_CONTAINER and proves the container's published 5432 binding equals
+# the verified target URL endpoint before any server access.
+#
+# Server identity is timezone/session-invariant: listen address, port, data
+# directory, server version, and pg_postmaster_start_time as epoch seconds.
+# Identity-affecting libpq parameters (options/service/servicefile/hostaddr)
+# are rejected. URLs are consumed but never printed; passwords never enter
+# argv/output.
 $ErrorActionPreference = 'Stop'
 if ($env:NAWA_ISOLATED_RESTORE_CONFIRM -ne 'YES') { throw 'Set NAWA_ISOLATED_RESTORE_CONFIRM=YES only for an isolated restore target.' }
 if ([string]::IsNullOrWhiteSpace($env:ISOLATED_RESTORE_DATABASE_URL) -and [string]::IsNullOrWhiteSpace($env:ISOLATED_RESTORE_DATABASE_URL_FILE)) {
@@ -20,6 +28,9 @@ Import-Module (Join-Path $PSScriptRoot 'postgres-cli.psm1') -Force
 
 function Get-DatabaseIdentity([string]$environmentName) {
   $parsed = Get-PostgresConnectionMetadata -ConnectionEnvironment $environmentName
+  if ($parsed.identityAffecting -eq $true) {
+    throw 'RESTORE_IDENTITY_AFFECTING_OPTIONS'
+  }
   return [pscustomobject]@{
     HostName = ([string]$parsed.host).TrimEnd('.').ToLowerInvariant()
     Port = [int]$parsed.port
@@ -34,9 +45,9 @@ function Get-NormalizedHostName([string]$value) {
   return $h
 }
 
-function Resolve-Tool([string]$explicit, [string]$name) {
+function Resolve-ToolPath([string]$explicit, [string]$name) {
   if (-not [string]::IsNullOrWhiteSpace($explicit)) {
-    if (-not (Test-Path -LiteralPath $explicit)) { throw "$name path is configured but missing." }
+    if (-not (Test-Path -LiteralPath $explicit)) { return $null }
     return $explicit
   }
   $onPath = Get-Command $name -ErrorAction SilentlyContinue
@@ -44,24 +55,20 @@ function Resolve-Tool([string]$explicit, [string]$name) {
   return $null
 }
 
-# Live server identity = listening address + port + data directory + cluster
-# start time. Two URLs that merely spell different hostnames for the same
-# server resolve to the SAME identity and are treated as the same server.
-$script:ServerIdentityQuery = "SELECT COALESCE(inet_server_addr()::text, 'local') || ':' || COALESCE(inet_server_port()::text, '0') || '|' || current_setting('data_directory') || '|' || pg_postmaster_start_time()::text"
+# Timezone/session-invariant live identity: textual timestamps are forbidden
+# because session TimeZone/options would change them.
+$script:ServerIdentityQuery = "SELECT COALESCE(inet_server_addr()::text, 'local') || ':' || COALESCE(inet_server_port()::text, '0') || '|' || current_setting('data_directory') || '|' || current_setting('server_version_num') || '|' || EXTRACT(EPOCH FROM pg_postmaster_start_time())::bigint::text"
 
-function Invoke-PsqlProbe([string]$connectionEnvironment, [string]$sql, [string]$database) {
-  $psql = Resolve-Tool $env:PG_PSQL_PATH 'psql'
-  if ($psql) {
+function Invoke-ModeProbe([string]$mode, [string]$connectionEnvironment, [string]$sql, [string]$database) {
+  if ($mode -eq 'host-binaries') {
+    $psql = Resolve-ToolPath $env:PG_PSQL_PATH 'psql'
+    if (-not $psql) { throw 'Identity verification requires psql (PG_PSQL_PATH or PATH) in host mode.' }
     return Invoke-PostgresTool -Tool $psql -ConnectionEnvironment $connectionEnvironment `
       -Database $database -ToolArguments @('-tAc', $sql) -CaptureOutput
   }
-  # Fallback for the LOCAL drill only: run psql inside the container whose
-  # port binding is later proven to match the target URL. The server-level
-  # identity query may run as the cluster bootstrap superuser; database-level
-  # probes still run as the target URL's user so privileges are not hidden.
-  if ([string]::IsNullOrWhiteSpace($env:PG_DOCKER_CONTAINER)) {
-    throw 'Identity verification requires psql (PG_PSQL_PATH or PATH) or PG_DOCKER_CONTAINER.'
-  }
+  # Docker mode: probe inside the proven container. The server-level identity
+  # query may fall back to the cluster bootstrap superuser; database-level
+  # probes always run as the target URL's user.
   $identity = Get-DatabaseIdentity $connectionEnvironment
   $output = $null
   $exitCode = 1
@@ -85,8 +92,8 @@ function Invoke-PsqlProbe([string]$connectionEnvironment, [string]$sql, [string]
   return [pscustomobject]@{ ExitCode = $exitCode; Output = ($output -join "`n").Trim() }
 }
 
-function Get-LiveServerIdentity([string]$connectionEnvironment) {
-  $probe = Invoke-PsqlProbe $connectionEnvironment $script:ServerIdentityQuery 'postgres'
+function Get-LiveServerIdentity([string]$mode, [string]$connectionEnvironment) {
+  $probe = Invoke-ModeProbe $mode $connectionEnvironment $script:ServerIdentityQuery 'postgres'
   if ($probe.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($probe.Output)) {
     throw 'RESTORE_SERVER_IDENTITY_PROBE_FAILED'
   }
@@ -94,22 +101,29 @@ function Get-LiveServerIdentity([string]$connectionEnvironment) {
 }
 
 function Test-DockerContainerMatchesTarget($targetIdentity, [string]$dockerContainer) {
-  # The container must resolve to the same normalized host:port the target URL
-  # names. Otherwise docker exec could silently operate on a different server.
   if ([string]::IsNullOrWhiteSpace($dockerContainer)) { return $false }
   $inspect = docker inspect $dockerContainer 2>$null
   if ($LASTEXITCODE -ne 0 -or -not $inspect) { return $false }
   $hostPort = (docker port $dockerContainer '5432/tcp' 2>$null) -join "`n"
   if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($hostPort)) { return $false }
-  $normalizedTargetHost = Get-NormalizedHostName $targetIdentity.HostName
-  if ($normalizedTargetHost -ne 'localhost') { return $false }
+  if ((Get-NormalizedHostName $targetIdentity.HostName) -ne 'localhost') { return $false }
   foreach ($binding in ($hostPort -split "`r?`n")) {
     if ($binding -match '^\S+:(\d+)$' -and [int]$Matches[1] -eq $targetIdentity.Port) { return $true }
   }
   return $false
 }
 
-# Validate identities before any database creation or pg_restore --clean.
+function Assert-StableDnsResolution($identity) {
+  $hostName = $identity.HostName
+  if ($hostName -match '^[0-9a-fA-F:.]+$') { return } # literal IP: no DNS
+  $first = @([System.Net.Dns]::GetHostAddresses($hostName) | ForEach-Object { $_.ToString() } | Sort-Object)
+  if ($first.Count -eq 0) { throw 'RESTORE_DNS_RESOLUTION_FAILED' }
+  Start-Sleep -Milliseconds 250
+  $second = @([System.Net.Dns]::GetHostAddresses($hostName) | ForEach-Object { $_.ToString() } | Sort-Object)
+  if (($first -join ',') -ne ($second -join ',')) { throw 'RESTORE_DNS_TOCTOU_DETECTED' }
+}
+
+# Parse and validate both identities (also rejects identity-affecting options).
 $target = Get-DatabaseIdentity 'ISOLATED_RESTORE_DATABASE_URL'
 $source = Get-DatabaseIdentity 'DATABASE_URL'
 $targetDb = $target.Database
@@ -123,40 +137,48 @@ if ($target.Database -notmatch '(?i)(restore|recovery|acceptance)') {
   throw 'Restore target database name must explicitly identify an isolated restore/recovery database.'
 }
 
-$pgRestore = Resolve-Tool $env:PG_RESTORE_PATH 'pg_restore'
+# 1. Select exactly ONE mode before proof; never mixed host/Docker.
+$psqlPath = Resolve-ToolPath $env:PG_PSQL_PATH 'psql'
+$pgRestore = Resolve-ToolPath $env:PG_RESTORE_PATH 'pg_restore'
 $dockerContainer = $env:PG_DOCKER_CONTAINER
-$mode = if ($pgRestore) { 'host-binaries' } elseif (-not [string]::IsNullOrWhiteSpace($dockerContainer)) { 'docker-exec' } else { throw 'No pg_restore available. Install PostgreSQL 16 client tools or set PG_DOCKER_CONTAINER for a local drill.' }
-
-# P0: live server identity proof for BOTH sides before anything destructive —
-# including before the backup artifact is even opened.
-$sourceServer = Get-LiveServerIdentity 'DATABASE_URL'
-$targetServer = Get-LiveServerIdentity 'ISOLATED_RESTORE_DATABASE_URL'
-
-if ($sourceServer -eq $targetServer -and $target.Database -eq $source.Database) {
-  throw 'RESTORE_TARGET_MATCHES_SOURCE_DATABASE'
+if (($null -eq $psqlPath) -xor ($null -eq $pgRestore)) {
+  throw 'RESTORE_MODE_INCONSISTENT'
 }
-# Alias guard: same live server + a canonical-looking target database name can
-# never masquerade as isolated merely because the URL spelled another host.
-if ($sourceServer -eq $targetServer -and $target.Database -in @('ai_marketing_phase1', 'platform')) {
-  throw 'RESTORE_TARGET_CANONICAL_DATABASE'
-}
+$mode = if ($psqlPath -and $pgRestore) { 'host-binaries' } elseif (-not [string]::IsNullOrWhiteSpace($dockerContainer)) { 'docker-exec' } else { throw 'No pg_restore available. Install PostgreSQL 16 client tools or set PG_DOCKER_CONTAINER for a local drill.' }
 
-if (-not (Test-Path -LiteralPath $BackupFile)) { throw 'Backup file does not exist.' }
-
-# Container binding: in docker-exec mode, fail closed unless the container can
-# be proven to be the server the verified target URL reaches.
+# 2. Docker binding proof precedes ANY server access in docker mode.
 if ($mode -eq 'docker-exec' -and -not (Test-DockerContainerMatchesTarget $target $dockerContainer)) {
   throw 'RESTORE_DOCKER_CONTAINER_IDENTITY_UNPROVEN'
 }
 
-# Non-destructive target existence/database proof.
-$targetExists = Invoke-PsqlProbe 'ISOLATED_RESTORE_DATABASE_URL' "SELECT 1 FROM pg_database WHERE datname = '$targetDb'" 'postgres'
+# 3. Live invariant identity proof for BOTH sides, same mode, before anything
+#    destructive — and before the backup artifact is even opened.
+$sourceServer = Get-LiveServerIdentity $mode 'DATABASE_URL'
+$targetServer = Get-LiveServerIdentity $mode 'ISOLATED_RESTORE_DATABASE_URL'
+
+if ($sourceServer -eq $targetServer -and $target.Database -eq $source.Database) {
+  throw 'RESTORE_TARGET_MATCHES_SOURCE_DATABASE'
+}
+# Alias guard: same live server + canonical-looking target name can never
+# masquerade as isolated because the URL spelled another host or credential.
+if ($sourceServer -eq $targetServer -and $target.Database -in @('ai_marketing_phase1', 'platform')) {
+  throw 'RESTORE_TARGET_CANONICAL_DATABASE'
+}
+
+# 4. DNS stability for host mode: the validated endpoint must resolve
+#    identically at proof time and immediately before destructive work.
+if ($mode -eq 'host-binaries') { Assert-StableDnsResolution $target }
+
+if (-not (Test-Path -LiteralPath $BackupFile)) { throw 'Backup file does not exist.' }
+
+# 5. Non-destructive target existence/database proof, same mode.
+$targetExists = Invoke-ModeProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' "SELECT 1 FROM pg_database WHERE datname = '$targetDb'" 'postgres'
 if ($targetExists.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
 if ($CreateDatabase) {
   if ($targetExists.Output -eq '1') { throw 'RESTORE_TARGET_DATABASE_ALREADY_EXISTS' }
 } else {
   if ($targetExists.Output -ne '1') { throw 'RESTORE_TARGET_DATABASE_MISSING' }
-  $databaseProbe = Invoke-PsqlProbe 'ISOLATED_RESTORE_DATABASE_URL' 'SELECT current_database()' $targetDb
+  $databaseProbe = Invoke-ModeProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' 'SELECT current_database()' $targetDb
   if ($databaseProbe.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
   if ($databaseProbe.Output -ne $targetDb) { throw 'RESTORE_TARGET_IDENTITY_DATABASE_MISMATCH' }
 }
@@ -169,9 +191,7 @@ if ($mode -eq 'host-binaries') {
 
 if ($mode -eq 'host-binaries') {
   if ($CreateDatabase) {
-    $psql = Resolve-Tool $env:PG_PSQL_PATH 'psql'
-    if (-not $psql) { throw 'CreateDatabase requires psql (PG_PSQL_PATH or PATH) in host-binaries mode.' }
-    $create = Invoke-PsqlProbe 'ISOLATED_RESTORE_DATABASE_URL' "CREATE DATABASE `"$targetDb`"" 'postgres'
+    $create = Invoke-ModeProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' "CREATE DATABASE `"$targetDb`"" 'postgres'
     if ($create.ExitCode -ne 0) { throw 'RESTORE_TARGET_CREATE_FAILED' }
   }
   $restore = Invoke-PostgresTool -Tool $pgRestore -ConnectionEnvironment 'ISOLATED_RESTORE_DATABASE_URL' `
@@ -199,7 +219,7 @@ if ($mode -eq 'host-binaries') {
   }
 }
 
-$restoredIdentity = Invoke-PsqlProbe 'ISOLATED_RESTORE_DATABASE_URL' 'SELECT current_database()' $targetDb
+$restoredIdentity = Invoke-ModeProbe $mode 'ISOLATED_RESTORE_DATABASE_URL' 'SELECT current_database()' $targetDb
 if ($restoredIdentity.ExitCode -ne 0) { throw 'RESTORE_TARGET_IDENTITY_PROBE_FAILED' }
 if ($restoredIdentity.Output -ne $targetDb) { throw 'RESTORE_TARGET_IDENTITY_DATABASE_MISMATCH' }
 
@@ -208,5 +228,5 @@ Write-Output (ConvertTo-Json -Compress @{
     target = 'isolated'
     database = $targetDb
     mode = $mode
-    nextStep = 'Provision roles (provision:production-roles), then run packages/db restore:verify and production:verify against the isolated URL before any cutover.'
+    nextStep = 'Provision roles (converge:production-grants), then run packages/db restore:verify and production:verify against the isolated URL before any cutover.'
   })

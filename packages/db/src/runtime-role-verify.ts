@@ -172,13 +172,19 @@ export async function assertWorkflowRuntimePrivileges(client: SqlClient, runtime
     has_insert: boolean;
     has_update: boolean;
     has_delete: boolean;
+    has_truncate: boolean;
+    has_references: boolean;
+    has_trigger: boolean;
   }>(
     await client.unsafe(
       `SELECT c.relname,
               has_table_privilege($1, c.oid, 'SELECT') AS has_select,
               has_table_privilege($1, c.oid, 'INSERT') AS has_insert,
               has_table_privilege($1, c.oid, 'UPDATE') AS has_update,
-              has_table_privilege($1, c.oid, 'DELETE') AS has_delete
+              has_table_privilege($1, c.oid, 'DELETE') AS has_delete,
+              has_table_privilege($1, c.oid, 'TRUNCATE') AS has_truncate,
+              has_table_privilege($1, c.oid, 'REFERENCES') AS has_references,
+              has_table_privilege($1, c.oid, 'TRIGGER') AS has_trigger
        FROM pg_class c
        JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public'
@@ -196,7 +202,7 @@ export async function assertWorkflowRuntimePrivileges(client: SqlClient, runtime
   }
   for (const table of PRODUCTION_CONTROL_TABLES) {
     const row = byName.get(table);
-    if (!row || row.has_insert || row.has_update || row.has_delete) {
+    if (!row || row.has_insert || row.has_update || row.has_delete || row.has_truncate || row.has_references || row.has_trigger) {
       throw new Error('PRODUCTION_CONTROL_TABLE_MUTATION_FORBIDDEN');
     }
   }
@@ -208,23 +214,31 @@ export async function assertWorkflowRuntimePrivileges(client: SqlClient, runtime
   }
 }
 
-/** Scheduler boundary: narrow SECURITY DEFINER functions, owner-controlled. */
+/** Scheduler boundary: narrow SECURITY DEFINER functions, exactly owner-controlled. */
 export async function assertWorkflowSchedulerPrivileges(client: SqlClient, runtimeRole: string): Promise<void> {
   const functions = rowsOf<{
     proname: string;
     executable: boolean;
-    owner_is_app: boolean;
+    owner: string;
+    table_owner: string | null;
     public_execute: boolean;
     security_definer: boolean;
     search_path: string | null;
+    identity_args: string;
+    returns_set: boolean;
   }>(
     await client.unsafe(
       `SELECT p.proname,
               has_function_privilege($1, p.oid, 'EXECUTE') AS executable,
-              (pg_get_userbyid(p.proowner) = $1) AS owner_is_app,
+              pg_get_userbyid(p.proowner) AS owner,
+              (SELECT pg_get_userbyid(c.relowner)
+               FROM pg_class c JOIN pg_namespace cn ON cn.oid = c.relnamespace
+               WHERE cn.nspname = 'public' AND c.relname = 'codecore_workflow_executions') AS table_owner,
               has_function_privilege(0, p.oid, 'EXECUTE') AS public_execute,
               p.prosecdef AS security_definer,
-              (SELECT string_agg(s, ',') FROM unnest(p.proconfig) AS s WHERE s LIKE 'search_path=%') AS search_path
+              (SELECT string_agg(s, ',') FROM unnest(p.proconfig) AS s WHERE s LIKE 'search_path=%') AS search_path,
+              pg_get_function_identity_arguments(p.oid) AS identity_args,
+              p.proretset AS returns_set
        FROM pg_proc p
        JOIN pg_namespace n ON n.oid = p.pronamespace
        WHERE n.nspname = 'public'
@@ -233,14 +247,33 @@ export async function assertWorkflowSchedulerPrivileges(client: SqlClient, runti
     ),
   );
   if (functions.length !== 2) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_FUNCTIONS_MISSING');
+  // Identity arguments include parameter names; accept the exact typed
+  // contract regardless of parameter naming.
+  const expectedArgs: Record<string, string[]> = {
+    codecore_claim_workflow_execution: ['character varying, integer'],
+    codecore_recover_expired_workflow_leases: [''],
+  };
   for (const fn of functions) {
     if (!fn.executable) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_EXECUTE_MISSING');
-    if (fn.owner_is_app) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_OWNED_BY_RUNTIME');
+    if (!fn.table_owner || fn.owner !== fn.table_owner) {
+      throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_OWNER_INVALID');
+    }
+    if (fn.owner === runtimeRole) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_OWNED_BY_RUNTIME');
     if (fn.public_execute) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_PUBLIC_EXECUTE');
     if (!fn.security_definer) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_NOT_DEFINER');
-    if (!fn.search_path || !/search_path=pg_catalog,\s*public/.test(fn.search_path)) {
+    if ((fn.search_path ?? '').replace(/\s+/g, '') !== 'search_path=pg_catalog,public') {
       throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_SEARCH_PATH_INVALID');
     }
+    const expected = expectedArgs[fn.proname];
+    const normalizedArgs = fn.identity_args
+      .split(',')
+      .map((part) => part.trim().replace(/^[A-Za-z_][A-Za-z0-9_]*\s+/, '').replace(/\s+/g, ' '))
+      .join(', ')
+      .trim();
+    if (!expected || !expected.includes(normalizedArgs)) {
+      throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_SIGNATURE_INVALID');
+    }
+    if (!fn.returns_set) throw new Error('PRODUCTION_WORKFLOW_SCHEDULER_SIGNATURE_INVALID');
   }
 }
 

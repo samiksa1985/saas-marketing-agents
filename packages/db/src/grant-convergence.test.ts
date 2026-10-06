@@ -30,7 +30,7 @@ const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /** Run the convergence entrypoint as a child process (top-level side effects). */
 function runConvergence(migrationUrl: string): void {
-  const result = spawnSync('cmd.exe', ['/c', 'npx', '--no-install', 'tsx', 'scripts/converge-production-grants.ts'], {
+  const result = spawnSync('cmd.exe', ['/c', 'npx', '--no-install', 'tsx', 'src/converge-production-grants.ts'], {
     cwd: packageRoot,
     env: { ...process.env, MIGRATION_DATABASE_URL: migrationUrl },
     encoding: 'utf8',
@@ -79,6 +79,102 @@ function urlWithDatabase(database: string, role?: string, password?: string): st
 
 function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
+}
+
+/** Run the DB migration CLI against the isolated database (authority only). */
+function runMigrationCli(migrationUrl: string): void {
+  const result = spawnSync('cmd.exe', ['/c', 'npx', '--no-install', 'tsx', 'src/migrate.ts'], {
+    cwd: packageRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: 'development',
+      DATABASE_URL: migrationUrl,
+      MIGRATION_DATABASE_URL: migrationUrl,
+      WEB_URL: 'http://localhost:3000',
+      ARTIFACT_BUCKET: 'waveab-upgrade',
+      AI_PROVIDER: 'mock',
+      AI_MODEL: 'mock',
+    },
+    encoding: 'utf8',
+    timeout: 300_000,
+  });
+  assert.equal(result.status, 0, `migration CLI failed: ${result.stderr}`);
+}
+
+/** Run the actual production deployment entrypoint (MIGRATE→CONVERGE→VERIFY). */
+function runDeploymentEntrypoint(migrationUrl: string, runtimeUrl: string): void {
+  const repoRoot = dirname(dirname(packageRoot));
+  const script = join(repoRoot, 'scripts', 'production-migrate.ps1');
+  const result = spawnSync(
+    process.platform === 'win32' ? 'powershell.exe' : 'pwsh',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NODE_ENV: 'production',
+        NAWA_PRODUCTION_MIGRATION_CONFIRM: 'APPLY',
+        DATABASE_URL: runtimeUrl,
+        MIGRATION_DATABASE_URL: migrationUrl,
+        WEB_URL: 'https://web.upgrade.example.com',
+        API_PUBLIC_URL: 'https://api.upgrade.example.com',
+        CORS_ALLOWED_ORIGINS: 'https://web.upgrade.example.com',
+        TRUST_PROXY: 'false',
+        RELEASE_VERSION: 'v1.0.0',
+        OIDC_ISSUER_URL: 'https://issuer.upgrade.example.com',
+        OIDC_AUDIENCE: 'upgrade-acceptance',
+        WORKFLOW_RUNTIME_MODE: 'postgres',
+        ARTIFACT_BUCKET: 'waveab-upgrade',
+        AI_PROVIDER: 'mock',
+        AI_MODEL: 'mock',
+      },
+      encoding: 'utf8',
+      timeout: 600_000,
+    },
+  );
+  assert.equal(result.status, 0, `deployment entrypoint failed: ${result.stderr}`);
+  assert.match(result.stdout, /"status":"ok"/, 'convergence step must run and report ok');
+  assert.match(result.stdout, /"passwordRotation":"skipped-converge-only"/, 'deployment convergence must never rotate credentials');
+  assert.match(result.stdout, /"status":"ready"/, 'production verification must run after convergence');
+}
+
+/** A failing migration step must stop the deployment entrypoint before converge/verify. */
+function runDeploymentEntrypointExpectFailure(runtimeUrl: string): void {
+  const repoRoot = dirname(dirname(packageRoot));
+  const script = join(repoRoot, 'scripts', 'production-migrate.ps1');
+  const badMigration = new URL(runtimeUrl);
+  badMigration.username = 'codecore_app';
+  badMigration.password = 'definitely-wrong-password-for-upgrade-gate';
+  const result = spawnSync(
+    process.platform === 'win32' ? 'powershell.exe' : 'pwsh',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NODE_ENV: 'production',
+        NAWA_PRODUCTION_MIGRATION_CONFIRM: 'APPLY',
+        DATABASE_URL: runtimeUrl,
+        MIGRATION_DATABASE_URL: badMigration.toString(),
+        WEB_URL: 'https://web.upgrade.example.com',
+        API_PUBLIC_URL: 'https://api.upgrade.example.com',
+        CORS_ALLOWED_ORIGINS: 'https://web.upgrade.example.com',
+        TRUST_PROXY: 'false',
+        RELEASE_VERSION: 'v1.0.0',
+        OIDC_ISSUER_URL: 'https://issuer.upgrade.example.com',
+        OIDC_AUDIENCE: 'upgrade-acceptance',
+        WORKFLOW_RUNTIME_MODE: 'postgres',
+        ARTIFACT_BUCKET: 'waveab-upgrade',
+        AI_PROVIDER: 'mock',
+        AI_MODEL: 'mock',
+      },
+      encoding: 'utf8',
+      timeout: 300_000,
+    },
+  );
+  assert.notEqual(result.status, 0, 'deployment entrypoint must fail when migration fails');
+  assert.match(result.stderr, /Migration failed/, 'failure must stop before convergence/verification');
+  assert.doesNotMatch(result.stdout, /"status":"ready"/, 'verification must not run after a failed migration');
 }
 
 test(
@@ -134,32 +230,46 @@ test(
           await app.end();
         }
 
-        // Phase 2: apply 0034 + 0035 (durable runtime + scheduler boundary).
-        const remaining = all.filter((m) => m.entry.idx > 33);
-        await applyJournalMigrations(migration as never, remaining, () => undefined);
+        // Phase 2: apply 0034+ (durable runtime + scheduler boundary) through
+        // the same migration CLI the deployment entrypoint wraps.
+        runMigrationCli(migrationUrl);
 
-        // Before convergence, new tables exist but runtime DML must be default-deny.
+        // Before convergence, new tables exist and runtime DML must fail with
+        // a missing TABLE PRIVILEGE specifically — not an RLS denial (seed the
+        // parent tenant and scope the transaction so RLS would pass).
+        const denyTenant = randomUUID();
+        await migration.unsafe(`INSERT INTO tenants(id, name) VALUES ($1::uuid, $2)`, [denyTenant, `upgrade-deny-${denyTenant}`]);
         const appBefore = postgres(
           urlWithDatabase(dbName, PRODUCTION_APP_ROLE, appPassword),
           productionPostgresOptions(urlWithDatabase(dbName, PRODUCTION_APP_ROLE, appPassword), { max: 1, prepare: false }),
         );
         try {
-          await assert.rejects(
-            () =>
-              appBefore.unsafe(
+          await appBefore.begin(async (tx) => {
+            await tx.unsafe(`SELECT set_config('app.tenant_id', $1, true)`, [denyTenant]);
+            let error: unknown;
+            try {
+              await tx.unsafe(
                 `INSERT INTO codecore_workflow_executions(tenant_id, workflow_id, workflow_type, idempotency_key)
                  VALUES ($1::uuid, 'wf', 'workflow', $2)`,
-                [randomUUID(), `deny-${randomUUID()}`],
-              ),
-            /permission denied| violates row-level security/i,
-            'new workflow table DML must be denied before grant convergence',
-          );
+                [denyTenant, `deny-${randomUUID()}`],
+              );
+            } catch (caught) {
+              error = caught;
+            }
+            assert.ok(error, 'pre-convergence workflow insert must fail');
+            const code = (error as { code?: string }).code;
+            assert.equal(code, '42501', `expected table-privilege denial (42501), got ${String(code)}`);
+            throw new Error('EXPECTED_ROLLBACK');
+          }).catch((error) => {
+            if ((error as Error).message !== 'EXPECTED_ROLLBACK') throw error;
+          });
         } finally {
           await appBefore.end();
         }
 
-        // Converge grants after migration — no credential rotation.
-        runConvergence(migrationUrl);
+        // Actual deployment entrypoint: MIGRATE (no-op) → CONVERGE → VERIFY.
+        runDeploymentEntrypoint(migrationUrl, urlWithDatabase(dbName, PRODUCTION_APP_ROLE, appPassword));
+        runDeploymentEntrypointExpectFailure(urlWithDatabase(dbName, PRODUCTION_APP_ROLE, appPassword));
 
         const appAfter = postgres(
           urlWithDatabase(dbName, PRODUCTION_APP_ROLE, appPassword),

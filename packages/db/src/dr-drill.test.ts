@@ -379,6 +379,37 @@ test('restore target guards reject malformed URLs, query parameters, and source 
   );
   assert.match(sameSourceDifferentCredentials.stderr, /RESTORE_TARGET_MATCHES_SOURCE_DATABASE|RESTORE_SERVER_IDENTITY_PROBE_FAILED/);
 
+  // Docker drill binding: a container that does not publish the verified
+  // target endpoint must be rejected before any probe or destructive command.
+  const wrongContainer = runPowerShell(
+    restoreScript,
+    ['-BackupFile', 'missing.dump'],
+    drillEnv({
+      NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+      ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('wsp03_restore_wrong_container'),
+      PG_DOCKER_CONTAINER: 'nawa-postgres',
+    }),
+  );
+  assert.notEqual(wrongContainer.status, 0);
+  assert.match(wrongContainer.stderr, /RESTORE_DOCKER_CONTAINER_IDENTITY_UNPROVEN/);
+
+  // localhost/127.0.0.1 aliases reach the same server: source==target must fail.
+  const aliasTarget = new URL(targetUrl('wsp03_restore_alias'));
+  aliasTarget.hostname = 'localhost';
+  const aliasSource = new URL(targetUrl('wsp03_restore_alias'));
+  aliasSource.hostname = '127.0.0.1';
+  const aliasCase = runPowerShell(
+    restoreScript,
+    ['-BackupFile', 'missing.dump'],
+    drillEnv({
+      DATABASE_URL: aliasSource.toString(),
+      ISOLATED_RESTORE_DATABASE_URL: aliasTarget.toString(),
+      NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+    }),
+  );
+  assert.notEqual(aliasCase.status, 0);
+  assert.match(aliasCase.stderr, /RESTORE_TARGET_MATCHES_SOURCE_DATABASE|RESTORE_SERVER_IDENTITY_PROBE_FAILED/);
+
   // Without -CreateDatabase the target must already exist for identity proof.
   const validIsolatedMissing = runGuard(urlWithDatabase('wsp03_restore_acceptance'));
   assert.match(validIsolatedMissing.stderr, /RESTORE_TARGET_DATABASE_MISSING|RESTORE_SERVER_IDENTITY_PROBE_FAILED|Backup file does not exist/);
@@ -387,6 +418,71 @@ test('restore target guards reject malformed URLs, query parameters, and source 
   // first hard failure.
   const validIsolatedCreate = runGuard(urlWithDatabase('wsp03_restore_acceptance_create'), ownerUrl!, true);
   assert.match(validIsolatedCreate.stderr, /Backup file does not exist|RESTORE_SERVER_IDENTITY_PROBE_FAILED/);
+});
+
+test('restore rejects identity-affecting options and mixed tool modes before any proof', () => {
+  const withOptions = new URL(ownerUrl!);
+  withOptions.pathname = '/wsp03_restore_options_probe';
+  withOptions.searchParams.set('options', "-c TimeZone=America/New_York");
+  const optionsCase = runPowerShell(
+    restoreScript,
+    ['-BackupFile', 'missing.dump'],
+    drillEnv({
+      DATABASE_URL: ownerUrl!,
+      ISOLATED_RESTORE_DATABASE_URL: withOptions.toString(),
+      NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+    }),
+  );
+  assert.notEqual(optionsCase.status, 0);
+  assert.match(optionsCase.stderr, /RESTORE_IDENTITY_AFFECTING_OPTIONS/);
+
+  // Same endpoint, TimeZone changed only through libpq options: still rejected,
+  // never reaching identity comparison or backup handling.
+  const sourceWithOptions = new URL(ownerUrl!);
+  sourceWithOptions.searchParams.set('options', '-c TimeZone=UTC');
+  const sourceOptions = runPowerShell(
+    restoreScript,
+    ['-BackupFile', 'missing.dump'],
+    drillEnv({
+      DATABASE_URL: sourceWithOptions.toString(),
+      ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('wsp03_restore_source_options'),
+      NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+    }),
+  );
+  assert.match(sourceOptions.stderr, /RESTORE_IDENTITY_AFFECTING_OPTIONS/);
+
+  // Mixed host tooling: host psql/pg_restore presence must be all-or-nothing.
+  // Hosts here have neither tool on PATH, so one explicit path makes the
+  // pairing inconsistent; the script must fail before any proof or restore.
+  const dummyTool = join(tmpdir(), 'wsp03-dummy-pg-tool.exe');
+  writeFileSync(dummyTool, 'not-a-real-tool');
+  try {
+    const mixed = runPowerShell(
+      restoreScript,
+      ['-BackupFile', 'missing.dump'],
+      drillEnv({
+        NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+        ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('wsp03_restore_mixed_mode'),
+        PG_RESTORE_PATH: dummyTool,
+      }),
+    );
+    assert.notEqual(mixed.status, 0);
+    assert.match(mixed.stderr, /RESTORE_MODE_INCONSISTENT/);
+
+    const reverseMixed = runPowerShell(
+      restoreScript,
+      ['-BackupFile', 'missing.dump'],
+      drillEnv({
+        NAWA_ISOLATED_RESTORE_CONFIRM: 'YES',
+        ISOLATED_RESTORE_DATABASE_URL: urlWithDatabase('wsp03_restore_mixed_mode'),
+        PG_PSQL_PATH: dummyTool,
+      }),
+    );
+    assert.notEqual(reverseMixed.status, 0);
+    assert.match(reverseMixed.stderr, /RESTORE_MODE_INCONSISTENT/);
+  } finally {
+    rmSync(dummyTool, { force: true });
+  }
 });
 
 test('restore fails closed before invoking restore tools for canonical targets', () => {

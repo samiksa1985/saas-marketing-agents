@@ -317,6 +317,9 @@ function parseCli(args) {
   return { ...options, toolArgs };
 }
 
+/** libpq parameters that can alter server-visible identity/session state. */
+const IDENTITY_AFFECTING_PARAMETERS = new Set(['options', 'service', 'servicefile', 'hostaddr']);
+
 export function inspectPostgresConnection(environmentName, environment = process.env) {
   if (!CONNECTION_ENVIRONMENTS.has(environmentName)) {
     throw new Error('POSTGRES_CLI_CONNECTION_ENVIRONMENT_UNSUPPORTED');
@@ -324,11 +327,22 @@ export function inspectPostgresConnection(environmentName, environment = process
   const value = resolveConnectionEnvironment(environment, environmentName);
   if (!value?.trim()) throw new Error(`${environmentName}_REQUIRED`);
   const connection = parsePostgresConnection(value);
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('POSTGRES_CLI_URL_INVALID');
+  }
+  const identityAffectingParameters = [...url.searchParams.keys()]
+    .map((key) => key.toLowerCase())
+    .filter((key) => IDENTITY_AFFECTING_PARAMETERS.has(key));
   return {
     host: connection.host,
     port: Number(connection.port),
     database: connection.database,
     username: connection.username,
+    identityAffecting: identityAffectingParameters.length > 0,
+    identityAffectingParameters,
   };
 }
 

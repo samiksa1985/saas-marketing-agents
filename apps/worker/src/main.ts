@@ -42,11 +42,13 @@ function shutdown(signal: string): void {
 process.once('SIGTERM', () => shutdown('SIGTERM'));
 process.once('SIGINT', () => shutdown('SIGINT'));
 
-async function executeClaimed(executionId: string): Promise<void> {
+async function executeClaimed(claimed: { id: string; tenantId: string; workflowType: string; approvalId?: string }): Promise<void> {
   active = true;
+  // The scheduler's authoritative tenant flows into every tenant-scoped
+  // transition, including failure handling; there is no second unscoped
+  // claim inside the worker.
+  const context = { tenantId: claimed.tenantId, roles: [], permissions: [], locale: 'en' as const };
   try {
-    const claimed = await runtime.claimExecution(executionId, workerId);
-    const context = { tenantId: claimed.tenantId, roles: [], permissions: [], locale: 'en' as const };
     await runtime.markRunning(claimed.id, workerId, context);
     platformMetrics.recordSignal('workflow', 'started');
     logger.emit('info', 'workflow.claimed', { workflowType: claimed.workflowType });
@@ -65,11 +67,11 @@ async function executeClaimed(executionId: string): Promise<void> {
     const message = error instanceof Error ? error.message : 'worker execution failed';
     const code = error instanceof Error && /^[A-Z][A-Z0-9_]+$/.test(error.name) ? error.name : 'WORKER_EXECUTION_FAILED';
     try {
-      await runtime.failExecution(executionId, workerId, {
+      await runtime.failExecution(claimed.id, workerId, {
         code,
         message,
         retryable: !/validation|authorization|tenant|approval/i.test(message),
-      });
+      }, context);
     } catch {
       // A lost/expired lease cannot be failed by this worker; recovery reclaims it.
     }
@@ -89,7 +91,7 @@ while (!stopping) {
     }
     const claimed = await runtime.claimNext(workerId);
     if (claimed) {
-      await executeClaimed(claimed.id);
+      await executeClaimed(claimed);
     } else {
       await sleep(1000);
     }
