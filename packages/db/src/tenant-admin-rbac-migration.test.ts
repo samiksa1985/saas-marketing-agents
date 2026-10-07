@@ -75,6 +75,13 @@ test('no later journaled migration introduces another RBAC seed source', () => {
       fileURLToPath(new URL(`../drizzle/${entry.tag}.sql`, import.meta.url)),
       'utf8',
     );
+    // WS-PROD-10 legitimately seeds the platform:provision permission name only
+    // (no role mapping); every other later migration must not touch RBAC seeds.
+    if (entry.tag === '0038_design_partner_lifecycle') {
+      assert.doesNotMatch(laterSource, /INSERT INTO (roles|role_permissions)/i);
+      assert.match(laterSource, /INSERT INTO permissions \(name\) VALUES \('platform:provision'\) ON CONFLICT \(name\) DO NOTHING/);
+      continue;
+    }
     assert.doesNotMatch(laterSource, /INSERT INTO (roles|permissions|role_permissions)/i);
   }
 });

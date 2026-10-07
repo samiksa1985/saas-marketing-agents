@@ -60,6 +60,18 @@ export class DatabaseTenantMembershipResolver<TTransaction extends TenantScopedT
       )[0];
       if (!membership || membership.status !== 'active') return null;
 
+      // WS-PROD-10: tenant lifecycle is an authoritative suspension boundary.
+      // Suspended/offboarding/offboarded tenants fail closed even when the
+      // membership row is still active; prior sessions cannot bypass it.
+      const tenant = rows<{ lifecycle: string }>(
+        await tx.execute(
+          sql`SELECT lifecycle FROM tenants WHERE id = ${claimedTenantId}::uuid`,
+        ),
+      )[0];
+      if (tenant && ['SUSPENDED', 'OFFBOARDING', 'OFFBOARDED'].includes(tenant.lifecycle)) {
+        return null;
+      }
+
       const role = rows<RoleRow>(
         await tx.execute(sql`SELECT name FROM roles WHERE id = ${membership.role_id}::uuid`),
       )[0];

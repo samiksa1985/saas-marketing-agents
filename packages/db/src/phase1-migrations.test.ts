@@ -77,6 +77,7 @@ test('Drizzle journal has the complete canonical forward chain and omits legacy 
     '0035_workflow_scheduler_functions',
     '0036_workflow_scheduler_final_attempt',
     '0037_google_ads_connections',
+    '0038_design_partner_lifecycle',
   ]);
   assert.equal(tags.includes('0000_foundation'), false);
   assert.deepEqual(

@@ -267,6 +267,13 @@
       "when": 1788629864192,
       "tag": "0037_google_ads_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788629864193,
+      "tag": "0038_design_partner_lifecycle",
+      "breakpoints": true
     }
   ]
 }

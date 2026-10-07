@@ -103,6 +103,7 @@ export const CANONICAL_PERMISSIONS = [
   'security_policy:read',
   'security_policy:manage',
   'system_health:read',
+  'platform:provision',
 ] as const;
 
 export type Permission = (typeof CANONICAL_PERMISSIONS)[number];

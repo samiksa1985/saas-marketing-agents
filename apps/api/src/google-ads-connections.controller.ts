@@ -27,9 +27,11 @@ import type { RuntimeConfig } from '@platform/config';
 import { ApiAuthGuard, getAuthContext, type AuthenticatedRequest } from './auth.guard.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 import { API_TENANT_DATABASE } from './main.js';
+import { TenantLifecycleError, TenantLifecycleService } from './tenant-lifecycle.service.js';
 
 const logger = createStructuredLogger('api');
 export const GOOGLE_ADS_CONNECTION_SERVICE = Symbol('GOOGLE_ADS_CONNECTION_SERVICE');
+export const TENANT_LIFECYCLE_SERVICE = Symbol('TENANT_LIFECYCLE_SERVICE');
 
 type SqlClient = { unsafe(query: string, parameters?: readonly unknown[]): Promise<unknown> };
 type Transaction = { execute(query: unknown): Promise<unknown>; $client?: SqlClient };
@@ -225,7 +227,23 @@ export class GoogleAdsConnectionsController {
   constructor(
     @Optional() @Inject(GOOGLE_ADS_CONNECTION_SERVICE) private readonly service?: GoogleAdsConnectionService,
     @Optional() @Inject('PLATFORM_CONFIG') private readonly config?: RuntimeConfig,
+    @Optional() @Inject(TENANT_LIFECYCLE_SERVICE) private readonly lifecycle?: TenantLifecycleService,
   ) {}
+
+  /** WS-PROD-10: tenant lifecycle is a hard interlock on provider connection. */
+  private async requireTenantProviderAllowed(context: TenantContext): Promise<void> {
+    if (!this.lifecycle) return;
+    try {
+      await this.lifecycle.assertProviderConnectionAllowed(context.tenantId);
+    } catch (error) {
+      if (error instanceof TenantLifecycleError) {
+        platformMetrics.recordSignal('provider', 'blocked');
+        logger.emit('warn', 'provider.tenant_lifecycle_blocked', { provider: 'GOOGLE_ADS', code: error.code });
+        throw new ForbiddenException('Tenant lifecycle does not permit provider connection');
+      }
+      throw error;
+    }
+  }
 
   private requireEnabled(): GoogleAdsConnectionService {
     if (!this.config?.googleAdsConnectionEnabled || !this.service) {
@@ -252,6 +270,7 @@ export class GoogleAdsConnectionsController {
   async connect(@Req() request: unknown, @Body() body: ConnectBody) {
     const context = this.context(request);
     this.requirePermission(context, 'integration:admin');
+    await this.requireTenantProviderAllowed(context);
     const service = this.requireEnabled();
     const result = await service.startConnection(context, body?.idempotencyKey ?? `gads-connect-${Date.now()}`);
     platformMetrics.recordSignal('provider', 'started');
@@ -264,6 +283,7 @@ export class GoogleAdsConnectionsController {
     const context = this.context(request);
     this.requirePermission(context, 'integration:admin');
     const service = this.requireEnabled();
+    await this.requireTenantProviderAllowed(context);
     if (!body?.state || !body.code) throw new UnauthorizedException('OAuth callback is invalid');
     try {
       const result = await service.completeConnection(context, {
@@ -302,6 +322,7 @@ export class GoogleAdsConnectionsController {
   async select(@Req() request: unknown, @Param('connectionId') connectionId: string, @Body() body: SelectBody) {
     const context = this.context(request);
     this.requirePermission(context, 'integration:admin');
+    await this.requireTenantProviderAllowed(context);
     if (!body?.customerId) throw new UnauthorizedException('customerId is required');
     try {
       await this.requireEnabled().selectAccount(context, connectionId, body.customerId, body.loginCustomerId);

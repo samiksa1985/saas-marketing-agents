@@ -60,6 +60,10 @@ const OPERATIONAL_RUNTIME_TABLES = [
   'tenant_provider_bindings',
   'tenant_provider_capabilities',
   'provider_integration_verifications',
+  // WS-PROD-10 design-partner lifecycle state (tenant-scoped, no control-plane grant).
+  'design_partner_requests',
+  'design_partner_limits',
+  'design_partner_lifecycle_events',
 ];
 
 /** SQL identifier quoting: ALTER ROLE "x", GRANT ... TO "x". */

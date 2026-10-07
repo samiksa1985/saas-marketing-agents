@@ -96,6 +96,7 @@ export const tenants = pgTable('tenants', {
   name: text('name').notNull(),
   defaultLocale: localeEnum('default_locale').notNull().default('en'),
   status: entityStatusEnum('status').notNull().default('active'),
+  lifecycle: varchar('lifecycle', { length: 24 }).notNull().default('ACTIVE_CONTROLLED'),
   ...times,
 });
 export const users = pgTable(
@@ -748,6 +749,80 @@ export const googleAdsAccountMappings = pgTable(
       table.customerId,
     ),
     index('google_ads_account_mappings_tenant_idx').on(table.tenantId, table.connectionId),
+  ],
+);
+
+/** WS-PROD-10: controlled design-partner lifecycle records. */
+export const designPartnerRequests = pgTable(
+  'design_partner_requests',
+  {
+    id: id(),
+    tenantId: uuid('tenant_id').references(() => tenants.id),
+    status: varchar('status', { length: 24 }).notNull().default('REQUESTED'),
+    slug: varchar('slug', { length: 80 }).notNull(),
+    displayName: varchar('display_name', { length: 255 }).notNull(),
+    designPartnerRef: varchar('design_partner_ref', { length: 255 }).notNull(),
+    adminSubject: varchar('admin_subject', { length: 512 }).notNull(),
+    adminDisplayName: varchar('admin_display_name', { length: 255 }).notNull(),
+    capabilities: jsonb('capabilities').notNull().default({}),
+    providerConnection: boolean('provider_connection').notNull().default(false),
+    providerReadOnly: boolean('provider_read_only').notNull().default(false),
+    providerValidateOnly: boolean('provider_validate_only').notNull().default(false),
+    providerLiveMutation: boolean('provider_live_mutation').notNull().default(false),
+    maxActiveWorkflows: integer('max_active_workflows').notNull().default(10),
+    maxMembers: integer('max_members').notNull().default(25),
+    maxProviderConnections: integer('max_provider_connections').notNull().default(2),
+    dispatchConcurrency: integer('dispatch_concurrency').notNull().default(2),
+    requestedBy: varchar('requested_by', { length: 255 }).notNull(),
+    approvalId: varchar('approval_id', { length: 255 }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    requestVersion: integer('request_version').notNull().default(1),
+    ...times,
+  },
+  (table) => [
+    uniqueIndex('design_partner_request_idempotency_uidx').on(table.idempotencyKey),
+    uniqueIndex('design_partner_request_slug_uidx').on(table.slug),
+    index('design_partner_request_status_idx').on(table.status),
+  ],
+);
+
+export const designPartnerLimits = pgTable(
+  'design_partner_limits',
+  {
+    tenantId: uuid('tenant_id')
+      .primaryKey()
+      .references(() => tenants.id),
+    maxActiveWorkflows: integer('max_active_workflows').notNull(),
+    maxMembers: integer('max_members').notNull(),
+    maxProviderConnections: integer('max_provider_connections').notNull(),
+    dispatchConcurrency: integer('dispatch_concurrency').notNull(),
+    providerConnectionAllowed: boolean('provider_connection_allowed').notNull().default(false),
+    providerReadOnlyAllowed: boolean('provider_read_only_allowed').notNull().default(false),
+    providerValidateOnlyAllowed: boolean('provider_validate_only_allowed').notNull().default(false),
+    providerLiveMutationAllowed: boolean('provider_live_mutation_allowed').notNull().default(false),
+    ...times,
+  },
+);
+
+export const designPartnerLifecycleEvents = pgTable(
+  'design_partner_lifecycle_events',
+  {
+    id: id(),
+    tenantId: uuid('tenant_id').references(() => tenants.id),
+    requestId: uuid('request_id').references(() => designPartnerRequests.id),
+    fromLifecycle: varchar('from_lifecycle', { length: 24 }),
+    toLifecycle: varchar('to_lifecycle', { length: 24 }).notNull(),
+    actor: varchar('actor', { length: 255 }).notNull(),
+    reason: text('reason'),
+    approvalId: varchar('approval_id', { length: 255 }),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }).notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('design_partner_lifecycle_event_idempotency_uidx').on(table.idempotencyKey),
+    index('design_partner_lifecycle_events_tenant_idx').on(table.tenantId, table.occurredAt),
   ],
 );
 

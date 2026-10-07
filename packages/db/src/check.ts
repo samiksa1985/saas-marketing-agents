@@ -39,6 +39,9 @@ const requiredTables = [
   'codecoreWorkflowExecutionEvents',
   'googleAdsConnections',
   'googleAdsAccountMappings',
+  'designPartnerRequests',
+  'designPartnerLimits',
+  'designPartnerLifecycleEvents',
 ];
 const missing = requiredTables.filter((table) => !(table in schema));
 if (missing.length > 0)

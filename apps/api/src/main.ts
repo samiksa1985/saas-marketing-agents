@@ -39,6 +39,8 @@ import {
   PostgresGoogleAdsConnectionStore,
 } from './google-ads-connections.controller.js';
 import { GoogleAdsConnectionService, GoogleAdsOAuthFetchTransport } from '@platform/tool-gateway';
+import { TENANT_LIFECYCLE_SERVICE_TOKEN, TenantLifecycleController } from './tenant-lifecycle.controller.js';
+import { TenantLifecycleService } from './tenant-lifecycle.service.js';
 import { ApiTenantDurableApprovalRepository } from './durable-approval.repository.js';
 import { ApiTenantDatabase } from './tenant-database.js';
 import { ProductSurfaceController, ProductSurfaceService } from './product-surface.controller.js';
@@ -229,7 +231,7 @@ const browserAuthService = new BrowserAuthService(
 );
 const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{membershipResolver});
 @Module({
-  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController,BrowserAuthController,GoogleAdsConnectionsController],
+  controllers:[AppController,RegistryController,WorkflowController,ApprovalController,MarketingOsController,ProductSurfaceController,ExternalActionsController,UnifiedCampaignsController,PerformanceOptimizationController,CustomerAcquisitionRevenueController,CustomerEngagementController,CustomerJourneyController,LifecycleActivationController,CustomerGrowthDecisionController,ProviderIntegrationsController,ExternalActionPoliciesController,ExternalActionOperationsController,BrowserAuthController,GoogleAdsConnectionsController,TenantLifecycleController],
   providers:[
     RegistryService,
     {
@@ -346,6 +348,7 @@ const authProviderFactory=():AuthProvider=>createApiAuthProvider(config,{members
     },
     {provide:AUTH_PROVIDER,useFactory:authProviderFactory},
     { provide: 'PLATFORM_CONFIG', useValue: config },
+    { provide: TENANT_LIFECYCLE_SERVICE_TOKEN, useValue: new TenantLifecycleService(database.$client as never) },
     {
       provide: GOOGLE_ADS_CONNECTION_SERVICE,
       useFactory: () => {
